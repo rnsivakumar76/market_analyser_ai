@@ -2,73 +2,41 @@
 # IAM — ECS Task Execution Role & Task Role
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Task Execution Role (used by ECS agent to pull images, write logs)
-resource "aws_iam_role" "ecs_task_execution" {
-  name = "${var.app_name}-ecs-execution-role"
+# App Runner Access Role (used to pull images from ECR)
+resource "aws_iam_role" "apprunner_access" {
+  name = "${var.app_name}-apprunner-access-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Action    = "sts:AssumeRole"
       Effect    = "Allow"
-      Principal = { Service = "ecs-tasks.amazonaws.com" }
+      Principal = { Service = "build.apprunner.amazonaws.com" }
     }]
   })
 
-  tags = { Name = "${var.app_name}-ecs-execution-role" }
+  tags = { Name = "${var.app_name}-apprunner-access" }
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
-  role       = aws_iam_role.ecs_task_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+resource "aws_iam_role_policy_attachment" "apprunner_access_policy" {
+  role       = aws_iam_role.apprunner_access.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess"
 }
 
-# Allow ECS to pull from ECR (already included in AmazonECSTaskExecutionRolePolicy)
-# Add CloudWatch Logs permission
-resource "aws_iam_role_policy" "ecs_task_execution_extras" {
-  name = "${var.app_name}-ecs-extras"
-  role = aws_iam_role.ecs_task_execution.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
-
-# Task Role (what the running container is allowed to do)
-resource "aws_iam_role" "ecs_task" {
-  name = "${var.app_name}-ecs-task-role"
+# App Runner Instance Role (what the running container is allowed to do)
+resource "aws_iam_role" "apprunner_instance" {
+  name = "${var.app_name}-apprunner-instance-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Action    = "sts:AssumeRole"
       Effect    = "Allow"
-      Principal = { Service = "ecs-tasks.amazonaws.com" }
+      Principal = { Service = "tasks.apprunner.amazonaws.com" }
     }]
   })
 
-  tags = { Name = "${var.app_name}-ecs-task-role" }
+  tags = { Name = "${var.app_name}-apprunner-instance" }
 }
 
 # GitLab CI/CD deployer user (create manually or via Terraform)
@@ -101,16 +69,15 @@ resource "aws_iam_user_policy" "gitlab_deployer" {
         Resource = "*"
       },
       {
-        # ECS permissions — update service & monitor deployment
+        # App Runner permissions — update service & monitor deployment
         Effect = "Allow"
         Action = [
-          "ecs:UpdateService",
-          "ecs:DescribeServices",
-          "ecs:DescribeTaskDefinition",
-          "ecs:RegisterTaskDefinition",
-          "ecs:ListTaskDefinitions",
-          "ecs:DescribeTasks",
-          "ecs:ListTasks",
+          "apprunner:UpdateService",
+          "apprunner:ListServices",
+          "apprunner:DescribeCustomDomains",
+          "apprunner:DescribeService",
+          "apprunner:StartDeployment",
+          "apprunner:ListOperations",
         ]
         Resource = "*"
       },
@@ -138,12 +105,12 @@ resource "aws_iam_user_policy" "gitlab_deployer" {
         Resource = "*"
       },
       {
-        # IAM PassRole — needed to register task definitions
+        # IAM PassRole — needed to pass roles to App Runner
         Effect   = "Allow"
         Action   = "iam:PassRole"
         Resource = [
-          aws_iam_role.ecs_task_execution.arn,
-          aws_iam_role.ecs_task.arn
+          aws_iam_role.apprunner_access.arn,
+          aws_iam_role.apprunner_instance.arn
         ]
       },
       {

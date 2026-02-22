@@ -78,15 +78,15 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_id                = "S3-frontend"
   }
 
-  # Backend API Origin (ALB)
+  # Backend API Origin (App Runner)
   origin {
-    domain_name = aws_lb.backend.dns_name
-    origin_id   = "ALB-backend"
+    domain_name = aws_apprunner_service.backend.service_url
+    origin_id   = "AppRunner-backend"
 
     custom_origin_config {
       http_port              = 80
       https_port             = 443
-      origin_protocol_policy = "http-only"
+      origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
@@ -114,7 +114,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     path_pattern           = "/api/*"
     allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "ALB-backend"
+    target_origin_id       = "AppRunner-backend"
     viewer_protocol_policy = "https-only"
     compress               = false
 

@@ -252,40 +252,7 @@ jobs:
           retention-days: 1
 
 # ──────────────────────────────────────────────────────────────────────────────
-# JOB 5: Deploy Backend (force ECS redeployment)
-# ──────────────────────────────────────────────────────────────────────────────
-  deploy-backend:
-    name: Deploy Backend to ECS
-    runs-on: ubuntu-latest
-    needs: [terraform-apply]
-
-    steps:
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-market-analyser
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-DeployBackend-${{ github.run_id }}
-
-      - name: Force ECS redeployment with new image
-        run: |
-          aws ecs update-service \
-            --cluster market-analyser-cluster \
-            --service market-analyser-backend \
-            --force-new-deployment \
-            --region ${{ vars.AWS_REGION }}
-
-      - name: Wait for ECS deployment to stabilise
-        run: |
-          echo "⏳ Waiting for ECS service to stabilise (up to 10 min)..."
-          aws ecs wait services-stable \
-            --cluster market-analyser-cluster \
-            --services market-analyser-backend \
-            --region ${{ vars.AWS_REGION }}
-          echo "✅ Backend deployment complete!"
-
-# ──────────────────────────────────────────────────────────────────────────────
-# JOB 6: Deploy Frontend (S3 sync + CloudFront invalidation)
+# JOB 5: Deploy Frontend (S3 sync + CloudFront invalidation)
 # ──────────────────────────────────────────────────────────────────────────────
   deploy-frontend:
     name: Deploy Frontend to S3/CloudFront

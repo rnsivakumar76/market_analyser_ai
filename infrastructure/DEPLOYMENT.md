@@ -1,4 +1,4 @@
-# 🚀 Deployment Guide — Market Analyser on AWS Fargate via GitHub Actions
+# 🚀 Deployment Guide — Market Analyser on AWS App Runner via GitHub Actions
 
 ## Architecture Overview
 
@@ -7,30 +7,28 @@ Internet
    │
    ▼
 CloudFront (CDN + HTTPS)
-   ├── /api/*  → Application Load Balancer → ECS Fargate Backend
+   ├── /api/*  → AWS App Runner Backend
    └── /*      → S3 Bucket (Angular SPA)
 
 GitHub Actions (OIDC Authentication - ZERO AWS KEYS STORED!)
    ├── Build → Docker images
    ├── Push  → AWS ECR
    ├── Plan  → Terraform (infra changes)
-   └── Deploy → ECS force-new-deployment + S3 sync
+   └── Deploy → AWS App Runner Auto-deployment + S3 sync
 ```
 
 ## 💰 Estimated Monthly Cost (AWS Free Tier Aware)
 
 | Service        | Spec                         | Cost/Mo |
 |----------------|------------------------------|---------|
-| ECS Fargate    | 0.25 vCPU, 512MB, SPOT       | ~$5-8   |
-| ALB            | Minimum (1 LCU)              | ~$16    |
+| AWS App Runner | 1 vCPU, 2GB Memory           | ~$5-10  |
 | CloudFront     | 1TB free/mo)                 | ~$0     |
 | S3             | 5GB free tier                | ~$0     |
 | ECR            | 500MB free tier              | ~$0     |
 | CloudWatch     | 7-day log retention          | ~$0-1   |
-| **Total**      |                              | **~$21-25/mo** |
+| **Total**      |                              | **~$5-10/mo** |
 
-> 💡 **Cost Tip**: Stop the ECS task when not in use → cost drops to ~$1-2/mo.
-> Run: `aws ecs update-service --cluster market-analyser-cluster --service market-analyser-backend --desired-count 0`
+> 💡 **Cost Tip**: AWS App Runner pauses CPU when there are no active requests. You only pay for memory (~$5/mo minimum if constantly paused) reducing your average overall cost compared to ECS with ALB.
 
 ---
 
@@ -138,21 +136,17 @@ terraform output cloudfront_url
 
 ## 🔧 Maintenance Commands
 
-### Stop backend (save money when not in use)
+### Pause backend (save money when not in use)
 ```bash
-aws ecs update-service \
-  --cluster market-analyser-cluster \
-  --service market-analyser-backend \
-  --desired-count 0 \
+aws apprunner pause-service \
+  --service-arn $(terraform output -raw apprunner_service_arn) \
   --region ap-southeast-1
 ```
 
-### Start backend
+### Resume backend
 ```bash
-aws ecs update-service \
-  --cluster market-analyser-cluster \
-  --service market-analyser-backend \
-  --desired-count 1 \
+aws apprunner resume-service \
+  --service-arn $(terraform output -raw apprunner_service_arn) \
   --region ap-southeast-1
 ```
 
