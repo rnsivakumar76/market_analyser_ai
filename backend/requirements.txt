@@ -12,3 +12,4 @@ twelvedata==1.2.28
 fmp-python==0.1.5
 apscheduler==3.10.4
 mangum
+boto3
