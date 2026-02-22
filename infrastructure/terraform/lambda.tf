@@ -14,7 +14,8 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      ENVIRONMENT = var.environment
+      ENVIRONMENT        = var.environment
+      CONFIG_S3_BUCKET   = aws_s3_bucket.config.bucket
     }
   }
 
