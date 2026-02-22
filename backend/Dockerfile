@@ -1,14 +1,14 @@
-FROM python:3.11-slim
+FROM public.ecr.aws/lambda/python:3.11
 
-WORKDIR /app
+# AWS Lambda base image uses microdnf/yum
+RUN yum update -y && yum install -y ca-certificates
 
-RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
-
-COPY requirements.txt .
+# Install Python requirements
+COPY requirements.txt ${LAMBDA_TASK_ROOT}
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy logic to Lambda Task Root
+COPY . ${LAMBDA_TASK_ROOT}
 
-EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start the Mangum APIGW Handler
+CMD ["app.main.handler"]
