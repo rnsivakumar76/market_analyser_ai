@@ -1,6 +1,6 @@
-output "alb_dns_name" {
-  description = "ALB DNS — use this for direct backend access or health checks"
-  value       = aws_lb.backend.dns_name
+output "apprunner_url" {
+  description = "App Runner Service URL — use this for direct backend access or health checks"
+  value       = aws_apprunner_service.backend.service_url
 }
 
 output "cloudfront_url" {
@@ -28,14 +28,9 @@ output "ecr_frontend_url" {
   value       = aws_ecr_repository.frontend.repository_url
 }
 
-output "ecs_cluster_name" {
-  description = "ECS cluster name"
-  value       = aws_ecs_cluster.main.name
-}
-
-output "ecs_service_name" {
-  description = "ECS service name for backend"
-  value       = aws_ecs_service.backend.name
+output "apprunner_service_arn" {
+  description = "App Runner service ARN"
+  value       = aws_apprunner_service.backend.arn
 }
 
 output "gitlab_deployer_access_key_id" {
@@ -53,11 +48,10 @@ output "gitlab_deployer_secret_access_key" {
 output "cost_estimate" {
   description = "Estimated monthly AWS costs"
   value = {
-    fargate_spot = "~$3-7/mo (0.25 vCPU, 512MB, 24/7, SPOT pricing)"
-    alb          = "~$16/mo (minimum)"
+    apprunner    = "~$5-10/mo (1 vCPU, 2GB memory, scaled to minimum 1 instance)"
     cloudfront   = "~$0 (free tier 1TB/mo)"
     s3           = "~$0 (free tier 5GB)"
     ecr          = "~$0 (free tier 500MB)"
-    total        = "~$20-25/mo running 24/7. Stop ECS task when not in use = ~$1/mo"
+    total        = "~$5-10/mo running 24/7 with zero traffic. Much cheaper than ALB!"
   }
 }
