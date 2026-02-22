@@ -1,25 +1,37 @@
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 from fastapi import APIRouter, Depends, HTTPException, Request
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
 from .auth import create_access_token
 
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # Replace with your actual Google Client ID and Secret
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    logger.error("MISSING GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET in environment variables!")
+
 config_data = {
-    'GOOGLE_CLIENT_ID': GOOGLE_CLIENT_ID,
-    'GOOGLE_CLIENT_SECRET': GOOGLE_CLIENT_SECRET
+    'GOOGLE_CLIENT_ID': GOOGLE_CLIENT_ID or "",
+    'GOOGLE_CLIENT_SECRET': GOOGLE_CLIENT_SECRET or ""
 }
 starlette_config = Config(environ=config_data)
 oauth = OAuth(starlette_config)
 
 oauth.register(
     name='google',
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
     server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    access_token_url='https://oauth2.googleapis.com/token',
+    authorize_url='https://accounts.google.com/o/oauth2/v2/auth',
+    userinfo_endpoint='https://openidconnect.googleapis.com/v1/userinfo',
+    jwks_uri='https://www.googleapis.com/oauth2/v3/certs',
     client_kwargs={
         'scope': 'openid email profile'
     }
@@ -27,8 +39,11 @@ oauth.register(
 
 @router.get('/login')
 async def login(request: Request):
-    redirect_uri = request.url_for('auth_callback')
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    # Force https for the redirect_uri in production
+    url = str(request.url_for('auth_callback'))
+    if "localhost" not in url:
+        url = url.replace("http://", "https://")
+    return await oauth.google.authorize_redirect(request, url)
 
 from fastapi.responses import RedirectResponse
 import json

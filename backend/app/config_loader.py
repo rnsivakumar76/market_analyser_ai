@@ -11,7 +11,13 @@ CONFIG_FILE_NAME = "instruments.yaml"
 LOCAL_CONFIG_DIR = Path(__file__).parent.parent / "config"
 DEFAULT_USER_ID = "global_default"
 
-s3_client = boto3.client("s3")
+_s3_client = None
+
+def get_s3_client():
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = boto3.client("s3")
+    return _s3_client
 
 
 def _get_config_key(user_id: str) -> str:
@@ -24,14 +30,14 @@ def load_config(user_id: str = DEFAULT_USER_ID, config_path: str = None) -> Dict
     if S3_BUCKET:
         key = _get_config_key(user_id)
         try:
-            response = s3_client.get_object(Bucket=S3_BUCKET, Key=key)
+            response = get_s3_client().get_object(Bucket=S3_BUCKET, Key=key)
             config = yaml.safe_load(response['Body'].read())
             return config
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
                 # If file doesn't exist for this user in S3 yet, load global default and save it to S3
                 config = _load_local_config(user_id, config_path)
-                save_instruments(config.get('instruments', []), user_id, config_path)
+                _save_to_storage(config, user_id, config_path)
                 return config
             raise e
     
@@ -104,7 +110,7 @@ def _save_to_storage(config: Dict[str, Any], user_id: str = DEFAULT_USER_ID, con
     if S3_BUCKET:
         key = _get_config_key(user_id)
         content = yaml.dump(config, default_flow_style=False, sort_keys=False)
-        s3_client.put_object(Bucket=S3_BUCKET, Key=key, Body=content)
+        get_s3_client().put_object(Bucket=S3_BUCKET, Key=key, Body=content)
     else:
         if config_path is None:
             config_path = LOCAL_CONFIG_DIR / f"{user_id}_{CONFIG_FILE_NAME}"

@@ -14,25 +14,27 @@ from .fmp_fetcher import FMPFetcher
 # Disable SSL verification warnings and bypass SSL for corporate proxies
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Patch requests session used by yfinance to disable SSL verification
-_original_get = requests.Session.get
-_original_post = requests.Session.post
+_av_fetcher = None
+_td_fetcher = None
+_fmp_fetcher = None
 
-def _patched_get(self, *args, **kwargs):
-    kwargs['verify'] = False
-    return _original_get(self, *args, **kwargs)
+def get_av_fetcher():
+    global _av_fetcher
+    if _av_fetcher is None:
+        _av_fetcher = AlphaVantageFetcher()
+    return _av_fetcher
 
-def _patched_post(self, *args, **kwargs):
-    kwargs['verify'] = False
-    return _original_post(self, *args, **kwargs)
+def get_td_fetcher():
+    global _td_fetcher
+    if _td_fetcher is None:
+        _td_fetcher = TwelveDataFetcher()
+    return _td_fetcher
 
-requests.Session.get = _patched_get
-requests.Session.post = _patched_post
-
-# Initialize all data fetchers as backup
-av_fetcher = AlphaVantageFetcher()
-td_fetcher = TwelveDataFetcher()
-fmp_fetcher = FMPFetcher()
+def get_fmp_fetcher():
+    global _fmp_fetcher
+    if _fmp_fetcher is None:
+        _fmp_fetcher = FMPFetcher()
+    return _fmp_fetcher
 
 YF_SYMBOL_MAP = {
     'XAU': 'GC=F', 'XAG': 'SI=F', 'BCO': 'BZ=F', 
@@ -152,7 +154,7 @@ def fetch_historical_data(
     # Try Alpha Vantage second (best for Singapore)
     try:
         print(f"Trying Alpha Vantage for {symbol}...")
-        data = av_fetcher.fetch_historical_data(symbol, days)
+        data = get_av_fetcher().fetch_historical_data(symbol, days)
         if not data.empty:
             print(f"✅ Alpha Vantage success for {symbol}")
             return data
@@ -162,7 +164,7 @@ def fetch_historical_data(
     # Try Twelve Data third
     try:
         print(f"Trying Twelve Data for {symbol}...")
-        data = td_fetcher.fetch_historical_data(symbol, days)
+        data = get_td_fetcher().fetch_historical_data(symbol, days)
         if not data.empty:
             print(f"✅ Twelve Data success for {symbol}")
             return data
@@ -172,7 +174,7 @@ def fetch_historical_data(
     # Try FMP fourth
     try:
         print(f"Trying FMP for {symbol}...")
-        data = fmp_fetcher.fetch_historical_data(symbol, days)
+        data = get_fmp_fetcher().fetch_historical_data(symbol, days)
         if not data.empty:
             print(f"✅ FMP success for {symbol}")
             return data
@@ -213,7 +215,7 @@ def get_current_price(symbol: str) -> float:
     # Try Alpha Vantage second
     try:
         print(f"Trying Alpha Vantage for current price of {symbol}...")
-        price = av_fetcher.get_current_price(symbol)
+        price = get_av_fetcher().get_current_price(symbol)
         print(f"✅ Alpha Vantage price success for {symbol}: {price}")
         return price
     except Exception as e:
@@ -222,7 +224,7 @@ def get_current_price(symbol: str) -> float:
     # Try Twelve Data third
     try:
         print(f"Trying Twelve Data for current price of {symbol}...")
-        price = td_fetcher.get_current_price(symbol)
+        price = get_td_fetcher().get_current_price(symbol)
         print(f"✅ Twelve Data price success for {symbol}: {price}")
         return price
     except Exception as e:
@@ -231,7 +233,7 @@ def get_current_price(symbol: str) -> float:
     # Try FMP fourth
     try:
         print(f"Trying FMP for current price of {symbol}...")
-        price = fmp_fetcher.get_current_price(symbol)
+        price = get_fmp_fetcher().get_current_price(symbol)
         print(f"✅ FMP price success for {symbol}: {price}")
         return price
     except Exception as e:

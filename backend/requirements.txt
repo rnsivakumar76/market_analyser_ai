@@ -15,3 +15,7 @@ boto3
 authlib
 python-jose[cryptography]
 python-multipart
+starlette
+cryptography
+httpx
+itsdangerous

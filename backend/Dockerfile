@@ -1,7 +1,7 @@
 FROM public.ecr.aws/lambda/python:3.11
 
-# AWS Lambda base image uses microdnf/yum
-RUN yum update -y && yum install -y ca-certificates
+# Install system dependencies if any
+RUN yum install -y ca-certificates
 
 # Install Python requirements
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
