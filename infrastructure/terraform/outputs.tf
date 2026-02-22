@@ -1,6 +1,11 @@
-output "apprunner_url" {
-  description = "App Runner Service URL — use this for direct backend access or health checks"
-  value       = aws_apprunner_service.backend.service_url
+output "api_gateway_url" {
+  description = "API Gateway URL — use this for direct backend access or health checks"
+  value       = aws_apigatewayv2_api.http_api.api_endpoint
+}
+
+output "frontend_url" {
+  description = "S3 Website URL — direct access to frontend"
+  value       = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
 }
 
 output "cloudfront_url" {
@@ -28,9 +33,9 @@ output "ecr_frontend_url" {
   value       = aws_ecr_repository.frontend.repository_url
 }
 
-output "apprunner_service_arn" {
-  description = "App Runner service ARN"
-  value       = aws_apprunner_service.backend.arn
+output "lambda_function_arn" {
+  description = "Backend Lambda function ARN"
+  value       = aws_lambda_function.api.arn
 }
 
 output "gitlab_deployer_access_key_id" {
@@ -48,10 +53,11 @@ output "gitlab_deployer_secret_access_key" {
 output "cost_estimate" {
   description = "Estimated monthly AWS costs"
   value = {
-    apprunner    = "~$5-10/mo (1 vCPU, 2GB memory, scaled to minimum 1 instance)"
+    lambda       = "~$0/mo (Free tier includes 1M requests/mo & 3.2M seconds of compute)"
+    api_gateway  = "~$0/mo (Free tier includes 1M API calls/mo)"
     cloudfront   = "~$0 (free tier 1TB/mo)"
     s3           = "~$0 (free tier 5GB)"
     ecr          = "~$0 (free tier 500MB)"
-    total        = "~$5-10/mo running 24/7 with zero traffic. Much cheaper than ALB!"
+    total        = "~$0/mo (100% Free Tier Serverless Architecture!)"
   }
 }
