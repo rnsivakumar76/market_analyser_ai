@@ -63,7 +63,12 @@ export class App implements OnInit {
 
     this.analyzerService.analyzeAll().subscribe({
       next: (response: AnalysisResponse) => {
-        this.instruments.set(response.instruments);
+        // Sort instruments: Highest magnitude score at the top (Absolute value)
+        const sortedInstruments = [...response.instruments].sort((a, b) => {
+          return Math.abs(b.trade_signal.score) - Math.abs(a.trade_signal.score);
+        });
+
+        this.instruments.set(sortedInstruments);
         this.weeklyPerformance.set(response.weekly_performance);
         this.correlationData.set(response.correlation_data);
         this.lastUpdated.set(new Date(response.analysis_timestamp).toLocaleString());
