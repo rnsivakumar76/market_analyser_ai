@@ -26,6 +26,9 @@
       <button class="menu-btn correlation-btn" (click)="showCorrelationModal.set(true)" title="Market Correlation">
         📊
       </button>
+      <button class="manual-btn" (click)="showUserManual.set(true)" title="Intelligence Manual">
+        📖
+      </button>
       <button class="strategy-btn" (click)="showStrategySettings.set(true)" title="Strategy Optimization">
         ⚡
       </button>
@@ -92,6 +95,10 @@
 
   @if (showCorrelationModal()) {
   <app-correlation-modal [data]="correlationData()" (close)="showCorrelationModal.set(false)"></app-correlation-modal>
+  }
+
+  @if (showUserManual()) {
+  <app-user-manual (close)="showUserManual.set(false)"></app-user-manual>
   }
 </div>
 } @else {

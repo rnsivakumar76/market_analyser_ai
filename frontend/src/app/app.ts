@@ -6,13 +6,14 @@ import { SettingsComponent } from './components/settings/settings.component';
 import { PerformanceBannerComponent } from './components/performance-banner/performance-banner.component';
 import { StrategySettingsComponent } from './components/strategy-settings/strategy-settings.component';
 import { CorrelationModalComponent } from './components/correlation-modal/correlation-modal.component';
+import { UserManualComponent } from './components/user-manual/user-manual.component';
 import { LoginComponent } from './components/login/login.component';
 import { AuthService, User } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, LoginComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -27,6 +28,7 @@ export class App implements OnInit {
   showSettings = signal(false);
   showStrategySettings = signal(false);
   showCorrelationModal = signal(false);
+  showUserManual = signal(false);
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
 
