@@ -1,4 +1,12 @@
-# 🚀 Deployment Guide — Market Analyser on AWS App Runner via GitHub Actions
+# 🚀 Deployment Guide — Market Analyser on AWS Lambda
+
+### ⚡ Current Migration Status
+- **Backend**: AWS Lambda + API Gateway -> **Live**
+- **Frontend**: S3 Website hosting -> **Live**
+- **API URL**: `https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api`
+- **Web App**: `http://market-analyser-frontend-614686365382.s3-website-ap-southeast-1.amazonaws.com`
+
+---
 
 ## Architecture Overview
 
@@ -7,28 +15,29 @@ Internet
    │
    ▼
 CloudFront (CDN + HTTPS)
-   ├── /api/*  → AWS App Runner Backend
+   ├── /api/*  → AWS API Gateway → AWS Lambda (FastAPI backend)
    └── /*      → S3 Bucket (Angular SPA)
 
 GitHub Actions (OIDC Authentication - ZERO AWS KEYS STORED!)
    ├── Build → Docker images
    ├── Push  → AWS ECR
    ├── Plan  → Terraform (infra changes)
-   └── Deploy → AWS App Runner Auto-deployment + S3 sync
+   └── Deploy → Lambda Code Update + S3 sync
 ```
 
 ## 💰 Estimated Monthly Cost (AWS Free Tier Aware)
 
 | Service        | Spec                         | Cost/Mo |
 |----------------|------------------------------|---------|
-| AWS App Runner | 1 vCPU, 2GB Memory           | ~$5-10  |
-| CloudFront     | 1TB free/mo)                 | ~$0     |
+| AWS Lambda     | 3.2M seconds free tier       | ~$0     |
+| API Gateway    | 1M API calls/mo free         | ~$0     |
+| CloudFront     | 1TB free/mo                  | ~$0     |
 | S3             | 5GB free tier                | ~$0     |
 | ECR            | 500MB free tier              | ~$0     |
 | CloudWatch     | 7-day log retention          | ~$0-1   |
-| **Total**      |                              | **~$5-10/mo** |
+| **Total**      | **100% Serverless**          | **~$0/mo** |
 
-> 💡 **Cost Tip**: AWS App Runner pauses CPU when there are no active requests. You only pay for memory (~$5/mo minimum if constantly paused) reducing your average overall cost compared to ECS with ALB.
+> 💡 **Cost Tip**: AWS Lambda charges absolutely nothing when it is not running. Since we use Serverless architecture (API Gateway + Lambda), your monthly cost defaults to exactly $0.00 if you stay within the generously high AWS Free Tier limits!
 
 ---
 
@@ -82,7 +91,7 @@ terraform init \
   -backend-config="dynamodb_table=market-analyser-tf-locks" \
   -backend-config="encrypt=true"
 
-# Apply (creates VPC, ECR, ECS, ALB, S3, CloudFront and GitHub OIDC Role)
+# Apply
 terraform apply \
   -var="aws_account_id=${AWS_ACCOUNT_ID}" \
   -var="aws_region=${AWS_REGION}" \
@@ -114,7 +123,7 @@ To prevent Terraform from automatically breaking things without your approval:
 
 ```bash
 git add .
-git commit -m "Add GitHub Actions OIDC pipeline"
+git commit -m "Migrate backend to Serverless AWS Lambda"
 git push
 ```
 
@@ -136,25 +145,11 @@ terraform output cloudfront_url
 
 ## 🔧 Maintenance Commands
 
-### Pause backend (save money when not in use)
-```bash
-aws apprunner pause-service \
-  --service-arn $(terraform output -raw apprunner_service_arn) \
-  --region ap-southeast-1
-```
-
-### Resume backend
-```bash
-aws apprunner resume-service \
-  --service-arn $(terraform output -raw apprunner_service_arn) \
-  --region ap-southeast-1
-```
-
 ### Destroy everything (nuclear option)
 ```bash
 cd infrastructure/terraform
 terraform destroy \
   -var="aws_account_id=${AWS_ACCOUNT_ID}" \
   -var="aws_region=${AWS_REGION}" \
-  -var="backend_image=placeholder"
+  -var="backend_image=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/market-analyser-backend:latest"
 ```

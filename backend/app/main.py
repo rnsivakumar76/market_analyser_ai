@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 from datetime import datetime, date
-from typing import List
+from typing import List, Dict, Any
 import logging
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import asyncio
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .config_loader import (
     load_config, get_instruments, get_analysis_params, 
@@ -40,17 +41,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# In-memory store for sent alerts to avoid duplicates during a single session
-# Format: "symbol_recommendation_date"
-SENT_ALERTS = set()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# No CORS middleware here - handled by AWS API Gateway for better performance and to avoid double-header issues.
 
 
 def analyze_instrument(symbol: str, name: str, params: dict, benchmark_direction: Signal = Signal.NEUTRAL, strategy_settings: StrategySettings = None) -> InstrumentAnalysis:
@@ -120,10 +111,13 @@ async def root():
     return {"message": "Market Analyzer API", "status": "running"}
 
 
+# In-memory store for sent alerts
+SENT_ALERTS = set()
+
 async def run_scheduled_analysis():
-    """Background task to analyze all instruments and send alerts."""
+    """Background task to analyze all instruments concurrently for speed on AWS Lambda."""
     try:
-        logger.info("Running market scan...")
+        logger.info("Running parallel market scan...")
         config = load_config()
         instruments = get_instruments(config)
         params = get_analysis_params(config)
@@ -131,72 +125,75 @@ async def run_scheduled_analysis():
         strategy_settings_data = get_strategy_config(config)
         strategy_settings = StrategySettings(**strategy_settings_data)
         
-        # Benchmark data fetching
+        # Benchmark data fetching (Parallel)
+        benchmarks_data = {}
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {
+                executor.submit(fetch_historical_data, "SPX", days=60): "SPX",
+                executor.submit(fetch_historical_data, "BTC-USD", days=60): "BTC-USD"
+            }
+            for future in as_completed(futures):
+                sym = futures[future]
+                try:
+                    benchmarks_data[sym] = future.result()
+                except Exception as e:
+                    logger.error(f"Failed to fetch benchmark {sym}: {e}")
+                    benchmarks_data[sym] = None
+
+        spy_data = benchmarks_data.get("SPX")
+        btc_data = benchmarks_data.get("BTC-USD")
+        
         spy_bench = Signal.NEUTRAL
         btc_bench = Signal.NEUTRAL
         
-        try:
-            logger.info("Fetching benchmark data (SPX and BTC)...")
-            spy_data = fetch_historical_data("SPX", days=60)
-            btc_data = fetch_historical_data("BTC-USD", days=60)
+        if spy_data is not None and not spy_data.empty:
+            spy_bench = analyze_monthly_trend(spy_data, params.get('monthly', {})).direction
+        if btc_data is not None and not btc_data.empty:
+            btc_bench = analyze_monthly_trend(btc_data, params.get('monthly', {})).direction
             
-            spy_analysis = analyze_monthly_trend(spy_data, params.get('monthly', {}))
-            btc_analysis = analyze_monthly_trend(btc_data, params.get('monthly', {}))
-            
-            spy_bench = spy_analysis.direction
-            btc_bench = btc_analysis.direction
-            logger.info(f"Benchmarks: SPX={spy_bench}, BTC={btc_bench}")
-        except Exception as e:
-            logger.error(f"Scheduled scan benchmark fetch failed: {e}")
+        benchmarks = {"SPX": spy_bench, "BTC-USD": btc_bench}
 
         results: List[InstrumentAnalysis] = []
-        data_map = {} # Store fetched data for performance calculation
-        
-        benchmarks = {"SPX": spy_bench, "BTC-USD": btc_bench}
-        
-        for inst in instruments:
+        data_map = {}
+
+        def process_instrument(inst):
+            sym = inst['symbol'].upper()
             try:
-                sym = inst['symbol'].upper()
                 bench = btc_bench if ("-USD" in sym or "BTC" in sym or "ETH" in sym) else spy_bench
-                
                 analysis = analyze_instrument(sym, inst['name'], params, bench, strategy_settings)
-                results.append(analysis)
-                
-                # Fetch daily data for performance tracking (already fetched in analyze_instrument, but we need it here)
-                # To be efficient, we can modify analyze_instrument to return data or just refetch from cache if cached
-                data_map[sym] = fetch_historical_data(sym, days=60)
-                
-                # Notification Logic
-                if analysis.trade_signal.trade_worthy:
-                    alert_key = f"{sym}_{analysis.trade_signal.recommendation}_{date.today()}"
-                    if alert_key not in SENT_ALERTS:
-                        send_alerts(analysis, alert_config)
-                        SENT_ALERTS.add(alert_key)
+                hist_data = fetch_historical_data(sym, days=60)
+                return sym, analysis, hist_data
             except Exception as e:
-                logger.error(f"Error in scheduled analysis for {inst['symbol']}: {str(e)}")
-        
-        # Calculate Weekly Performance Summary
+                logger.error(f"Error analyzing {sym}: {e}")
+                return sym, None, None
+
+        # Process all instruments in parallel
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_inst = {executor.submit(process_instrument, inst): inst for inst in instruments}
+            for future in as_completed(future_to_inst):
+                sym, analysis, hist_data = future.result()
+                if analysis:
+                    results.append(analysis)
+                    data_map[sym] = hist_data
+                    
+                    # Notification Logic
+                    if analysis.trade_signal.trade_worthy:
+                        alert_key = f"{sym}_{analysis.trade_signal.recommendation}_{date.today()}"
+                        if alert_key not in SENT_ALERTS:
+                            send_alerts(analysis, alert_config)
+                            SENT_ALERTS.add(alert_key)
+
+        # Calculate summaries (Synchronous)
         perf_summary = calculate_weekly_performance(instruments, data_map, params, benchmarks, strategy_settings)
-        
-        # Calculate Correlation Matrix
         correlation_results = calculate_correlations(data_map)
-        
-        # Apply Risk-Adjusted Position Sizing
         results = apply_position_sizing(results, correlation_results, strategy_settings)
         
         return results, perf_summary, correlation_results
     except Exception as e:
-        logger.error(f"Scheduled analysis failed: {str(e)}")
-        return []
+        logger.error(f"Concurrent analysis failed: {str(e)}")
+        return [], None, None
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize scheduler on startup."""
-    scheduler = AsyncIOScheduler()
-    # Runs every hour at the top of the hour
-    scheduler.add_job(run_scheduled_analysis, 'cron', minute=0)
-    scheduler.start()
-    logger.info("Hourly market scan scheduler started.")
+# Scheduler removed for AWS Lambda (handled by EventBridge)
 
 @app.get("/api/analyze", response_model=AnalysisResponse)
 async def analyze_all():
@@ -304,3 +301,6 @@ async def update_settings(settings: StrategySettings):
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+# Handler for AWS Lambda
+handler = Mangum(app)

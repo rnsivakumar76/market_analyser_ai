@@ -135,8 +135,8 @@ class CorrelationData(BaseModel):
 class AnalysisResponse(BaseModel):
     analysis_timestamp: str
     instruments: List[InstrumentAnalysis]
-    weekly_performance: PerformanceSummary
-    correlation_data: CorrelationData
+    weekly_performance: Optional[PerformanceSummary] = None
+    correlation_data: Optional[CorrelationData] = None
 
 
 class InstrumentConfig(BaseModel):

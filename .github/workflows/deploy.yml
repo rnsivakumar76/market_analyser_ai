@@ -1,312 +1,154 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Deploy Workflow — Runs on push to main
-#
-# OIDC Authentication: No AWS keys stored in GitHub!
-# GitHub generates a short-lived JWT token → AWS trusts GitHub's identity
-# → AWS issues temporary credentials for this run only.
-#
-# Required GitHub Variables (Settings → Secrets and variables → Actions):
-#   Vars (not secret):
-#     AWS_ACCOUNT_ID    — your 12-digit AWS account number
-#     AWS_REGION        — e.g. ap-southeast-1
-#     TF_STATE_BUCKET   — e.g. market-analyser-tfstate-123456789012
-#     TF_LOCK_TABLE     — e.g. market-analyser-tf-locks
-#   No secrets needed! OIDC handles authentication.
 # ──────────────────────────────────────────────────────────────────────────────
 name: Deploy to AWS
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:    # Allow manual trigger from GitHub UI
-    inputs:
-      skip_terraform:
-        description: "Skip Terraform (only redeploy app)"
-        required: false
-        default: "false"
-        type: boolean
+  workflow_dispatch:
 
-# Required for OIDC token generation
 permissions:
-  id-token: write   # GitHub generates JWT token for AWS OIDC
-  contents: read    # Checkout the repo
+  id-token: write
+  contents: read
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
   ECR_BACKEND: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/market-analyser-backend
-  ECR_FRONTEND: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/market-analyser-frontend
   TF_ROOT: infrastructure/terraform
 
-# ──────────────────────────────────────────────────────────────────────────────
-# JOB 1: Build & Push Backend to ECR
-# ──────────────────────────────────────────────────────────────────────────────
 jobs:
+  # 1. Build & Push Backend
   build-push-backend:
     name: Build & Push Backend
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.version }}
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials (OIDC — no keys!)
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-market-analyser
           aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-Backend-${{ github.run_id }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
+      - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push
+        run: |
+          docker build -t $ECR_BACKEND:latest ./backend
+          docker push $ECR_BACKEND:latest
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.ECR_BACKEND }}
-          tags: |
-            type=sha,prefix=,format=short
-            type=raw,value=latest
-
-      - name: Build and push backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
-
-# ──────────────────────────────────────────────────────────────────────────────
-# JOB 2: Build & Push Frontend to ECR (also builds static assets)
-# ──────────────────────────────────────────────────────────────────────────────
-  build-push-frontend:
+  # 2. Build Frontend
+  build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: cd frontend && npm ci
-
-      - name: Build Angular production bundle
-        run: cd frontend && npm run build -- --configuration production
-
-      # Upload the built static files as an artifact for the deploy job
-      - name: Upload frontend build artifact
+          node-version: "22" # Using Node 22 for Angular 20
+      - name: Install & Build
+        run: |
+          cd frontend
+          npm ci
+          npm run build -- --configuration production
+      - name: Upload dist
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: frontend/dist/
+          path: frontend/dist/frontend/browser/
           retention-days: 1
 
-# ──────────────────────────────────────────────────────────────────────────────
-# JOB 3: Terraform Plan (runs in parallel with builds)
-# ──────────────────────────────────────────────────────────────────────────────
-  terraform-plan:
-    name: Terraform Plan
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.skip_terraform != 'true' }}
-    outputs:
-      plan-exitcode: ${{ steps.plan.outputs.exitcode }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-market-analyser
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-TFPlan-${{ github.run_id }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.7.0"
-
-      - name: Terraform Init
-        run: |
-          cd ${{ env.TF_ROOT }}
-          terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=market-analyser/terraform.tfstate" \
-            -backend-config="region=${{ vars.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}" \
-            -backend-config="encrypt=true"
-
-      - name: Terraform Plan
-        id: plan
-        run: |
-          cd ${{ env.TF_ROOT }}
-          terraform plan \
-            -var="aws_account_id=${{ vars.AWS_ACCOUNT_ID }}" \
-            -var="aws_region=${{ vars.AWS_REGION }}" \
-            -var="backend_image=${{ env.ECR_BACKEND }}:latest" \
-            -detailed-exitcode \
-            -out=tfplan 2>&1 | tee plan_output.txt
-          echo "exitcode=$?" >> $GITHUB_OUTPUT
-        continue-on-error: true
-
-      - name: Upload Terraform plan
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan
-          path: |
-            ${{ env.TF_ROOT }}/tfplan
-            ${{ env.TF_ROOT }}/plan_output.txt
-          retention-days: 1
-
-      - name: Post plan summary to GitHub
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('${{ env.TF_ROOT }}/plan_output.txt', 'utf8');
-            const body = `## 🏗️ Terraform Plan\n\`\`\`hcl\n${plan.slice(-4000)}\n\`\`\``;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body
-            });
-
-# ──────────────────────────────────────────────────────────────────────────────
-# JOB 4: Terraform Apply
-# Uses GitHub Environments with required reviewer approval as the manual gate
-# Set up: Settings → Environments → "production" → Required reviewers
-# ──────────────────────────────────────────────────────────────────────────────
+  # 3. Terraform Apply
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: [terraform-plan, build-push-backend, build-push-frontend]
-    if: ${{ github.event.inputs.skip_terraform != 'true' }}
-
-    # ⭐ This is the manual approval gate
-    # Go to: Settings → Environments → Create "production" → Add yourself as required reviewer
+    needs: [build-push-backend, build-frontend]
     environment: production
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials (OIDC)
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-market-analyser
           aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-TFApply-${{ github.run_id }}
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.7.0"
-
-      - name: Terraform Init
+      - name: Terraform Init & Apply
         run: |
           cd ${{ env.TF_ROOT }}
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="key=market-analyser/terraform.tfstate" \
             -backend-config="region=${{ vars.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}" \
-            -backend-config="encrypt=true"
-
-      - name: Download Terraform plan
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-plan
-          path: ${{ env.TF_ROOT }}
-
-      - name: Terraform Apply
-        id: apply
-        run: |
-          cd ${{ env.TF_ROOT }}
-          terraform apply -auto-approve tfplan
-
-      - name: Save Terraform outputs
+            -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}"
+          terraform apply -auto-approve \
+            -var="aws_account_id=${{ vars.AWS_ACCOUNT_ID }}" \
+            -var="aws_region=${{ vars.AWS_REGION }}" \
+            -var="backend_image=${{ env.ECR_BACKEND }}:latest"
+      - name: Save outputs
         run: |
           cd ${{ env.TF_ROOT }}
           terraform output -json > tf_outputs.json
-
-      - name: Upload Terraform outputs
+      - name: Upload outputs
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-outputs
+          name: tf-outputs
           path: ${{ env.TF_ROOT }}/tf_outputs.json
-          retention-days: 1
 
-# ──────────────────────────────────────────────────────────────────────────────
-# JOB 5: Deploy Frontend (S3 sync + CloudFront invalidation)
-# ──────────────────────────────────────────────────────────────────────────────
-  deploy-frontend:
-    name: Deploy Frontend to S3/CloudFront
+  # 4. Deploy Backend (Update Lambda)
+  deploy-backend:
+    name: Update Lambda
     runs-on: ubuntu-latest
-    needs: [terraform-apply, build-push-frontend]
-
+    needs: terraform-apply
     steps:
-      - name: Configure AWS Credentials (OIDC)
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-market-analyser
           aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-DeployFrontend-${{ github.run_id }}
+      - name: Update Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name market-analyser-api \
+            --image-uri ${{ env.ECR_BACKEND }}:latest
 
-      - name: Download Terraform outputs
+  # 5. Deploy Frontend (Sync S3)
+  deploy-frontend:
+    name: Sync S3
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-market-analyser
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Download outputs
         uses: actions/download-artifact@v4
         with:
-          name: terraform-outputs
-          path: ./tf-outputs
-
-      - name: Extract deployment targets from Terraform outputs
-        id: tf-outputs
-        run: |
-          S3_BUCKET=$(cat tf-outputs/tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_s3_bucket']['value'])")
-          CF_ID=$(cat tf-outputs/tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['cloudfront_distribution_id']['value'])")
-          echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
-          echo "cf_id=$CF_ID" >> $GITHUB_OUTPUT
-          echo "📦 S3 Bucket: $S3_BUCKET"
-          echo "🌐 CloudFront ID: $CF_ID"
-
-      - name: Download frontend build artifact
+          name: tf-outputs
+          path: .
+      - name: Download dist
         uses: actions/download-artifact@v4
         with:
           name: frontend-dist
           path: ./dist
-
-      - name: Sync to S3
+      - name: Sync S3 & Invalidate CloudFront
         run: |
-          # Sync all files, delete removed files
-          aws s3 sync ./dist/ s3://${{ steps.tf-outputs.outputs.s3_bucket }}/ \
-            --delete \
-            --region ${{ vars.AWS_REGION }}
-          echo "✅ S3 sync complete"
-
-      - name: Invalidate CloudFront cache
+          BUCKET=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_s3_bucket']['value'])")
+          DIST_ID=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['cloudfront_distribution_id']['value'])")
+          
+          # Sync to S3
+          aws s3 sync ./dist/ s3://$BUCKET/ --delete
+          
+          # Invalidate CloudFront Cache
+          echo "Invalidating CloudFront cache for $DIST_ID..."
+          aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
+      - name: Summary
         run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ steps.tf-outputs.outputs.cf_id }} \
-            --paths "/*"
-          echo "✅ CloudFront cache invalidated"
-
-      - name: Print deployment URL
-        run: |
-          CF_URL=$(cat tf-outputs/tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['cloudfront_url']['value'])")
-          echo "🚀 App is live at: $CF_URL"
-          echo "### 🚀 Deployment Complete!" >> $GITHUB_STEP_SUMMARY
-          echo "**URL**: $CF_URL" >> $GITHUB_STEP_SUMMARY
+          CF_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['cloudfront_url']['value'])")
+          S3_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_url']['value'])")
+          echo "### 🚀 App is live!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Secure (HTTPS):** $CF_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- **Direct S3 (HTTP):** $S3_URL" >> $GITHUB_STEP_SUMMARY

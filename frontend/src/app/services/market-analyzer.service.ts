@@ -136,7 +136,7 @@ export interface AnalysisResponse {
 })
 export class MarketAnalyzerService {
   private http = inject(HttpClient);
-  private apiUrl = '/api';
+  private apiUrl = 'https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api';
 
   analyzeAll(): Observable<AnalysisResponse> {
     return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze`);
