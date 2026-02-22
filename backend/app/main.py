@@ -1,9 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
+from starlette.middleware.sessions import SessionMiddleware
 from mangum import Mangum
 from datetime import datetime, date
 from typing import List, Dict, Any
 import logging
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .config_loader import (
@@ -30,6 +32,8 @@ from .models import (
     InstrumentAnalysis, AnalysisResponse, InstrumentConfig, 
     Signal, StrategySettings
 )
+from .auth import get_current_user
+from .oauth import router as auth_router
 
 
 logging.basicConfig(level=logging.INFO)
@@ -41,8 +45,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Required for Authlib OAuth state storage
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "super-secret-session-key"))
+
 # No CORS middleware here - handled by AWS API Gateway for better performance and to avoid double-header issues.
 
+app.include_router(auth_router)
 
 def analyze_instrument(symbol: str, name: str, params: dict, benchmark_direction: Signal = Signal.NEUTRAL, strategy_settings: StrategySettings = None) -> InstrumentAnalysis:
     """Perform complete analysis on a single instrument."""
@@ -114,11 +122,11 @@ async def root():
 # In-memory store for sent alerts
 SENT_ALERTS = set()
 
-async def run_scheduled_analysis():
+async def run_scheduled_analysis(user_id: str = "global_default"):
     """Background task to analyze all instruments concurrently for speed on AWS Lambda."""
     try:
-        logger.info("Running parallel market scan...")
-        config = load_config()
+        logger.info(f"Running parallel market scan for user: {user_id}...")
+        config = load_config(user_id=user_id)
         instruments = get_instruments(config)
         params = get_analysis_params(config)
         alert_config = get_alert_config(config)
@@ -178,7 +186,7 @@ async def run_scheduled_analysis():
                     
                     # Notification Logic
                     if analysis.trade_signal.trade_worthy:
-                        alert_key = f"{sym}_{analysis.trade_signal.recommendation}_{date.today()}"
+                        alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}"
                         if alert_key not in SENT_ALERTS:
                             send_alerts(analysis, alert_config)
                             SENT_ALERTS.add(alert_key)
@@ -193,12 +201,11 @@ async def run_scheduled_analysis():
         logger.error(f"Concurrent analysis failed: {str(e)}")
         return [], None, None
 
-# Scheduler removed for AWS Lambda (handled by EventBridge)
 
 @app.get("/api/analyze", response_model=AnalysisResponse)
-async def analyze_all():
-    """Analyze all configured instruments."""
-    results, perf, corr = await run_scheduled_analysis()
+async def analyze_all(user_id: str = Depends(get_current_user)):
+    """Analyze all configured instruments for the logged-in user."""
+    results, perf, corr = await run_scheduled_analysis(user_id=user_id)
     return AnalysisResponse(
         analysis_timestamp=datetime.now().isoformat(),
         instruments=results,
@@ -208,10 +215,10 @@ async def analyze_all():
 
 
 @app.get("/api/analyze/{symbol}", response_model=InstrumentAnalysis)
-async def analyze_single(symbol: str):
-    """Analyze a single instrument by symbol."""
+async def analyze_single(symbol: str, user_id: str = Depends(get_current_user)):
+    """Analyze a single instrument by symbol for the logged-in user."""
     try:
-        config = load_config()
+        config = load_config(user_id=user_id)
         params = get_analysis_params(config)
         instruments = get_instruments(config)
         strategy_settings = StrategySettings(**get_strategy_config(config))
@@ -234,28 +241,25 @@ async def analyze_single(symbol: str):
 
 
 @app.get("/api/instruments")
-async def list_instruments():
-    """List all configured instruments."""
-    config = load_config()
+async def list_instruments(user_id: str = Depends(get_current_user)):
+    """List all configured instruments for the user."""
+    config = load_config(user_id=user_id)
     return {"instruments": get_instruments(config)}
 
 
 @app.post("/api/instruments")
-async def add_instrument(instrument: InstrumentConfig):
-    """Add a new instrument to the configuration."""
-    config = load_config()
+async def add_instrument(instrument: InstrumentConfig, user_id: str = Depends(get_current_user)):
+    """Add a new instrument to the user's configuration."""
+    config = load_config(user_id=user_id)
     instruments = get_instruments(config)
     
-    # Check if symbol already exists
     if any(i['symbol'].upper() == instrument.symbol.upper() for i in instruments):
         raise HTTPException(status_code=400, detail=f"Symbol {instrument.symbol} already exists")
     
-    # Simple validation using yfinance
     try:
         yf_sym = _get_yf_symbol(instrument.symbol)
         import yfinance as yf
         ticker = yf.Ticker(yf_sym)
-        # Try to get the current price as a basic sanity check
         data = ticker.history(period="1d")
         if data.empty:
             raise ValueError(f"No market data found for {instrument.symbol}")
@@ -264,37 +268,36 @@ async def add_instrument(instrument: InstrumentConfig):
         raise HTTPException(status_code=400, detail=f"Could not validate symbol {instrument.symbol}: {str(e)}")
 
     instruments.append({"symbol": instrument.symbol.upper(), "name": instrument.name})
-    save_instruments(instruments)
+    save_instruments(instruments, user_id=user_id)
     return {"message": f"Instrument {instrument.symbol} added successfully", "instruments": instruments}
 
 
 @app.delete("/api/instruments/{symbol}")
-async def delete_instrument(symbol: str):
-    """Remove an instrument from the configuration."""
-    config = load_config()
+async def delete_instrument(symbol: str, user_id: str = Depends(get_current_user)):
+    """Remove an instrument from the user's configuration."""
+    config = load_config(user_id=user_id)
     instruments = get_instruments(config)
     
-    # Filter out the symbol
     new_instruments = [i for i in instruments if i['symbol'].upper() != symbol.upper()]
     
     if len(new_instruments) == len(instruments):
         raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found")
     
-    save_instruments(new_instruments)
+    save_instruments(new_instruments, user_id=user_id)
     return {"message": f"Instrument {symbol} removed successfully", "instruments": new_instruments}
 
 
 @app.get("/api/settings", response_model=StrategySettings)
-async def get_settings():
-    """Retrieve current strategy settings."""
-    config = load_config()
+async def get_settings(user_id: str = Depends(get_current_user)):
+    """Retrieve current strategy settings for the user."""
+    config = load_config(user_id=user_id)
     return get_strategy_config(config)
 
 
 @app.post("/api/settings")
-async def update_settings(settings: StrategySettings):
-    """Update strategy settings."""
-    save_strategy_config(settings.dict())
+async def update_settings(settings: StrategySettings, user_id: str = Depends(get_current_user)):
+    """Update strategy settings for the user."""
+    save_strategy_config(settings.dict(), user_id=user_id)
     return {"message": "Strategy settings updated successfully"}
 
 

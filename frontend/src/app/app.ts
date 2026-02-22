@@ -1,22 +1,24 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse } from './services/market-analyzer.service';
+import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { PerformanceBannerComponent } from './components/performance-banner/performance-banner.component';
 import { StrategySettingsComponent } from './components/strategy-settings/strategy-settings.component';
-import { CorrelationHeatmapComponent } from './components/correlation-heatmap/correlation-heatmap.component';
 import { CorrelationModalComponent } from './components/correlation-modal/correlation-modal.component';
-import { WeeklyPerformance, CorrelationData } from './services/market-analyzer.service';
+import { LoginComponent } from './components/login/login.component';
+import { AuthService, User } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationHeatmapComponent, CorrelationModalComponent], templateUrl: './app.html',
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, LoginComponent],
+  templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements OnInit {
   private analyzerService = inject(MarketAnalyzerService);
+  public authService = inject(AuthService);
 
   instruments = signal<InstrumentAnalysis[]>([]);
   loading = signal(false);
@@ -29,7 +31,28 @@ export class App implements OnInit {
   correlationData = signal<CorrelationData | null>(null);
 
   ngOnInit() {
-    this.runAnalysis();
+    // Check for auth token in URL (from Google callback)
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    if (token) {
+      const user: User = {
+        id: urlParams.get('id') || '',
+        name: urlParams.get('name') || '',
+        email: urlParams.get('email') || '',
+        picture: urlParams.get('picture') || ''
+      };
+
+      this.authService.setToken(token);
+      this.authService.setUser(user);
+
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (this.authService.isLoggedIn) {
+      this.runAnalysis();
+    }
   }
 
   runAnalysis() {

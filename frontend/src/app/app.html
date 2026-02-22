@@ -1,10 +1,28 @@
+@if (authService.isLoggedIn) {
 <div class="dashboard">
   <header class="header">
     <div class="header-content">
-      <h1>Market Analyzer</h1>
-      <p class="subtitle">Multi-timeframe analysis for trading decisions</p>
+      <div class="logo-area">
+        <h1>Market Analyzer</h1>
+        <span class="badge">PRO</span>
+      </div>
+      <p class="subtitle">Multi-timeframe analysis for institutional decisions</p>
     </div>
+
     <div class="header-actions">
+      <!-- User Profile Section -->
+      @if (authService.user(); as user) {
+      <div class="user-profile">
+        <img [src]="user.picture" class="user-avatar" [alt]="user.name">
+        <div class="user-info">
+          <span class="user-name">{{ user.name }}</span>
+          <button class="logout-link" (click)="authService.logout()">Sign out</button>
+        </div>
+      </div>
+      }
+
+      <div class="action-divider"></div>
+
       <button class="menu-btn correlation-btn" (click)="showCorrelationModal.set(true)" title="Market Correlation">
         📊
       </button>
@@ -24,6 +42,7 @@
     </div>
   </header>
 
+  <!-- ... rest of the status bar and grid ... -->
   @if (lastUpdated()) {
   <div class="status-bar">
     <span class="last-updated">Last updated: {{ lastUpdated() }}</span>
@@ -75,3 +94,6 @@
   <app-correlation-modal [data]="correlationData()" (close)="showCorrelationModal.set(false)"></app-correlation-modal>
   }
 </div>
+} @else {
+<app-login></app-login>
+}

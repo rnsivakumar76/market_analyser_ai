@@ -61,3 +61,27 @@ variable "vpc_cidr" {
   type        = string
   default     = "10.0.0.0/16"
 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Google Auth & Security
+# ──────────────────────────────────────────────────────────────────────────────
+
+variable "google_client_id" {
+  description = "Google OAuth Client ID"
+  type        = string
+  default     = ""
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth Client Secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "jwt_secret_key" {
+  description = "Secret key for JWT generation (keep this safe!)"
+  type        = string
+  sensitive   = true
+  default     = "7b9d6e5a4c2b8a1f0e9d8c7b6a5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7"
+}
