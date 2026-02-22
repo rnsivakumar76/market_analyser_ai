@@ -1,0 +1,247 @@
+.dashboard {
+  min-height: 100vh;
+  background: #11111b;
+  color: #cdd6f4;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  background: #1e1e2e;
+  border-bottom: 1px solid #313244;
+}
+
+.header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  color: #cdd6f4;
+}
+
+.subtitle {
+  color: #6c7086;
+  margin-top: 4px;
+  font-size: 0.9rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-btn {
+  background: #313244;
+  color: #cdd6f4;
+  border: 1px solid #45475a;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.settings-btn:hover {
+  background: #45475a;
+  border-color: #585b70;
+  transform: rotate(30deg);
+}
+
+.menu-btn {
+  background: #313244;
+  color: #fab387;
+  border: 1px solid #45475a;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.menu-btn:hover {
+  background: #fab387;
+  color: #11111b;
+  border-color: #fab387;
+  box-shadow: 0 0 15px rgba(250, 179, 135, 0.3);
+}
+
+.strategy-btn {
+  background: #313244;
+  color: #fab387;
+  border: 1px solid #45475a;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.strategy-btn:hover {
+  background: #fab387;
+  color: #11111b;
+  border-color: #fab387;
+  box-shadow: 0 0 15px rgba(250, 179, 135, 0.3);
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #89b4fa;
+  color: #1e1e2e;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: #b4befe;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #1e1e2e;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 32px;
+  background: #181825;
+  border-bottom: 1px solid #313244;
+}
+
+.last-updated {
+  color: #6c7086;
+  font-size: 0.85rem;
+}
+
+.summary {
+  display: flex;
+  gap: 20px;
+}
+
+.stat {
+  font-size: 0.85rem;
+  color: #a6adc8;
+}
+
+.stat.bullish {
+  color: #a6e3a1;
+}
+
+.stat.bearish {
+  color: #f38ba8;
+}
+
+.stat.highlight {
+  color: #89b4fa;
+  font-weight: 600;
+}
+
+.error-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  background: rgba(243, 139, 168, 0.1);
+  border-bottom: 1px solid #f38ba8;
+  color: #f38ba8;
+}
+
+.error-banner button {
+  padding: 6px 16px;
+  background: #f38ba8;
+  color: #1e1e2e;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 32px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #313244;
+  border-top-color: #89b4fa;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.loading-container p {
+  color: #a6adc8;
+  margin: 0;
+}
+
+.loading-note {
+  color: #6c7086 !important;
+  font-size: 0.85rem;
+  margin-top: 8px !important;
+}
+
+.instruments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+  padding: 24px 32px;
+}
+
+@media (max-width: 500px) {
+  .instruments-grid {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .status-bar {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+}

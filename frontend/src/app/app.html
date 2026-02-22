@@ -1,0 +1,77 @@
+<div class="dashboard">
+  <header class="header">
+    <div class="header-content">
+      <h1>Market Analyzer</h1>
+      <p class="subtitle">Multi-timeframe analysis for trading decisions</p>
+    </div>
+    <div class="header-actions">
+      <button class="menu-btn correlation-btn" (click)="showCorrelationModal.set(true)" title="Market Correlation">
+        📊
+      </button>
+      <button class="strategy-btn" (click)="showStrategySettings.set(true)" title="Strategy Optimization">
+        ⚡
+      </button>
+      <button class="settings-btn" (click)="showSettings.set(true)" title="Manage Symbols">
+        ⚙️
+      </button>
+      <button class="refresh-btn" (click)="runAnalysis()" [disabled]="loading()">
+        @if (loading()) {
+        <span class="spinner"></span> Analyzing...
+        } @else {
+        Refresh Analysis
+        }
+      </button>
+    </div>
+  </header>
+
+  @if (lastUpdated()) {
+  <div class="status-bar">
+    <span class="last-updated">Last updated: {{ lastUpdated() }}</span>
+    <div class="summary">
+      <span class="stat">{{ instruments().length }} instruments</span>
+      <span class="stat bullish">{{ bullishCount }} bullish</span>
+      <span class="stat bearish">{{ bearishCount }} bearish</span>
+      <span class="stat highlight">{{ tradeWorthyCount }} trade-worthy</span>
+    </div>
+  </div>
+  }
+
+  @if (error()) {
+  <div class="error-banner">
+    <span>{{ error() }}</span>
+    <button (click)="runAnalysis()">Retry</button>
+  </div>
+  }
+
+  @if (loading() && instruments().length === 0) {
+  <div class="loading-container">
+    <div class="loading-spinner"></div>
+    <p>Fetching market data and running analysis...</p>
+    <p class="loading-note">This may take a moment for the first load</p>
+  </div>
+  }
+
+  @if (weeklyPerformance()) {
+  <div style="padding: 0 32px;">
+    <app-performance-banner [performance]="weeklyPerformance()"></app-performance-banner>
+  </div>
+  }
+
+  <main class="instruments-grid">
+    @for (instrument of instruments(); track instrument.symbol) {
+    <app-instrument-card [analysis]="instrument"></app-instrument-card>
+    }
+  </main>
+
+  @if (showSettings()) {
+  <app-settings (close)="showSettings.set(false)" (updated)="runAnalysis()"></app-settings>
+  }
+
+  @if (showStrategySettings()) {
+  <app-strategy-settings (close)="showStrategySettings.set(false)" (updated)="runAnalysis()"></app-strategy-settings>
+  }
+
+  @if (showCorrelationModal()) {
+  <app-correlation-modal [data]="correlationData()" (close)="showCorrelationModal.set(false)"></app-correlation-modal>
+  }
+</div>

@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - USE_MOCK_DATA=false
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend:/app
+      - /app/venv # Don't overwrite container venv with host if it exists
+      - ./backend/cache:/app/cache
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Don't overwrite container node_modules
+    depends_on:
+      - backend
+    restart: always

@@ -1,28 +1,47 @@
-# Angular specific
-/dist/
-/out-tsc/
-/tmp/
-/coverage/
-/e2e/test-output/
-/.angular/
-.angular/
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
 
-# Node modules and dependency files
-/node_modules/
-/package-lock.json
-/yarn.lock
+# Python / Backend
+backend/venv/
+backend/.env
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/dist/
+backend/build/
+backend/*.egg-info/
+
+# Frontend / Angular
+frontend/node_modules/
+frontend/dist/
+frontend/tmp/
+frontend/out-tsc/
+frontend/bazel-out/
+frontend/.angular/
+frontend/.npm/
+frontend/coverage/
+
+# Docker
+.docker/
 
 # Environment files
-/.env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Angular CLI and build artefacts
-/.angular-cli.json
-/.ng/
+# Additional Ignores
+node_modules/
+venv/
+backend/venv/
 
-# TypeScript cache
-*.tsbuildinfo
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*

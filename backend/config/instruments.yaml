@@ -1,0 +1,57 @@
+alpha_vantage:
+  api_key: 7EX94WT7NX8PFUIZ
+twelvedata:
+  api_key: 0bdb613a23cd4d1a945114a224503e7b
+fmp:
+  api_key: bF2I9pQqYw0jRnnJbv3yrDmFwA4yyESM
+instruments:
+- symbol: XAU
+  name: Gold USD
+- symbol: XAG
+  name: Silver USD
+- symbol: BCO
+  name: Brent Crude Oil
+- symbol: USDJPY
+  name: USD/JPY
+- symbol: EURUSD
+  name: EUR/USD
+- symbol: SPX
+  name: S&P 500 Index
+- symbol: AAPL
+  name: Apple Inc.
+- symbol: NVDA
+  name: NVIDIA Corporation
+- symbol: TSLA
+  name: Tesla Inc
+- symbol: BTC-USD
+  name: Bitcoin USD
+analysis:
+  monthly:
+    fast_ma_period: 20
+    slow_ma_period: 50
+    lookback_days: 60
+  weekly:
+    lookback_weeks: 4
+    pullback_threshold: 0.03
+    support_tolerance: 0.02
+  daily:
+    rsi_period: 14
+    rsi_oversold: 30
+    rsi_overbought: 70
+    volume_ma_period: 20
+    volume_surge_threshold: 1.5
+strategy:
+  conviction_threshold: 70
+  adx_threshold: 25
+  atr_multiplier_tp: 3.0
+  atr_multiplier_sl: 1.5
+  portfolio_value: 10000.0
+  risk_per_trade_percent: 1.0
+alerts:
+  telegram:
+    enabled: false
+    bot_token: YOUR_TELEGRAM_BOT_TOKEN
+    chat_id: YOUR_CHAT_ID
+  discord:
+    enabled: false
+    webhook_url: YOUR_DISCORD_WEBHOOK_URL
