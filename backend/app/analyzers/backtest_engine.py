@@ -13,9 +13,16 @@ from .strength_analyzer import analyze_daily_strength
 from .volatility_analyzer import calculate_atr
 from ..signal_generator import generate_trade_signal
 
+import os
+
 logger = logging.getLogger(__name__)
 
-CACHE_DIR = Path(__file__).parent.parent.parent / "cache"
+# Lambda specific cache location
+if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+    CACHE_DIR = Path("/tmp") / "cache"
+else:
+    CACHE_DIR = Path(__file__).parent.parent.parent / "cache"
+
 CACHE_FILE = CACHE_DIR / "backtest_cache.json"
 
 def _load_cache():
@@ -30,8 +37,13 @@ def _load_cache():
     return {}
 
 def _save_cache(cache):
-    with open(CACHE_FILE, 'w') as f:
-        json.dump(cache, f)
+    try:
+        if not CACHE_DIR.exists():
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        with open(CACHE_FILE, 'w') as f:
+            json.dump(cache, f)
+    except Exception as e:
+        logger.warning(f"Could not save backtest cache: {e}")
 
 def get_backtest_results(symbol: str, daily_data: pd.DataFrame, params: Dict[str, Any], settings: StrategySettings = None) -> BacktestAnalysis:
     """Run a historical backtest for a symbol or return cached results."""

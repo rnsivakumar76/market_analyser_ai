@@ -34,6 +34,22 @@ export interface PhaseAnalysis {
   description: string;
 }
 
+export interface PivotPoints {
+  pivot: number;
+  r1: number;
+  r2: number;
+  s1: number;
+  s2: number;
+}
+
+export interface TechnicalAnalysis {
+  pivot_points: PivotPoints;
+  least_resistance_line: 'up' | 'down' | 'flat';
+  trend_breakout: 'bullish_breakout' | 'bearish_breakout' | 'none';
+  breakout_confidence: number;
+  description: string;
+}
+
 export interface TradeSignal {
   recommendation: 'bullish' | 'bearish' | 'neutral';
   score: number;
@@ -105,6 +121,7 @@ export interface InstrumentAnalysis {
   candle_patterns: CandleAnalysis;
   benchmark_direction: 'bullish' | 'bearish' | 'neutral';
   trade_signal: TradeSignal;
+  technical_indicators?: TechnicalAnalysis;
   position_sizing?: PositionSizing;
 }
 

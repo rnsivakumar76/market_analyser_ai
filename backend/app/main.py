@@ -40,11 +40,11 @@ app.include_router(auth_router, prefix="/api")
 # Lazy analysis helper to keep imports deferred
 def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_direction: Any = None, strategy_settings: Any = None) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
-    from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price, _get_yf_symbol
+    from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price, _get_yf_symbols
     from .analyzers import (
         analyze_monthly_trend, analyze_weekly_pullback, analyze_daily_strength,
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
-        get_backtest_results, detect_candle_patterns
+        get_backtest_results, detect_candle_patterns, analyze_technical_indicators
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis
@@ -54,13 +54,19 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     # Fetch data
     daily_data = fetch_historical_data(symbol, days=500)
     weekly_data = fetch_weekly_data(symbol, weeks=12)
-    current_price = get_current_price(symbol)
+    
+    try:
+        current_price = get_current_price(symbol)
+    except Exception as e:
+        logger.warning(f"Could not fetch current price for {symbol}: {e}. Using last daily close.")
+        current_price = float(daily_data['Close'].iloc[-1])
     
     trend = analyze_monthly_trend(daily_data, params.get('monthly', {}))
     pullback = analyze_weekly_pullback(weekly_data, current_price, params.get('weekly', {}))
     strength = analyze_daily_strength(daily_data, params.get('daily', {}))
     phase = analyze_market_phase(daily_data, params.get('daily', {}))
     candle_res = detect_candle_patterns(daily_data)
+    tech_indicators = analyze_technical_indicators(daily_data)
     
     trade_signal = generate_trade_signal(
         trend, pullback, strength, 
@@ -68,8 +74,18 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         settings=strategy_settings
     )
     
+    # Boost/adjust score based on technical indicators
+    if tech_indicators.trend_breakout == 'bullish_breakout':
+        trade_signal.score = min(trade_signal.score + 15, 100)
+        trade_signal.reasons.append(f"Bullish Breakout ({tech_indicators.breakout_confidence*100:.0f}% confidence)")
+    elif tech_indicators.trend_breakout == 'bearish_breakout':
+        trade_signal.score = max(trade_signal.score - 15, -100)
+        trade_signal.reasons.append(f"Bearish Breakout ({tech_indicators.breakout_confidence*100:.0f}% confidence)")
+
     volatility = analyze_volatility_and_risk(daily_data, current_price, trade_signal.recommendation.value)
-    fundamentals = analyze_fundamentals(symbol, _get_yf_symbol(symbol))
+    # Use the primary mapping for fundamentals
+    primary_yf_sym = _get_yf_symbols(symbol)[0]
+    fundamentals = analyze_fundamentals(symbol, primary_yf_sym)
     backtest = get_backtest_results(symbol, daily_data, params)
     
     return InstrumentAnalysis(
@@ -86,8 +102,9 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         backtest_results=backtest,
         candle_patterns=candle_res,
         benchmark_direction=benchmark_direction,
-        trade_signal=trade_signal
-    )
+        trade_signal=trade_signal,
+        technical_indicators=tech_indicators
+    ), daily_data
 
 @app.get("/")
 async def root():
@@ -140,8 +157,7 @@ async def run_scheduled_analysis(user_id: str = "global_default"):
         sym = inst['symbol'].upper()
         try:
             bench = btc_bench if ("-USD" in sym or "BTC" in sym or "ETH" in sym) else spy_bench
-            analysis = analyze_instrument_lazy(sym, inst['name'], params, bench, strategy_settings)
-            hist_data = fetch_historical_data(sym, days=60)
+            analysis, hist_data = analyze_instrument_lazy(sym, inst['name'], params, bench, strategy_settings)
             return sym, analysis, hist_data
         except Exception as e:
             logger.error(f"Error analyzing {sym}: {e}")
@@ -163,7 +179,7 @@ async def run_scheduled_analysis(user_id: str = "global_default"):
     perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC-USD": btc_bench}, strategy_settings)
     correlation_results = calculate_correlations(data_map)
     results = apply_position_sizing(results, correlation_results, strategy_settings)
-    
+    logger.info(f"Analysis complete. Returning results for: {[a.symbol for a in results]}")
     return results, perf_summary, correlation_results
 
 @app.get("/api/analyze")
@@ -193,7 +209,8 @@ async def analyze_single(symbol: str, user_id: str = Depends(get_current_user)):
             name = inst['name']
             break
             
-    return analyze_instrument_lazy(symbol.upper(), name, params, strategy_settings=strategy_settings)
+    analysis, _ = analyze_instrument_lazy(symbol.upper(), name, params, strategy_settings=strategy_settings)
+    return analysis
 
 @app.get("/api/instruments")
 async def list_instruments(user_id: str = Depends(get_current_user)):
@@ -245,6 +262,32 @@ async def update_settings(settings: Dict[str, Any], user_id: str = Depends(get_c
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.get("/api/test/gold")
+async def test_gold():
+    from .models import StrategySettings
+    from .config_loader import load_config, get_analysis_params, get_strategy_config
+    from .data_fetcher import YF_SYMBOL_MAP, _get_yf_symbols
+    
+    config = load_config()
+    params = get_analysis_params(config)
+    strategy_settings = StrategySettings(**get_strategy_config(config))
+    
+    try:
+        analysis, _ = analyze_instrument_lazy("XAU", "Gold USD Test", params, strategy_settings=strategy_settings)
+        return {
+            "analysis": analysis,
+            "yf_symbol_map": YF_SYMBOL_MAP,
+            "xau_symbols": _get_yf_symbols("XAU")
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "yf_symbol_map": YF_SYMBOL_MAP,
+            "xau_symbols": _get_yf_symbols("XAU")
+        }
 
 # Handler for AWS Lambda
 handler = Mangum(app)

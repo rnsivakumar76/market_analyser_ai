@@ -77,6 +77,40 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
           <p class="description">{{ analysis.daily_strength.description }}</p>
         </div>
       </div>
+
+      @if (analysis.technical_indicators) {
+        <div class="tech-indicators-section">
+          <div class="tech-header">Strategic Pivot & Breakout</div>
+          <div class="tech-grid">
+            <div class="tech-item pivot-main">
+              <span class="tech-label">Pivot Point</span>
+              <span class="tech-value">\${{ analysis.technical_indicators.pivot_points.pivot }}</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Resistance 1</span>
+              <span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r1 }}</span>
+            </div>
+             <div class="tech-item">
+              <span class="tech-label">Support 1</span>
+              <span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s1 }}</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">LLR</span>
+              <span class="tech-value" [class]="getResistanceClass()">
+                {{ analysis.technical_indicators.least_resistance_line.toUpperCase() }}
+              </span>
+            </div>
+          </div>
+          
+          @if (analysis.technical_indicators.trend_breakout !== 'none') {
+            <div class="breakout-badge" [class]="getBreakoutClass()">
+              🎯 {{ analysis.technical_indicators.trend_breakout.replace('_', ' ').toUpperCase() }} 
+              ({{ (analysis.technical_indicators.breakout_confidence * 100).toFixed(0) }}%)
+            </div>
+          }
+          <p class="description tech-desc">{{ analysis.technical_indicators.description }}</p>
+        </div>
+      }
       
       @if (analysis.volatility_risk) {
         <div class="risk-section">
@@ -749,6 +783,85 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       font-size: 0.8rem;
       margin-bottom: 4px;
     }
+
+    .tech-indicators-section {
+      background: rgba(137, 180, 250, 0.05);
+      border: 1px solid rgba(137, 180, 250, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .tech-header {
+      color: #89b4fa;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tech-header::before {
+      content: "🧠";
+    }
+
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tech-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tech-label {
+      font-size: 0.7rem;
+      color: #9399b2;
+    }
+
+    .tech-value {
+      font-weight: 700;
+      color: #cdd6f4;
+      font-size: 0.85rem;
+    }
+
+    .tech-value.res { color: #f38ba8; }
+    .tech-value.sup { color: #a6e3a1; }
+    .tech-value.up { color: #a6e3a1; }
+    .tech-value.down { color: #f38ba8; }
+
+    .breakout-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .breakout-badge.bullish {
+      background: rgba(166, 227, 161, 0.2);
+      color: #a6e3a1;
+      border: 1px solid #a6e3a1;
+    }
+
+    .breakout-badge.bearish {
+      background: rgba(243, 139, 168, 0.2);
+      color: #f38ba8;
+      border: 1px solid #f38ba8;
+    }
+
+    .tech-desc {
+      font-size: 0.75rem;
+      color: #a6adc8;
+      border-top: 1px solid rgba(137, 180, 250, 0.1);
+      padding-top: 8px;
+    }
   `]
 })
 export class InstrumentCardComponent {
@@ -800,5 +913,18 @@ export class InstrumentCardComponent {
 
   getPhaseClass(): string {
     return this.analysis.market_phase.phase;
+  }
+
+  getResistanceClass(): string {
+    if (!this.analysis.technical_indicators) return '';
+    return this.analysis.technical_indicators.least_resistance_line;
+  }
+
+  getBreakoutClass(): string {
+    if (!this.analysis.technical_indicators) return '';
+    const type = this.analysis.technical_indicators.trend_breakout;
+    if (type.includes('bullish')) return 'bullish';
+    if (type.includes('bearish')) return 'bearish';
+    return '';
   }
 }

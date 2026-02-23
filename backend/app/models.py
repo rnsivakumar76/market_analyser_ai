@@ -80,6 +80,22 @@ class StrengthAnalysis(BaseModel):
     description: str
 
 
+class PivotPoints(BaseModel):
+    pivot: float
+    r1: float
+    r2: float
+    s1: float
+    s2: float
+
+
+class TechnicalAnalysis(BaseModel):
+    pivot_points: PivotPoints
+    least_resistance_line: str  # 'up', 'down', 'flat'
+    trend_breakout: str  # 'bullish_breakout', 'bearish_breakout', 'none'
+    breakout_confidence: float  # 0 to 1
+    description: str
+
+
 class TradeSignal(BaseModel):
     recommendation: Signal
     score: int  # -100 to +100
@@ -113,6 +129,7 @@ class InstrumentAnalysis(BaseModel):
     candle_patterns: CandleAnalysis
     benchmark_direction: Signal
     trade_signal: TradeSignal
+    technical_indicators: Optional[TechnicalAnalysis] = None
     position_sizing: Optional[PositionSizing] = None
 
 

@@ -37,12 +37,20 @@ def get_fmp_fetcher():
     return _fmp_fetcher
 
 YF_SYMBOL_MAP = {
-    'XAU': 'GC=F', 'XAG': 'SI=F', 'BCO': 'BZ=F', 
-    'USDJPY': 'JPY=X', 'EURUSD': 'EURUSD=X', 'SPX': '^GSPC', 'SPX500': '^GSPC'
+    'XAU': ['XAUUSD=X', 'GC=F', 'GOLD'], 
+    'XAG': ['XAGUSD=X', 'SI=F', 'SILVER'], 
+    'BCO': ['BZ=F', 'EB=F'], 
+    'USDJPY': ['JPY=X', 'USDJPY=X'], 
+    'EURUSD': ['EURUSD=X', 'EUR=X'], 
+    'SPX': ['^GSPC', 'SPY'], 
+    'SPX500': ['^GSPC', 'SPY']
 }
 
-def _get_yf_symbol(symbol: str) -> str:
-    return YF_SYMBOL_MAP.get(symbol.upper(), symbol)
+def _get_yf_symbols(symbol: str) -> list:
+    mapped = YF_SYMBOL_MAP.get(symbol.upper())
+    if mapped:
+        return mapped if isinstance(mapped, list) else [mapped]
+    return [symbol]
 
 
 def generate_mock_data(symbol: str, days: int = 90, base_price: float = None) -> pd.DataFrame:
@@ -132,24 +140,24 @@ def fetch_historical_data(
         return df
 
     # Try yfinance first (no restrictive API limits)
-    try:
-        yf_sym = _get_yf_symbol(symbol)
-        print(f"Trying yfinance for {symbol} (as {yf_sym})...")
-        if end_date is None:
-            end_date = datetime.now()
-        
-        start_date = end_date - timedelta(days=days)
-        
-        ticker = yf.Ticker(yf_sym)
-        df = ticker.history(start=start_date, end=end_date)
-        
-        if not df.empty:
-            print(f"✅ yfinance success for {symbol} as {yf_sym}")
-            return df
-        else:
-            raise ValueError(f"No data found for symbol: {yf_sym}")
-    except Exception as e:
-        print(f"❌ yfinance failed for {symbol}: {e}")
+    yf_symbols = _get_yf_symbols(symbol)
+    for yf_sym in yf_symbols:
+        try:
+            print(f"Trying yfinance for {symbol} (as {yf_sym})...")
+            if end_date is None:
+                end_date = datetime.now()
+            
+            start_date = end_date - timedelta(days=days)
+            
+            ticker = yf.Ticker(yf_sym)
+            df = ticker.history(start=start_date, end=end_date)
+            
+            if not df.empty:
+                print(f"✅ yfinance success for {symbol} as {yf_sym}")
+                return df
+        except Exception as e:
+            print(f"❌ yfinance failed for {symbol} as {yf_sym}: {e}")
+            continue
 
     # Try Alpha Vantage second (best for Singapore)
     try:
@@ -197,20 +205,24 @@ def get_current_price(symbol: str) -> float:
         return 100.0 # Extreme fallback
 
     # Try yfinance first
-    try:
-        yf_sym = _get_yf_symbol(symbol)
-        print(f"Trying yfinance for current price of {symbol} (as {yf_sym})...")
-        ticker = yf.Ticker(yf_sym)
-        data = ticker.history(period="1d")
-        
-        if not data.empty:
-            price = float(data['Close'].iloc[-1])
-            print(f"✅ yfinance price success for {symbol} as {yf_sym}: {price}")
-            return price
-        else:
-            raise ValueError(f"No current price data for symbol: {yf_sym}")
-    except Exception as e:
-        print(f"❌ yfinance price failed for {symbol}: {e}")
+    yf_symbols = _get_yf_symbols(symbol)
+    for yf_sym in yf_symbols:
+        try:
+            print(f"Trying yfinance for current price of {symbol} (as {yf_sym})...")
+            ticker = yf.Ticker(yf_sym)
+            data = ticker.history(period="1d")
+            
+            if data.empty:
+                # Fallback for weekends/gaps: try last 5 days
+                data = ticker.history(period="5d")
+                
+            if not data.empty:
+                price = float(data['Close'].iloc[-1])
+                print(f"✅ yfinance price success for {symbol} as {yf_sym}: {price}")
+                return price
+        except Exception as e:
+            print(f"❌ yfinance price failed for {symbol} as {yf_sym}: {e}")
+            continue
 
     # Try Alpha Vantage second
     try:
