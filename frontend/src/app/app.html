@@ -79,11 +79,22 @@
   </div>
   }
 
-  <main class="instruments-grid">
-    @for (instrument of instruments(); track instrument.symbol) {
-    <app-instrument-card [analysis]="instrument"></app-instrument-card>
-    }
-  </main>
+  @if (!selectedInstrument()) {
+    <main class="instruments-grid summary-view">
+      @for (instrument of instruments(); track instrument.symbol) {
+      <app-instrument-summary [analysis]="instrument" (select)="selectedInstrument.set(instrument)"></app-instrument-summary>
+      }
+    </main>
+  } @else {
+    <div class="detail-view-container">
+      <button class="back-link" (click)="selectedInstrument.set(null)">
+        ← Back to all instruments
+      </button>
+      <div class="detailed-card-wrapper">
+        <app-instrument-card [analysis]="selectedInstrument()!"></app-instrument-card>
+      </div>
+    </div>
+  }
 
   @if (showSettings()) {
   <app-settings (close)="showSettings.set(false)" (updated)="runAnalysis()"></app-settings>

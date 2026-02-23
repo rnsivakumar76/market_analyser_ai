@@ -9,11 +9,12 @@ import { CorrelationModalComponent } from './components/correlation-modal/correl
 import { UserManualComponent } from './components/user-manual/user-manual.component';
 import { LoginComponent } from './components/login/login.component';
 import { AuthService, User } from './services/auth.service';
+import { InstrumentSummaryComponent } from './components/instrument-summary/instrument-summary.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent],
+  imports: [CommonModule, InstrumentCardComponent, InstrumentSummaryComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -31,6 +32,7 @@ export class App implements OnInit {
   showUserManual = signal(false);
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
+  selectedInstrument = signal<InstrumentAnalysis | null>(null);
 
   ngOnInit() {
     // Check for auth token in URL (from Google callback)
@@ -69,6 +71,14 @@ export class App implements OnInit {
         });
 
         this.instruments.set(sortedInstruments);
+
+        // Update selection if exists
+        const currentSelection = this.selectedInstrument();
+        if (currentSelection) {
+          const updated = sortedInstruments.find(i => i.symbol === currentSelection.symbol);
+          this.selectedInstrument.set(updated || null);
+        }
+
         this.weeklyPerformance.set(response.weekly_performance);
         this.correlationData.set(response.correlation_data);
         this.lastUpdated.set(new Date(response.analysis_timestamp).toLocaleString());

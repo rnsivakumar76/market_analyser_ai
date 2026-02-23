@@ -44,7 +44,8 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     from .analyzers import (
         analyze_monthly_trend, analyze_weekly_pullback, analyze_daily_strength,
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
-        get_backtest_results, detect_candle_patterns, analyze_technical_indicators
+        get_backtest_results, detect_candle_patterns, analyze_technical_indicators,
+        analyze_news_sentiment
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis
@@ -67,6 +68,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     phase = analyze_market_phase(daily_data, params.get('daily', {}))
     candle_res = detect_candle_patterns(daily_data)
     tech_indicators = analyze_technical_indicators(daily_data)
+    news_sentiment = analyze_news_sentiment(symbol)
     
     trade_signal = generate_trade_signal(
         trend, pullback, strength, 
@@ -81,6 +83,14 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     elif tech_indicators.trend_breakout == 'bearish_breakout':
         trade_signal.score = max(trade_signal.score - 15, -100)
         trade_signal.reasons.append(f"Bearish Breakout ({tech_indicators.breakout_confidence*100:.0f}% confidence)")
+
+    # Boost/adjust based on news sentiment
+    if news_sentiment.label == "Bullish":
+        trade_signal.score = min(trade_signal.score + 10, 100)
+        trade_signal.reasons.append(f"Positive News Sentiment (+10 boost)")
+    elif news_sentiment.label == "Bearish":
+        trade_signal.score = max(trade_signal.score - 10, -100)
+        trade_signal.reasons.append(f"Negative News Sentiment (-10 penalty)")
 
     volatility = analyze_volatility_and_risk(daily_data, current_price, trade_signal.recommendation.value)
     # Use the primary mapping for fundamentals
@@ -103,7 +113,8 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         candle_patterns=candle_res,
         benchmark_direction=benchmark_direction,
         trade_signal=trade_signal,
-        technical_indicators=tech_indicators
+        technical_indicators=tech_indicators,
+        news_sentiment=news_sentiment
     ), daily_data
 
 @app.get("/")
@@ -259,13 +270,34 @@ async def update_settings(settings: Dict[str, Any], user_id: str = Depends(get_c
     save_strategy_config(settings, user_id=user_id)
     return {"message": "Strategy settings updated successfully"}
 
+@app.get("/api/chart/{symbol}")
+async def get_chart_data(symbol: str):
+    from .data_fetcher import fetch_historical_data
+    try:
+        df = fetch_historical_data(symbol, days=365)
+        # Convert to list of dicts for frontend
+        data = []
+        for index, row in df.iterrows():
+            data.append({
+                "time": index.strftime('%Y-%m-%d'),
+                "open": float(row['Open']),
+                "high": float(row['High']),
+                "low": float(row['Low']),
+                "close": float(row['Close']),
+                "volume": float(row['Volume'])
+            })
+        return data
+    except Exception as e:
+        logger.error(f"Error fetching chart data for {symbol}: {e}")
+        return {"error": str(e)}
+
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
 @app.get("/api/test/gold")
 async def test_gold():
-    from .models import StrategySettings
+    from .models import StrategySettings, Signal
     from .config_loader import load_config, get_analysis_params, get_strategy_config
     from .data_fetcher import YF_SYMBOL_MAP, _get_yf_symbols
     
@@ -274,7 +306,8 @@ async def test_gold():
     strategy_settings = StrategySettings(**get_strategy_config(config))
     
     try:
-        analysis, _ = analyze_instrument_lazy("XAU", "Gold USD Test", params, strategy_settings=strategy_settings)
+        # Pass Signal.NEUTRAL to avoid validation error
+        analysis, _ = analyze_instrument_lazy("XAU", "Gold USD Test", params, benchmark_direction=Signal.NEUTRAL, strategy_settings=strategy_settings)
         return {
             "analysis": analysis,
             "yf_symbol_map": YF_SYMBOL_MAP,
@@ -282,6 +315,7 @@ async def test_gold():
         }
     except Exception as e:
         import traceback
+        logger.error(f"Test Gold Failed: {e}\n{traceback.format_exc()}")
         return {
             "error": str(e),
             "traceback": traceback.format_exc(),

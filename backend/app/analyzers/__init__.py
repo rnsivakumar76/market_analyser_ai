@@ -10,6 +10,7 @@ from .performance_analyzer import calculate_weekly_performance
 from .correlation_analyzer import calculate_correlations
 from .position_sizer import apply_position_sizing
 from .technical_analyzer import analyze_technical_indicators
+from .news_analyzer import analyze_news_sentiment
 from ..models import CandleAnalysis, PerformanceSummary, CorrelationData
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     'calculate_correlations',
     'CorrelationData',
     'apply_position_sizing',
-    'analyze_technical_indicators'
+    'analyze_technical_indicators',
+    'analyze_news_sentiment'
 ]

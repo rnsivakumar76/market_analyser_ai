@@ -19,3 +19,5 @@ starlette
 cryptography
 httpx
 itsdangerous
+beautifulsoup4==4.12.3
+vaderSentiment==3.3.2

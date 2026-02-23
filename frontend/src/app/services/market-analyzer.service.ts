@@ -106,6 +106,30 @@ export interface PositionSizing {
   description: string;
 }
 
+export interface NewsItem {
+  title: string;
+  source: string;
+  url: string;
+  sentiment_score: number;
+  sentiment_label: string;
+}
+
+export interface NewsSentiment {
+  score: number;
+  label: string;
+  sentiment_summary: string;
+  news_items: NewsItem[];
+}
+
+export interface ChartData {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 export interface InstrumentAnalysis {
   symbol: string;
   name: string;
@@ -123,6 +147,7 @@ export interface InstrumentAnalysis {
   trade_signal: TradeSignal;
   technical_indicators?: TechnicalAnalysis;
   position_sizing?: PositionSizing;
+  news_sentiment?: NewsSentiment;
 }
 
 export interface WeeklyPerformance {
@@ -165,6 +190,10 @@ export class MarketAnalyzerService {
 
   getInstruments(): Observable<{ instruments: { symbol: string; name: string }[] }> {
     return this.http.get<{ instruments: { symbol: string; name: string }[] }>(`${this.apiUrl}/instruments`);
+  }
+
+  getChartData(symbol: string): Observable<ChartData[]> {
+    return this.http.get<ChartData[]>(`${this.apiUrl}/chart/${symbol}`);
   }
 
   addInstrument(symbol: string, name: string): Observable<any> {

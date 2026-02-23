@@ -114,6 +114,21 @@ class PositionSizing(BaseModel):
     description: str
 
 
+class NewsItem(BaseModel):
+    title: str
+    source: str
+    url: str
+    sentiment_score: float # -1 to 1
+    sentiment_label: str # Bullish, Bearish, Neutral
+
+
+class NewsSentiment(BaseModel):
+    score: float # -1 to 1
+    label: str # Bullish, Bearish, Neutral
+    sentiment_summary: str
+    news_items: List[NewsItem]
+
+
 class InstrumentAnalysis(BaseModel):
     symbol: str
     name: str
@@ -131,6 +146,7 @@ class InstrumentAnalysis(BaseModel):
     trade_signal: TradeSignal
     technical_indicators: Optional[TechnicalAnalysis] = None
     position_sizing: Optional[PositionSizing] = None
+    news_sentiment: Optional[NewsSentiment] = None
 
 
 class PerformanceSummary(BaseModel):
