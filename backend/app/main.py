@@ -73,7 +73,9 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     trade_signal = generate_trade_signal(
         trend, pullback, strength, 
         candle_res, benchmark_direction,
-        settings=strategy_settings
+        settings=strategy_settings,
+        current_price=current_price,
+        tech_indicators=tech_indicators
     )
     
     # Boost/adjust score based on technical indicators

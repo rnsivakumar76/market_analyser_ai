@@ -10,7 +10,7 @@ def calculate_pivot_points(df: pd.DataFrame) -> PivotPoints:
     """
     if len(df) < 2:
         zero = 0.0
-        return PivotPoints(pivot=zero, r1=zero, r2=zero, s1=zero, s2=zero)
+        return PivotPoints(pivot=zero, r1=zero, r2=zero, r3=zero, s1=zero, s2=zero, s3=zero)
     
     # Use the previous complete bar (the last one is usually the current live one)
     prev_bar = df.iloc[-2]
@@ -23,13 +23,17 @@ def calculate_pivot_points(df: pd.DataFrame) -> PivotPoints:
     s1 = (2 * pivot) - high
     r2 = pivot + (high - low)
     s2 = pivot - (high - low)
+    r3 = high + 2 * (pivot - low)
+    s3 = low - 2 * (high - pivot)
     
     return PivotPoints(
         pivot=round(float(pivot), 2),
         r1=round(float(r1), 2),
         r2=round(float(r2), 2),
+        r3=round(float(r3), 2),
         s1=round(float(s1), 2),
-        s2=round(float(s2), 2)
+        s2=round(float(s2), 2),
+        s3=round(float(s3), 2)
     )
 
 def analyze_least_resistance_line(df: pd.DataFrame) -> str:

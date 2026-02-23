@@ -84,8 +84,10 @@ class PivotPoints(BaseModel):
     pivot: float
     r1: float
     r2: float
+    r3: float
     s1: float
     s2: float
+    s3: float
 
 
 class TechnicalAnalysis(BaseModel):
@@ -101,6 +103,8 @@ class TradeSignal(BaseModel):
     score: int  # -100 to +100
     reasons: List[str]
     trade_worthy: bool
+    action_plan: str = ""
+    action_plan_details: str = ""
 
 
 class PositionSizing(BaseModel):

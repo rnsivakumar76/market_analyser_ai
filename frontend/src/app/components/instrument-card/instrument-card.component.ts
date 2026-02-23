@@ -142,6 +142,12 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             }
           </div>
 
+          <div class="action-plan" [class]="getSignalClass()">
+            <div class="plan-header">Actionable Plan</div>
+            <div class="plan-title">{{ analysis.trade_signal.action_plan }}</div>
+            <p class="plan-details">{{ analysis.trade_signal.action_plan_details }}</p>
+          </div>
+
           @if (analysis.trade_signal.reasons.length > 0) {
             <div class="reasons highlight-reasons">
               <h4>Trustworthy Indicators</h4>
@@ -203,22 +209,23 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
 
           @if (analysis.technical_indicators) {
             <div class="tech-indicators-section">
-              <div class="tech-header">Strategic Pivot & Breakout</div>
+              <div class="tech-header">Strategic Pivot Matrix</div>
+              <div class="tech-grid pivot-matrix">
+                <div class="tech-item"><span class="tech-label">Resistance 3</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r3 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Resistance 2</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r2 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Resistance 1</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r1 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Support 1</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s1 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Support 2</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s2 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Support 3</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s3 }}</span></div>
+              </div>
+              
               <div class="tech-grid">
                 <div class="tech-item pivot-main">
-                  <span class="tech-label">Pivot Point</span>
+                  <span class="tech-label">Daily Pivot Point</span>
                   <span class="tech-value">\${{ analysis.technical_indicators.pivot_points.pivot }}</span>
                 </div>
                 <div class="tech-item">
-                  <span class="tech-label">Resistance 1</span>
-                  <span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r1 }}</span>
-                </div>
-                <div class="tech-item">
-                  <span class="tech-label">Support 1</span>
-                  <span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s1 }}</span>
-                </div>
-                <div class="tech-item">
-                  <span class="tech-label">LLR</span>
+                  <span class="tech-label">Least Resistance</span>
                   <span class="tech-value" [class]="getResistanceClass()">
                     {{ analysis.technical_indicators.least_resistance_line.toUpperCase() }}
                   </span>
@@ -851,6 +858,43 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       margin: 4px 0 0 0;
     }
 
+    .action-plan {
+      background: rgba(30,30,46,0.5);
+      border: 1px solid #313244;
+      border-left: 4px solid #89b4fa;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 4px 8px 8px 4px;
+    }
+    
+    .action-plan.bullish { border-left-color: #a6e3a1; }
+    .action-plan.bearish { border-left-color: #f38ba8; }
+
+    .plan-header {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #9399b2;
+      margin-bottom: 6px;
+    }
+
+    .plan-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #cdd6f4;
+      margin-bottom: 8px;
+    }
+    
+    .action-plan.bullish .plan-title { color: #a6e3a1; }
+    .action-plan.bearish .plan-title { color: #f38ba8; }
+
+    .plan-details {
+      font-size: 0.85rem;
+      color: #a6adc8;
+      line-height: 1.5;
+      margin: 0;
+    }
+
     .reasons {
       padding: 16px;
       border-radius: 8px;
@@ -903,9 +947,16 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
 
     .tech-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 8px;
       margin-bottom: 12px;
+    }
+
+    .tech-grid.pivot-matrix {
+      grid-template-columns: repeat(3, 1fr);
+      background: rgba(24, 24, 37, 0.5);
+      border-radius: 8px;
+      padding: 8px;
     }
 
     .tech-item {

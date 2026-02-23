@@ -38,8 +38,10 @@ export interface PivotPoints {
   pivot: number;
   r1: number;
   r2: number;
+  r3: number;
   s1: number;
   s2: number;
+  s3: number;
 }
 
 export interface TechnicalAnalysis {
@@ -55,6 +57,8 @@ export interface TradeSignal {
   score: number;
   reasons: string[];
   trade_worthy: boolean;
+  action_plan: string;
+  action_plan_details: string;
 }
 
 export interface VolatilityAnalysis {
