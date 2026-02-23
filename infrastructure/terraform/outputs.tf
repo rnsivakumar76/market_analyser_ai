@@ -8,6 +8,7 @@ output "frontend_url" {
   value       = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
 }
 
+/*
 output "cloudfront_url" {
   description = "CloudFront URL — this is your public app URL"
   value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
@@ -17,6 +18,7 @@ output "cloudfront_distribution_id" {
   description = "CloudFront distribution ID — used by CI/CD to invalidate cache"
   value       = aws_cloudfront_distribution.frontend.id
 }
+*/
 
 output "frontend_s3_bucket" {
   description = "S3 bucket name for the frontend — CI/CD syncs build artifacts here"
