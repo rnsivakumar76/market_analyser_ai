@@ -105,6 +105,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         name=name,
         current_price=round(current_price, 2),
         analysis_date=date.today(),
+        last_updated=datetime.now().isoformat(),
         monthly_trend=trend,
         weekly_pullback=pullback,
         daily_strength=strength,

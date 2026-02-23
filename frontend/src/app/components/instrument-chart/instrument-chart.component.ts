@@ -24,6 +24,7 @@ export class InstrumentChartComponent implements AfterViewInit, OnDestroy, OnCha
 
     private chart: IChartApi | null = null;
     private candleSeries: ISeriesApi<"Candlestick"> | null = null;
+    private resizeObserver: ResizeObserver | null = null;
 
     ngAfterViewInit() {
         this.initChart();
@@ -76,18 +77,24 @@ export class InstrumentChartComponent implements AfterViewInit, OnDestroy, OnCha
             this.candleSeries.setData(this.data as any);
             this.chart.timeScale().fitContent();
         }
-    }
 
-    @HostListener('window:resize')
-    onResize() {
-        if (this.chart && this.chartContainer) {
-            this.chart.applyOptions({
-                width: this.chartContainer.nativeElement.clientWidth
-            });
-        }
+        this.resizeObserver = new ResizeObserver(entries => {
+            if (entries.length === 0 || entries[0].target !== this.chartContainer.nativeElement) {
+                return;
+            }
+            const newRect = entries[0].contentRect;
+            if (this.chart && newRect.width > 0 && newRect.height > 0) {
+                this.chart.applyOptions({ width: newRect.width, height: newRect.height });
+            }
+        });
+
+        this.resizeObserver.observe(this.chartContainer.nativeElement);
     }
 
     ngOnDestroy() {
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+        }
         if (this.chart) {
             this.chart.remove();
         }

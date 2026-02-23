@@ -138,6 +138,7 @@ class InstrumentAnalysis(BaseModel):
     name: str
     current_price: float
     analysis_date: date
+    last_updated: str
     monthly_trend: TrendAnalysis
     weekly_pullback: PullbackAnalysis
     daily_strength: StrengthAnalysis

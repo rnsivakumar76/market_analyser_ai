@@ -1,7 +1,6 @@
-import { Component, Input, inject } from '@angular/core';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { InstrumentAnalysis, MarketAnalyzerService, ChartData } from '../../services/market-analyzer.service';
+import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem } from '../../services/market-analyzer.service';
 import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
 
 @Component({
@@ -22,11 +21,17 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
           </div>
           <span class="name">{{ analysis.name }}</span>
         </div>
-        <div class="price-info">
-          <span class="price">\${{ analysis.current_price.toFixed(2) }}</span>
-          <span class="change" [class]="getPriceChangeClass()">
-            {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}%
-          </span>
+        <div class="header-actions-right">
+          <div class="price-info">
+            <span class="price" title="Current or Last Daily Close Price">\${{ analysis.current_price.toFixed(2) }}</span>
+            <span class="change" [class]="getPriceChangeClass()">
+              {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}%
+            </span>
+          </div>
+          <div class="last-updated-row">
+            <span class="last-updated-text">Updated: {{ getTimeAgo(analysis.last_updated) }}</span>
+            <button class="btn-refresh-local" (click)="onRefresh()" title="Refresh Instrument">🔄</button>
+          </div>
         </div>
       </div>
 
@@ -112,7 +117,7 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
               <p class="news-summary">{{ analysis.news_sentiment.sentiment_summary }}</p>
               <div class="news-items">
                 @for (item of analysis.news_sentiment.news_items.slice(0, 3); track item.title) {
-                  <div (click)="openNewsModal(item.url)" class="news-item-link">
+                  <div (click)="openNewsModal(item)" class="news-item-link">
                     <span class="news-item-title">{{ item.title }}</span>
                     <div class="news-item-meta">
                       <span class="news-source">{{ item.source }}</span>
@@ -300,14 +305,26 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
         </div>
       </div>
       
-      @if (selectedNewsUrl) {
+      @if (selectedNewsItem) {
         <div class="news-modal-overlay" (click)="closeNewsModal()">
-          <div class="news-modal-content" (click)="$event.stopPropagation()">
+          <div class="news-modal-content news-preview-card" (click)="$event.stopPropagation()">
             <div class="news-modal-header">
               <h3>Intelligence Viewer</h3>
               <button class="close-btn" (click)="closeNewsModal()">×</button>
             </div>
-            <iframe [src]="selectedNewsUrl" class="news-iframe"></iframe>
+            <div class="news-preview-body">
+              <span class="news-preview-source">{{ selectedNewsItem.source }}</span>
+              <h2 class="news-preview-title">{{ selectedNewsItem.title }}</h2>
+              <div class="news-preview-meta">
+                <span class="news-sentiment" [class]="selectedNewsItem.sentiment_label.toLowerCase()">
+                  Sentiment: {{ selectedNewsItem.sentiment_label }} (Score: {{ selectedNewsItem.sentiment_score.toFixed(2) }})
+                </span>
+              </div>
+              <p class="news-preview-text">
+                Direct embedded viewing is blocked by the news provider's security settings.
+              </p>
+              <a [href]="selectedNewsItem.url" target="_blank" class="btn-read-full">Read Full Article on {{ selectedNewsItem.source }} ↗</a>
+            </div>
           </div>
         </div>
       }
@@ -374,6 +391,43 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     .symbol-info {
       display: flex;
       flex-direction: column;
+    }
+
+    .header-actions-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .last-updated-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .last-updated-text {
+      font-size: 0.7rem;
+      color: #9399b2;
+      font-style: italic;
+    }
+
+    .btn-refresh-local {
+      background: rgba(137, 180, 250, 0.1);
+      border: 1px solid rgba(137, 180, 250, 0.2);
+      border-radius: 4px;
+      padding: 4px 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .btn-refresh-local:hover {
+      background: rgba(137, 180, 250, 0.3);
+      transform: rotate(15deg);
     }
 
     .symbol-row {
@@ -1181,31 +1235,113 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       color: #f38ba8;
     }
 
-    .news-iframe {
-      flex: 1;
+    .news-preview-card {
+      max-width: 600px;
+      height: auto;
+      max-height: 80vh;
+    }
+
+    .news-preview-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .news-preview-source {
+      font-size: 0.8rem;
+      color: #9399b2;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .news-preview-title {
+      font-size: 1.4rem;
+      color: #cdd6f4;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .news-preview-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .news-preview-text {
+      color: #a6adc8;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      padding: 16px;
+      background: rgba(24, 24, 37, 0.5);
+      border-radius: 8px;
+      border: 1px dashed #313244;
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .btn-read-full {
+      display: inline-block;
       width: 100%;
-      border: none;
-      background: #ffffff; /* News sites expect white bg */
+      text-align: center;
+      padding: 12px 20px;
+      background: #89b4fa;
+      color: #1e1e2e;
+      text-decoration: none;
+      font-weight: 700;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn-read-full:hover {
+      background: #b4befe;
     }
   `]
 })
 export class InstrumentCardComponent {
   @Input({ required: true }) analysis!: InstrumentAnalysis;
+  @Output() refresh = new EventEmitter<string>();
 
   private marketAnalyzerService = inject(MarketAnalyzerService);
-  private sanitizer = inject(DomSanitizer);
 
   showChart = false;
   chartData: ChartData[] = [];
   isLoadingChart = false;
-  selectedNewsUrl: SafeResourceUrl | null = null;
+  selectedNewsItem: NewsItem | null = null;
 
-  openNewsModal(url: string) {
-    this.selectedNewsUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  openNewsModal(item: NewsItem) {
+    this.selectedNewsItem = item;
   }
 
   closeNewsModal() {
-    this.selectedNewsUrl = null;
+    this.selectedNewsItem = null;
+  }
+
+  onRefresh() {
+    this.refresh.emit(this.analysis.symbol);
+  }
+
+  getTimeAgo(timestamp: string): string {
+    if (!timestamp) return 'Unknown';
+    const updatedDate = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - updatedDate.getTime();
+
+    // Convert to seconds
+    const diffSecs = Math.floor(diffMs / 1000);
+
+    if (diffSecs < 60) return `Just now`;
+    if (diffSecs < 3600) {
+      const mins = Math.floor(diffSecs / 60);
+      return `${mins} min${mins !== 1 ? 's' : ''} ago`;
+    }
+    if (diffSecs < 86400) {
+      const hours = Math.floor(diffSecs / 3600);
+      return `${hours} hr${hours !== 1 ? 's' : ''} ago`;
+    }
+    const days = Math.floor(diffSecs / 86400);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
   }
 
   toggleChart() {

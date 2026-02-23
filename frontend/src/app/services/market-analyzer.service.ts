@@ -139,6 +139,7 @@ export interface InstrumentAnalysis {
   name: string;
   current_price: number;
   analysis_date: string;
+  last_updated: string;
   monthly_trend: TrendAnalysis;
   weekly_pullback: PullbackAnalysis;
   daily_strength: StrengthAnalysis;
