@@ -5,7 +5,7 @@ name: Deploy to AWS
 
 on:
   push:
-    branches: [main]
+    branches: [main, "feature/*"]
   workflow_dispatch:
 
 permissions:
@@ -134,21 +134,15 @@ jobs:
         with:
           name: frontend-dist
           path: ./dist
-      - name: Sync S3 & Invalidate CloudFront
+      - name: Sync S3
         run: |
           BUCKET=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_s3_bucket']['value'])")
-          DIST_ID=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['cloudfront_distribution_id']['value'])")
           
           # Sync to S3
           aws s3 sync ./dist/ s3://$BUCKET/ --delete
           
-          # Invalidate CloudFront Cache
-          echo "Invalidating CloudFront cache for $DIST_ID..."
-          aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
       - name: Summary
         run: |
-          CF_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['cloudfront_url']['value'])")
           S3_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_url']['value'])")
           echo "### 🚀 App is live!" >> $GITHUB_STEP_SUMMARY
-          echo "- **Secure (HTTPS):** $CF_URL" >> $GITHUB_STEP_SUMMARY
           echo "- **Direct S3 (HTTP):** $S3_URL" >> $GITHUB_STEP_SUMMARY

@@ -92,6 +92,28 @@ export class App implements OnInit {
     });
   }
 
+  refreshInstrument(symbol: string) {
+    this.loading.set(true);
+    this.analyzerService.analyzeSingle(symbol).subscribe({
+      next: (updatedAnalysis) => {
+        const sortedInstruments = this.instruments().map(i => i.symbol === symbol ? updatedAnalysis : i).sort((a, b) => {
+          return Math.abs(b.trade_signal.score) - Math.abs(a.trade_signal.score);
+        });
+        this.instruments.set(sortedInstruments);
+
+        if (this.selectedInstrument()?.symbol === symbol) {
+          this.selectedInstrument.set(updatedAnalysis);
+        }
+        this.loading.set(false);
+      },
+      error: (err) => {
+        this.error.set(`Failed to refresh ${symbol}.`);
+        this.loading.set(false);
+        console.error('Refresh error:', err);
+      }
+    });
+  }
+
   get tradeWorthyCount(): number {
     return this.instruments().filter(i => i.trade_signal.trade_worthy).length;
   }

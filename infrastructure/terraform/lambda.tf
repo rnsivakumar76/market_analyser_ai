@@ -19,7 +19,7 @@ resource "aws_lambda_function" "api" {
       GOOGLE_CLIENT_ID     = var.google_client_id
       GOOGLE_CLIENT_SECRET = var.google_client_secret
       JWT_SECRET_KEY       = var.jwt_secret_key
-      FRONTEND_URL         = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+      FRONTEND_URL         = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
     }
   }
 

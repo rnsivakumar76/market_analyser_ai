@@ -11,7 +11,9 @@ def generate_trade_signal(
     strength: StrengthAnalysis,
     candle: CandleAnalysis,
     benchmark_direction: Signal = Signal.NEUTRAL,
-    settings: StrategySettings = None
+    settings: StrategySettings = None,
+    current_price: float = None,
+    tech_indicators = None
 ) -> TradeSignal:
     """
     Generate a composite trade signal based on all analyses.
@@ -131,9 +133,34 @@ def generate_trade_signal(
         elif candle.is_bullish is not None:
              reasons.append(f"Price Action Trigger confirmed: {candle.description}")
 
+    action_plan = "Stand Aside"
+    action_plan_details = "Market conditions do not support a high-probability trade."
+
+    if current_price and tech_indicators:
+        pivots = tech_indicators.pivot_points
+        if recommendation == Signal.BULLISH:
+            if trade_worthy:
+                action_plan = "Enter Long (Market)"
+                action_plan_details = f"Strong bullish setup confirmed. Consider entry near current price ${current_price:.2f}. Key support/stop levels below are Pivot (${pivots.pivot}) and S1 (${pivots.s1}). Next targets are R1 (${pivots.r1}) and R2 (${pivots.r2})."
+            else:
+                action_plan = "Wait for Trigger / Pullback"
+                action_plan_details = f"Developing bullish bias. Ideal entry is on a pullback near support (S1: ${pivots.s1}, S2: ${pivots.s2}) with a bullish reversal candle, or upon a confirmed breakout above R1 (${pivots.r1})."
+        elif recommendation == Signal.BEARISH:
+            if trade_worthy:
+                action_plan = "Enter Short (Market)"
+                action_plan_details = f"Strong bearish setup confirmed. Consider short entry near current price ${current_price:.2f}. Key resistance/stop levels above are Pivot (${pivots.pivot}) and R1 (${pivots.r1}). Next targets are S1 (${pivots.s1}) and S2 (${pivots.s2})."
+            else:
+                action_plan = "Wait for Trigger / Bounce"
+                action_plan_details = f"Developing bearish bias. Ideal entry is on a bounce near resistance (R1: ${pivots.r1}, R2: ${pivots.r2}) with a bearish reversal candle, or upon a confirmed breakdown below S1 (${pivots.s1})."
+        else:
+             action_plan = "Wait and Observe"
+             action_plan_details = f"Neutral bias. Key levels to watch: Breakout above R1 (${pivots.r1}) or Breakdown below S1 (${pivots.s1})."
+
     return TradeSignal(
         recommendation=recommendation,
         score=score,
         reasons=reasons,
-        trade_worthy=trade_worthy
+        trade_worthy=trade_worthy,
+        action_plan=action_plan,
+        action_plan_details=action_plan_details
     )

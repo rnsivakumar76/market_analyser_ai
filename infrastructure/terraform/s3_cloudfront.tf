@@ -63,8 +63,9 @@ resource "aws_s3_bucket_policy" "frontend_public" {
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CloudFront — HTTPS & Content Delivery
+# CloudFront — HTTPS & Content Delivery (DISABLED FOR NOW)
 # ──────────────────────────────────────────────────────────────────────────────
+/*
 resource "aws_cloudfront_distribution" "frontend" {
   origin {
     domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
@@ -130,3 +131,4 @@ resource "aws_cloudfront_distribution" "frontend" {
     Environment = var.environment
   }
 }
+*/
