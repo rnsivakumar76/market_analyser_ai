@@ -48,9 +48,12 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         analyze_news_sentiment
     )
     from .signal_generator import generate_trade_signal
-    from .models import InstrumentAnalysis
+    from .models import InstrumentAnalysis, Signal
     
     logger.info(f"Analyzing {symbol}...")
+    
+    if benchmark_direction is None:
+        benchmark_direction = Signal.NEUTRAL
     
     # Fetch data
     daily_data = fetch_historical_data(symbol, days=500)
