@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from starlette.middleware.sessions import SessionMiddleware
 from mangum import Mangum
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import List, Dict, Any
 import logging
 import os
@@ -105,7 +105,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         name=name,
         current_price=round(current_price, 2),
         analysis_date=date.today(),
-        last_updated=datetime.now().isoformat(),
+        last_updated=datetime.now(timezone.utc).isoformat(),
         monthly_trend=trend,
         weekly_pullback=pullback,
         daily_strength=strength,
@@ -201,7 +201,7 @@ async def analyze_all(user_id: str = Depends(get_current_user)):
     from .models import AnalysisResponse
     results, perf, corr = await run_scheduled_analysis(user_id=user_id)
     return AnalysisResponse(
-        analysis_timestamp=datetime.now().isoformat(),
+        analysis_timestamp=datetime.now(timezone.utc).isoformat(),
         instruments=results,
         weekly_performance=perf,
         correlation_data=corr
@@ -296,7 +296,7 @@ async def get_chart_data(symbol: str):
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @app.get("/api/test/gold")
 async def test_gold():
