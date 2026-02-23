@@ -236,6 +236,17 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
                   </span>
                 </div>
               </div>
+
+              <!-- Swing Fibonacci Ranges -->
+              <div class="tech-header fib-header">Swing Fibonacci Ranges <span class="fib-trend" [class]="analysis.technical_indicators.fibonacci.trend">({{ analysis.technical_indicators.fibonacci.trend.toUpperCase() }})</span></div>
+              <div class="tech-grid fib-matrix">
+                <div class="tech-item"><span class="tech-label">Ext 1.618</span><span class="tech-value ext">\${{ analysis.technical_indicators.fibonacci.ext_1618 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Ext 1.272</span><span class="tech-value ext">\${{ analysis.technical_indicators.fibonacci.ext_1272 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Swing High</span><span class="tech-value swing">\${{ analysis.technical_indicators.fibonacci.swing_high }}</span></div>
+                <div class="tech-item"><span class="tech-label">Ret 38.2%</span><span class="tech-value ret">\${{ analysis.technical_indicators.fibonacci.ret_382 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Ret 61.8%</span><span class="tech-value ret">\${{ analysis.technical_indicators.fibonacci.ret_618 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Swing Low</span><span class="tech-value swing">\${{ analysis.technical_indicators.fibonacci.swing_low }}</span></div>
+              </div>
               
               @if (analysis.technical_indicators.trend_breakout !== 'none') {
                 <div class="breakout-badge" [class]="getBreakoutClass()">
@@ -1013,6 +1024,13 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       padding: 8px;
     }
 
+    .tech-grid.fib-matrix {
+      grid-template-columns: repeat(3, 1fr);
+      background: rgba(24, 24, 37, 0.5);
+      border-radius: 8px;
+      padding: 8px;
+    }
+
     .tech-item {
       display: flex;
       flex-direction: column;
@@ -1022,6 +1040,24 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       font-size: 0.7rem;
       color: #9399b2;
     }
+
+    .fib-header {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(137, 180, 250, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .fib-trend {
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    
+    .fib-trend.up { color: #a6e3a1; }
+    .fib-trend.down { color: #f38ba8; }
+    .fib-trend.flat { color: #9399b2; }
 
     .tech-value {
       font-weight: 700;
@@ -1033,6 +1069,9 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     .tech-value.sup { color: #a6e3a1; }
     .tech-value.up { color: #a6e3a1; }
     .tech-value.down { color: #f38ba8; }
+    .tech-value.ext { color: #cba6f7; }
+    .tech-value.ret { color: #f9e2af; }
+    .tech-value.swing { color: #89b4fa; }
 
     .breakout-badge {
       display: inline-block;

@@ -44,8 +44,20 @@ export interface PivotPoints {
   s3: number;
 }
 
+export interface FibonacciLevels {
+  trend: 'up' | 'down' | 'flat';
+  swing_high: number;
+  swing_low: number;
+  ret_382: number;
+  ret_500: number;
+  ret_618: number;
+  ext_1272: number;
+  ext_1618: number;
+}
+
 export interface TechnicalAnalysis {
   pivot_points: PivotPoints;
+  fibonacci: FibonacciLevels;
   least_resistance_line: 'up' | 'down' | 'flat';
   trend_breakout: 'bullish_breakout' | 'bearish_breakout' | 'none';
   breakout_confidence: number;

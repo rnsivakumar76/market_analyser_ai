@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, Tuple
-from ..models import TechnicalAnalysis, PivotPoints, Signal
+from ..models import TechnicalAnalysis, PivotPoints, Signal, FibonacciLevels
 
 def calculate_pivot_points(df: pd.DataFrame) -> PivotPoints:
     """
@@ -88,9 +88,51 @@ def detect_trend_breakout(df: pd.DataFrame) -> Tuple[str, float]:
     
     return "none", 0.0
 
+def calculate_fibonacci_levels(df: pd.DataFrame) -> FibonacciLevels:
+    """Calculate recent swing Fibonacci retracements and extensions."""
+    if len(df) < 20:
+        zero = 0.0
+        return FibonacciLevels(trend="flat", swing_high=zero, swing_low=zero, ret_382=zero, ret_500=zero, ret_618=zero, ext_1272=zero, ext_1618=zero)
+        
+    recent_period = df.tail(60) # look at last 60 days for major swing
+    high = recent_period['High'].max()
+    low = recent_period['Low'].min()
+    current = df['Close'].iloc[-1]
+    
+    diff = high - low
+    if diff == 0:
+        return FibonacciLevels(trend="flat", swing_high=high, swing_low=low, ret_382=high, ret_500=high, ret_618=high, ext_1272=high, ext_1618=high)
+        
+    if (current - low) >= (high - current):
+        trend = "up"
+        ret_382 = high - (diff * 0.382)
+        ret_500 = high - (diff * 0.500)
+        ret_618 = high - (diff * 0.618)
+        ext_1272 = low + (diff * 1.272)
+        ext_1618 = low + (diff * 1.618)
+    else:
+        trend = "down"
+        ret_382 = low + (diff * 0.382)
+        ret_500 = low + (diff * 0.500)
+        ret_618 = low + (diff * 0.618)
+        ext_1272 = high - (diff * 1.272)
+        ext_1618 = high - (diff * 1.618)
+        
+    return FibonacciLevels(
+        trend=trend,
+        swing_high=round(float(high), 2),
+        swing_low=round(float(low), 2),
+        ret_382=round(float(ret_382), 2),
+        ret_500=round(float(ret_500), 2),
+        ret_618=round(float(ret_618), 2),
+        ext_1272=round(float(ext_1272), 2),
+        ext_1618=round(float(ext_1618), 2)
+    )
+
 def analyze_technical_indicators(df: pd.DataFrame) -> TechnicalAnalysis:
     """Main function to consolidate technical indicators."""
     pivots = calculate_pivot_points(df)
+    fibs = calculate_fibonacci_levels(df)
     least_resistance = analyze_least_resistance_line(df)
     breakout_type, confidence = detect_trend_breakout(df)
     
@@ -113,6 +155,7 @@ def analyze_technical_indicators(df: pd.DataFrame) -> TechnicalAnalysis:
     
     return TechnicalAnalysis(
         pivot_points=pivots,
+        fibonacci=fibs,
         least_resistance_line=least_resistance,
         trend_breakout=breakout_type,
         breakout_confidence=float(confidence),

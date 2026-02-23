@@ -90,8 +90,20 @@ class PivotPoints(BaseModel):
     s3: float
 
 
+class FibonacciLevels(BaseModel):
+    trend: str
+    swing_high: float
+    swing_low: float
+    ret_382: float
+    ret_500: float
+    ret_618: float
+    ext_1272: float
+    ext_1618: float
+
+
 class TechnicalAnalysis(BaseModel):
     pivot_points: PivotPoints
+    fibonacci: FibonacciLevels
     least_resistance_line: str  # 'up', 'down', 'flat'
     trend_breakout: str  # 'bullish_breakout', 'bearish_breakout', 'none'
     breakout_confidence: float  # 0 to 1
