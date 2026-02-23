@@ -71,6 +71,8 @@ export interface TradeSignal {
   trade_worthy: boolean;
   action_plan: string;
   action_plan_details: string;
+  psychological_guard: string;
+  pyramiding_plan: string;
 }
 
 export interface VolatilityAnalysis {

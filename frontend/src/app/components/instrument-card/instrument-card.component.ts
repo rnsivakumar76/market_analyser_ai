@@ -151,6 +151,20 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             <div class="plan-header">Actionable Plan</div>
             <div class="plan-title">{{ analysis.trade_signal.action_plan }}</div>
             <p class="plan-details">{{ analysis.trade_signal.action_plan_details }}</p>
+
+            @if (analysis.trade_signal.psychological_guard) {
+              <div class="psych-guard">
+                <span class="guard-icon">🛡️</span>
+                <span class="guard-text"><strong>Psychological Rule:</strong> {{ analysis.trade_signal.psychological_guard }}</span>
+              </div>
+            }
+
+            @if (analysis.trade_signal.pyramiding_plan && analysis.trade_signal.pyramiding_plan !== 'N/A') {
+              <div class="pyramid-plan">
+                <span class="pyramid-icon">🔼</span>
+                <span class="pyramid-text"><strong>Pyramiding Range:</strong> {{ analysis.trade_signal.pyramiding_plan }}</span>
+              </div>
+            }
           </div>
 
           @if (analysis.trade_signal.reasons.length > 0) {
@@ -958,6 +972,41 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       color: #a6adc8;
       line-height: 1.5;
       margin: 0;
+    }
+
+    .psych-guard, .pyramid-plan {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    
+    .psych-guard {
+      background: rgba(243, 139, 168, 0.05); /* Red tint */
+      border: 1px dashed rgba(243, 139, 168, 0.3);
+      color: #f38ba8;
+    }
+
+    .pyramid-plan {
+      background: rgba(166, 227, 161, 0.05); /* Green tint */
+      border: 1px dashed rgba(166, 227, 161, 0.3);
+      color: #a6e3a1;
+    }
+    
+    .guard-text, .pyramid-text {
+      line-height: 1.4;
+      color: #cdd6f4;
+    }
+    
+    .guard-text strong {
+      color: #f38ba8;
+    }
+    
+    .pyramid-text strong {
+      color: #a6e3a1;
     }
 
     .reasons {

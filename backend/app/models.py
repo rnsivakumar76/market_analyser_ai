@@ -117,6 +117,8 @@ class TradeSignal(BaseModel):
     trade_worthy: bool
     action_plan: str = ""
     action_plan_details: str = ""
+    psychological_guard: str = ""
+    pyramiding_plan: str = ""
 
 
 class PositionSizing(BaseModel):
