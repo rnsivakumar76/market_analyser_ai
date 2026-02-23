@@ -1,4 +1,5 @@
 import { Component, Input, inject } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { InstrumentAnalysis, MarketAnalyzerService, ChartData } from '../../services/market-analyzer.service';
 import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
@@ -111,28 +112,18 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
               <p class="news-summary">{{ analysis.news_sentiment.sentiment_summary }}</p>
               <div class="news-items">
                 @for (item of analysis.news_sentiment.news_items.slice(0, 3); track item.title) {
-                  <a [href]="item.url" target="_blank" class="news-item-link">
+                  <div (click)="openNewsModal(item.url)" class="news-item-link">
                     <span class="news-item-title">{{ item.title }}</span>
                     <div class="news-item-meta">
                       <span class="news-source">{{ item.source }}</span>
                       <span class="news-sentiment" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
                     </div>
-                  </a>
+                  </div>
                 }
               </div>
             </div>
           }
 
-          @if (analysis.trade_signal.reasons.length > 0) {
-            <div class="reasons">
-              <h4>Analysis Summary</h4>
-              <ul>
-                @for (reason of analysis.trade_signal.reasons; track reason) {
-                  <li>{{ reason }}</li>
-                }
-              </ul>
-            </div>
-          }
         </div>
 
         <!-- Side Column (Right) -->
@@ -150,6 +141,17 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
               <span class="trade-worthy">✓ Trade Worthy</span>
             }
           </div>
+
+          @if (analysis.trade_signal.reasons.length > 0) {
+            <div class="reasons highlight-reasons">
+              <h4>Trustworthy Indicators</h4>
+              <ul>
+                @for (reason of analysis.trade_signal.reasons; track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
+            </div>
+          }
 
           <div class="indicators">
             <div class="indicator-item">
@@ -290,6 +292,18 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
           }
         </div>
       </div>
+      
+      @if (selectedNewsUrl) {
+        <div class="news-modal-overlay" (click)="closeNewsModal()">
+          <div class="news-modal-content" (click)="$event.stopPropagation()">
+            <div class="news-modal-header">
+              <h3>Intelligence Viewer</h3>
+              <button class="close-btn" (click)="closeNewsModal()">×</button>
+            </div>
+            <iframe [src]="selectedNewsUrl" class="news-iframe"></iframe>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -838,8 +852,13 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     }
 
     .reasons {
-      padding-top: 12px;
-      border-top: 1px solid #313244;
+      padding: 16px;
+      border-radius: 8px;
+    }
+
+    .highlight-reasons {
+      background: rgba(137, 180, 250, 0.05);
+      border: 1px dashed rgba(137, 180, 250, 0.3);
     }
 
     .reasons h4 {
@@ -1023,12 +1042,12 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     }
 
     .news-item-link {
-      text-decoration: none;
       display: block;
       padding: 8px;
       background: rgba(49, 50, 68, 0.5);
       border-radius: 6px;
       transition: background 0.2s;
+      cursor: pointer;
     }
 
     .news-item-link:hover {
@@ -1053,15 +1072,90 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     .news-sentiment.bullish { color: #a6e3a1; }
     .news-sentiment.bearish { color: #f38ba8; }
     .news-sentiment.neutral { color: #9399b2; }
+
+    .news-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(17, 17, 27, 0.8);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .news-modal-content {
+      background: #1e1e2e;
+      border: 1px solid #313244;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 1000px;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .news-modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #313244;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(30, 30, 46, 0.95);
+    }
+
+    .news-modal-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #cdd6f4;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #a6adc8;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .close-btn:hover {
+      color: #f38ba8;
+    }
+
+    .news-iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+      background: #ffffff; /* News sites expect white bg */
+    }
   `]
 })
 export class InstrumentCardComponent {
   @Input({ required: true }) analysis!: InstrumentAnalysis;
 
   private marketAnalyzerService = inject(MarketAnalyzerService);
+  private sanitizer = inject(DomSanitizer);
+
   showChart = false;
   chartData: ChartData[] = [];
   isLoadingChart = false;
+  selectedNewsUrl: SafeResourceUrl | null = null;
+
+  openNewsModal(url: string) {
+    this.selectedNewsUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
+
+  closeNewsModal() {
+    this.selectedNewsUrl = null;
+  }
 
   toggleChart() {
     this.showChart = !this.showChart;
