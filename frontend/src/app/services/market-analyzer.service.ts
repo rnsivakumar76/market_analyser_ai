@@ -34,6 +34,22 @@ export interface PhaseAnalysis {
   description: string;
 }
 
+export interface PivotPoints {
+  pivot: number;
+  r1: number;
+  r2: number;
+  s1: number;
+  s2: number;
+}
+
+export interface TechnicalAnalysis {
+  pivot_points: PivotPoints;
+  least_resistance_line: 'up' | 'down' | 'flat';
+  trend_breakout: 'bullish_breakout' | 'bearish_breakout' | 'none';
+  breakout_confidence: number;
+  description: string;
+}
+
 export interface TradeSignal {
   recommendation: 'bullish' | 'bearish' | 'neutral';
   score: number;
@@ -90,6 +106,30 @@ export interface PositionSizing {
   description: string;
 }
 
+export interface NewsItem {
+  title: string;
+  source: string;
+  url: string;
+  sentiment_score: number;
+  sentiment_label: string;
+}
+
+export interface NewsSentiment {
+  score: number;
+  label: string;
+  sentiment_summary: string;
+  news_items: NewsItem[];
+}
+
+export interface ChartData {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 export interface InstrumentAnalysis {
   symbol: string;
   name: string;
@@ -105,7 +145,9 @@ export interface InstrumentAnalysis {
   candle_patterns: CandleAnalysis;
   benchmark_direction: 'bullish' | 'bearish' | 'neutral';
   trade_signal: TradeSignal;
+  technical_indicators?: TechnicalAnalysis;
   position_sizing?: PositionSizing;
+  news_sentiment?: NewsSentiment;
 }
 
 export interface WeeklyPerformance {
@@ -148,6 +190,10 @@ export class MarketAnalyzerService {
 
   getInstruments(): Observable<{ instruments: { symbol: string; name: string }[] }> {
     return this.http.get<{ instruments: { symbol: string; name: string }[] }>(`${this.apiUrl}/instruments`);
+  }
+
+  getChartData(symbol: string): Observable<ChartData[]> {
+    return this.http.get<ChartData[]>(`${this.apiUrl}/chart/${symbol}`);
   }
 
   addInstrument(symbol: string, name: string): Observable<any> {

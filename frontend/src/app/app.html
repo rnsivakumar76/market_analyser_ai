@@ -1,12 +1,33 @@
+@if (authService.isLoggedIn) {
 <div class="dashboard">
   <header class="header">
     <div class="header-content">
-      <h1>Market Analyzer</h1>
-      <p class="subtitle">Multi-timeframe analysis for trading decisions</p>
+      <div class="logo-area">
+        <h1>Market Analyzer</h1>
+        <span class="badge">PRO</span>
+      </div>
+      <p class="subtitle">Multi-timeframe analysis for institutional decisions</p>
     </div>
+
     <div class="header-actions">
+      <!-- User Profile Section -->
+      @if (authService.user(); as user) {
+      <div class="user-profile">
+        <img [src]="user.picture" class="user-avatar" [alt]="user.name">
+        <div class="user-info">
+          <span class="user-name">{{ user.name }}</span>
+          <button class="logout-link" (click)="authService.logout()">Sign out</button>
+        </div>
+      </div>
+      }
+
+      <div class="action-divider"></div>
+
       <button class="menu-btn correlation-btn" (click)="showCorrelationModal.set(true)" title="Market Correlation">
         📊
+      </button>
+      <button class="manual-btn" (click)="showUserManual.set(true)" title="Intelligence Manual">
+        📖
       </button>
       <button class="strategy-btn" (click)="showStrategySettings.set(true)" title="Strategy Optimization">
         ⚡
@@ -24,6 +45,7 @@
     </div>
   </header>
 
+  <!-- ... rest of the status bar and grid ... -->
   @if (lastUpdated()) {
   <div class="status-bar">
     <span class="last-updated">Last updated: {{ lastUpdated() }}</span>
@@ -57,11 +79,22 @@
   </div>
   }
 
-  <main class="instruments-grid">
-    @for (instrument of instruments(); track instrument.symbol) {
-    <app-instrument-card [analysis]="instrument"></app-instrument-card>
-    }
-  </main>
+  @if (!selectedInstrument()) {
+    <main class="instruments-grid summary-view">
+      @for (instrument of instruments(); track instrument.symbol) {
+      <app-instrument-summary [analysis]="instrument" (select)="selectedInstrument.set(instrument)"></app-instrument-summary>
+      }
+    </main>
+  } @else {
+    <div class="detail-view-container">
+      <button class="back-link" (click)="selectedInstrument.set(null)">
+        ← Back to all instruments
+      </button>
+      <div class="detailed-card-wrapper">
+        <app-instrument-card [analysis]="selectedInstrument()!"></app-instrument-card>
+      </div>
+    </div>
+  }
 
   @if (showSettings()) {
   <app-settings (close)="showSettings.set(false)" (updated)="runAnalysis()"></app-settings>
@@ -74,4 +107,11 @@
   @if (showCorrelationModal()) {
   <app-correlation-modal [data]="correlationData()" (close)="showCorrelationModal.set(false)"></app-correlation-modal>
   }
+
+  @if (showUserManual()) {
+  <app-user-manual (close)="showUserManual.set(false)"></app-user-manual>
+  }
 </div>
+} @else {
+<app-login></app-login>
+}

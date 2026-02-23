@@ -1,22 +1,26 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse } from './services/market-analyzer.service';
+import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { PerformanceBannerComponent } from './components/performance-banner/performance-banner.component';
 import { StrategySettingsComponent } from './components/strategy-settings/strategy-settings.component';
-import { CorrelationHeatmapComponent } from './components/correlation-heatmap/correlation-heatmap.component';
 import { CorrelationModalComponent } from './components/correlation-modal/correlation-modal.component';
-import { WeeklyPerformance, CorrelationData } from './services/market-analyzer.service';
+import { UserManualComponent } from './components/user-manual/user-manual.component';
+import { LoginComponent } from './components/login/login.component';
+import { AuthService, User } from './services/auth.service';
+import { InstrumentSummaryComponent } from './components/instrument-summary/instrument-summary.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationHeatmapComponent, CorrelationModalComponent], templateUrl: './app.html',
+  imports: [CommonModule, InstrumentCardComponent, InstrumentSummaryComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent],
+  templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements OnInit {
   private analyzerService = inject(MarketAnalyzerService);
+  public authService = inject(AuthService);
 
   instruments = signal<InstrumentAnalysis[]>([]);
   loading = signal(false);
@@ -25,11 +29,34 @@ export class App implements OnInit {
   showSettings = signal(false);
   showStrategySettings = signal(false);
   showCorrelationModal = signal(false);
+  showUserManual = signal(false);
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
+  selectedInstrument = signal<InstrumentAnalysis | null>(null);
 
   ngOnInit() {
-    this.runAnalysis();
+    // Check for auth token in URL (from Google callback)
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    if (token) {
+      const user: User = {
+        id: urlParams.get('id') || '',
+        name: urlParams.get('name') || '',
+        email: urlParams.get('email') || '',
+        picture: urlParams.get('picture') || ''
+      };
+
+      this.authService.setToken(token);
+      this.authService.setUser(user);
+
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (this.authService.isLoggedIn) {
+      this.runAnalysis();
+    }
   }
 
   runAnalysis() {
@@ -38,7 +65,20 @@ export class App implements OnInit {
 
     this.analyzerService.analyzeAll().subscribe({
       next: (response: AnalysisResponse) => {
-        this.instruments.set(response.instruments);
+        // Sort instruments: Highest magnitude score at the top (Absolute value)
+        const sortedInstruments = [...response.instruments].sort((a, b) => {
+          return Math.abs(b.trade_signal.score) - Math.abs(a.trade_signal.score);
+        });
+
+        this.instruments.set(sortedInstruments);
+
+        // Update selection if exists
+        const currentSelection = this.selectedInstrument();
+        if (currentSelection) {
+          const updated = sortedInstruments.find(i => i.symbol === currentSelection.symbol);
+          this.selectedInstrument.set(updated || null);
+        }
+
         this.weeklyPerformance.set(response.weekly_performance);
         this.correlationData.set(response.correlation_data);
         this.lastUpdated.set(new Date(response.analysis_timestamp).toLocaleString());

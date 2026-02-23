@@ -1,0 +1,46 @@
+<div class="modal-overlay" (click)="close.emit()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <div class="title-group">
+                <h2>Intelligence Manual</h2>
+                <span class="version">v1.2 - Strategic Guide</span>
+            </div>
+            <button class="close-icon" (click)="close.emit()">&times;</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="sidebar">
+                @for (section of sections; track section.id) {
+                <button [class.active]="activeSection === section.id" (click)="activeSection = section.id">
+                    <span class="icon">{{ section.icon }}</span>
+                    <span class="lbl">{{ section.title }}</span>
+                </button>
+                }
+            </div>
+
+            <div class="content-area">
+                @for (section of sections; track section.id) {
+                @if (activeSection === section.id) {
+                <div class="section-content animate-fade">
+                    <h3>{{ section.title }}</h3>
+                    <div class="html-content" [innerHTML]="section.content"></div>
+
+                    @if (section.id === 'strategy') {
+                    <div class="strategy-visualization">
+                        <div class="level level-3">Monthly: Macro Filter <span>(Safety First)</span></div>
+                        <div class="level level-2">Weekly: Entry Zone <span>(Optimization)</span></div>
+                        <div class="level level-1">Daily: Momentum <span>(Execution)</span></div>
+                    </div>
+                    }
+                </div>
+                }
+                }
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <p>Institutional Market Analyzer - Trading is high risk. Not financial advice.</p>
+            <button class="done-btn" (click)="close.emit()">Understood</button>
+        </div>
+    </div>
+</div>

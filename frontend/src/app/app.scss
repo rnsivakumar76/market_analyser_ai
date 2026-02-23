@@ -15,15 +15,81 @@
 
 .header h1 {
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
   color: #cdd6f4;
+  letter-spacing: -0.5px;
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge {
+  background: linear-gradient(135deg, #f5c2e7, #cba6f7);
+  color: #11111b;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
 }
 
 .subtitle {
   color: #6c7086;
   margin-top: 4px;
   font-size: 0.9rem;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 12px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #313244;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #cdd6f4;
+}
+
+.logout-link {
+  font-size: 0.75rem;
+  color: #f38ba8;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+}
+
+.action-divider {
+  width: 1px;
+  height: 32px;
+  background: #313244;
+  margin: 0 12px;
 }
 
 .header-actions {
@@ -71,6 +137,27 @@
   color: #11111b;
   border-color: #fab387;
   box-shadow: 0 0 15px rgba(250, 179, 135, 0.3);
+}
+
+.manual-btn {
+  background: #313244;
+  color: #cba6f7;
+  border: 1px solid #45475a;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.manual-btn:hover {
+  background: #cba6f7;
+  color: #11111b;
+  border-color: #cba6f7;
+  box-shadow: 0 0 15px rgba(203, 166, 247, 0.3);
 }
 
 .strategy-btn {
@@ -225,6 +312,45 @@
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 20px;
   padding: 24px 32px;
+
+  &.summary-view {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+.detail-view-container {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.back-link {
+  background: none;
+  border: none;
+  color: #89b4fa;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 1400px;
+  width: 100%;
+  padding: 8px 12px;
+
+  &:hover {
+    color: #b4befe;
+    text-decoration: underline;
+  }
+}
+
+.detailed-card-wrapper {
+  max-width: 1400px;
+  width: 100%;
 }
 
 @media (max-width: 500px) {

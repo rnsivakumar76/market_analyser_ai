@@ -7,40 +7,54 @@ import requests
 import random
 import numpy as np
 import os
+import logging
 from .alpha_vantage_fetcher import AlphaVantageFetcher
 from .twelvedata_fetcher import TwelveDataFetcher
 from .fmp_fetcher import FMPFetcher
 
+# Setup logger
+logger = logging.getLogger(__name__)
+
 # Disable SSL verification warnings and bypass SSL for corporate proxies
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Patch requests session used by yfinance to disable SSL verification
-_original_get = requests.Session.get
-_original_post = requests.Session.post
+_av_fetcher = None
+_td_fetcher = None
+_fmp_fetcher = None
 
-def _patched_get(self, *args, **kwargs):
-    kwargs['verify'] = False
-    return _original_get(self, *args, **kwargs)
+def get_av_fetcher():
+    global _av_fetcher
+    if _av_fetcher is None:
+        _av_fetcher = AlphaVantageFetcher()
+    return _av_fetcher
 
-def _patched_post(self, *args, **kwargs):
-    kwargs['verify'] = False
-    return _original_post(self, *args, **kwargs)
+def get_td_fetcher():
+    global _td_fetcher
+    if _td_fetcher is None:
+        _td_fetcher = TwelveDataFetcher()
+    return _td_fetcher
 
-requests.Session.get = _patched_get
-requests.Session.post = _patched_post
-
-# Initialize all data fetchers as backup
-av_fetcher = AlphaVantageFetcher()
-td_fetcher = TwelveDataFetcher()
-fmp_fetcher = FMPFetcher()
+def get_fmp_fetcher():
+    global _fmp_fetcher
+    if _fmp_fetcher is None:
+        _fmp_fetcher = FMPFetcher()
+    return _fmp_fetcher
 
 YF_SYMBOL_MAP = {
-    'XAU': 'GC=F', 'XAG': 'SI=F', 'BCO': 'BZ=F', 
-    'USDJPY': 'JPY=X', 'EURUSD': 'EURUSD=X', 'SPX': '^GSPC', 'SPX500': '^GSPC'
+    'XAU': ['XAUUSD=X', 'GC=F', 'GOLD'], 
+    'XAG': ['XAGUSD=X', 'SI=F', 'SILVER'], 
+    'BCO': ['BZ=F', 'EB=F'], 
+    'USDJPY': ['JPY=X', 'USDJPY=X'], 
+    'EURUSD': ['EURUSD=X', 'EUR=X'], 
+    'SPX': ['^GSPC', 'SPY'], 
+    'SPX500': ['^GSPC', 'SPY']
 }
 
-def _get_yf_symbol(symbol: str) -> str:
-    return YF_SYMBOL_MAP.get(symbol.upper(), symbol)
+def _get_yf_symbols(symbol: str) -> list:
+    mapped = YF_SYMBOL_MAP.get(symbol.upper())
+    if mapped:
+        return mapped if isinstance(mapped, list) else [mapped]
+    return [symbol]
 
 
 def generate_mock_data(symbol: str, days: int = 90, base_price: float = None) -> pd.DataFrame:
@@ -130,54 +144,54 @@ def fetch_historical_data(
         return df
 
     # Try yfinance first (no restrictive API limits)
-    try:
-        yf_sym = _get_yf_symbol(symbol)
-        print(f"Trying yfinance for {symbol} (as {yf_sym})...")
-        if end_date is None:
-            end_date = datetime.now()
-        
-        start_date = end_date - timedelta(days=days)
-        
-        ticker = yf.Ticker(yf_sym)
-        df = ticker.history(start=start_date, end=end_date)
-        
-        if not df.empty:
-            print(f"✅ yfinance success for {symbol} as {yf_sym}")
-            return df
-        else:
-            raise ValueError(f"No data found for symbol: {yf_sym}")
-    except Exception as e:
-        print(f"❌ yfinance failed for {symbol}: {e}")
+    yf_symbols = _get_yf_symbols(symbol)
+    for yf_sym in yf_symbols:
+        try:
+            logger.info(f"Trying yfinance for {symbol} (as {yf_sym})...")
+            if end_date is None:
+                end_date = datetime.now()
+            
+            start_date = end_date - timedelta(days=days)
+            
+            ticker = yf.Ticker(yf_sym)
+            df = ticker.history(start=start_date, end=end_date)
+            
+            if not df.empty:
+                logger.info(f"✅ yfinance success for {symbol} as {yf_sym}")
+                return df
+        except Exception as e:
+            logger.error(f"❌ yfinance failed for {symbol} as {yf_sym}: {e}")
+            continue
 
     # Try Alpha Vantage second (best for Singapore)
     try:
-        print(f"Trying Alpha Vantage for {symbol}...")
-        data = av_fetcher.fetch_historical_data(symbol, days)
+        logger.info(f"Trying Alpha Vantage for {symbol}...")
+        data = get_av_fetcher().fetch_historical_data(symbol, days)
         if not data.empty:
-            print(f"✅ Alpha Vantage success for {symbol}")
+            logger.info(f"✅ Alpha Vantage success for {symbol}")
             return data
     except Exception as e:
-        print(f"❌ Alpha Vantage failed for {symbol}: {e}")
+        logger.error(f"❌ Alpha Vantage failed for {symbol}: {e}")
     
     # Try Twelve Data third
     try:
-        print(f"Trying Twelve Data for {symbol}...")
-        data = td_fetcher.fetch_historical_data(symbol, days)
+        logger.info(f"Trying Twelve Data for {symbol}...")
+        data = get_td_fetcher().fetch_historical_data(symbol, days)
         if not data.empty:
-            print(f"✅ Twelve Data success for {symbol}")
+            logger.info(f"✅ Twelve Data success for {symbol}")
             return data
     except Exception as e:
-        print(f"❌ Twelve Data failed for {symbol}: {e}")
+        logger.error(f"❌ Twelve Data failed for {symbol}: {e}")
     
     # Try FMP fourth
     try:
-        print(f"Trying FMP for {symbol}...")
-        data = fmp_fetcher.fetch_historical_data(symbol, days)
+        logger.info(f"Trying FMP for {symbol}...")
+        data = get_fmp_fetcher().fetch_historical_data(symbol, days)
         if not data.empty:
-            print(f"✅ FMP success for {symbol}")
+            logger.info(f"✅ FMP success for {symbol}")
             return data
     except Exception as e:
-        print(f"❌ FMP failed for {symbol}: {e}")
+        logger.error(f"❌ FMP failed for {symbol}: {e}")
     
     # No mock data fallback - return error if all sources fail
     raise ValueError(f"Failed to fetch data for {symbol} from all sources")
@@ -195,47 +209,51 @@ def get_current_price(symbol: str) -> float:
         return 100.0 # Extreme fallback
 
     # Try yfinance first
-    try:
-        yf_sym = _get_yf_symbol(symbol)
-        print(f"Trying yfinance for current price of {symbol} (as {yf_sym})...")
-        ticker = yf.Ticker(yf_sym)
-        data = ticker.history(period="1d")
-        
-        if not data.empty:
-            price = float(data['Close'].iloc[-1])
-            print(f"✅ yfinance price success for {symbol} as {yf_sym}: {price}")
-            return price
-        else:
-            raise ValueError(f"No current price data for symbol: {yf_sym}")
-    except Exception as e:
-        print(f"❌ yfinance price failed for {symbol}: {e}")
+    yf_symbols = _get_yf_symbols(symbol)
+    for yf_sym in yf_symbols:
+        try:
+            logger.info(f"Trying yfinance for current price of {symbol} (as {yf_sym})...")
+            ticker = yf.Ticker(yf_sym)
+            data = ticker.history(period="1d")
+            
+            if data.empty:
+                # Fallback for weekends/gaps: try last 5 days
+                data = ticker.history(period="5d")
+                
+            if not data.empty:
+                price = float(data['Close'].iloc[-1])
+                logger.info(f"✅ yfinance price success for {symbol} as {yf_sym}: {price}")
+                return price
+        except Exception as e:
+            logger.error(f"❌ yfinance price failed for {symbol} as {yf_sym}: {e}")
+            continue
 
     # Try Alpha Vantage second
     try:
-        print(f"Trying Alpha Vantage for current price of {symbol}...")
-        price = av_fetcher.get_current_price(symbol)
-        print(f"✅ Alpha Vantage price success for {symbol}: {price}")
+        logger.info(f"Trying Alpha Vantage for current price of {symbol}...")
+        price = get_av_fetcher().get_current_price(symbol)
+        logger.info(f"✅ Alpha Vantage price success for {symbol}: {price}")
         return price
     except Exception as e:
-        print(f"❌ Alpha Vantage price failed for {symbol}: {e}")
+        logger.error(f"❌ Alpha Vantage price failed for {symbol}: {e}")
     
     # Try Twelve Data third
     try:
-        print(f"Trying Twelve Data for current price of {symbol}...")
-        price = td_fetcher.get_current_price(symbol)
-        print(f"✅ Twelve Data price success for {symbol}: {price}")
+        logger.info(f"Trying Twelve Data for current price of {symbol}...")
+        price = get_td_fetcher().get_current_price(symbol)
+        logger.info(f"✅ Twelve Data price success for {symbol}: {price}")
         return price
     except Exception as e:
-        print(f"❌ Twelve Data price failed for {symbol}: {e}")
+        logger.error(f"❌ Twelve Data price failed for {symbol}: {e}")
     
     # Try FMP fourth
     try:
-        print(f"Trying FMP for current price of {symbol}...")
-        price = fmp_fetcher.get_current_price(symbol)
-        print(f"✅ FMP price success for {symbol}: {price}")
+        logger.info(f"Trying FMP for current price of {symbol}...")
+        price = get_fmp_fetcher().get_current_price(symbol)
+        logger.info(f"✅ FMP price success for {symbol}: {price}")
         return price
     except Exception as e:
-        print(f"❌ FMP price failed for {symbol}: {e}")
+        logger.error(f"❌ FMP price failed for {symbol}: {e}")
     
     # No mock data fallback - return error if all sources fail
     raise ValueError(f"Failed to get current price for {symbol} from all sources")
