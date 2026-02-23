@@ -241,6 +241,9 @@ async def add_instrument(instrument_data: Dict[str, str], user_id: str = Depends
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
     
+    if len(instruments) >= 5:
+        raise HTTPException(status_code=400, detail="Maximum limit of 5 instruments reached. Please remove an instrument before adding a new one.")
+    
     symbol = instrument_data.get("symbol", "").upper()
     name = instrument_data.get("name", "")
     
