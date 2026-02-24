@@ -1,7 +1,8 @@
 from typing import List
 from .models import (
     TrendAnalysis, PullbackAnalysis, StrengthAnalysis, 
-    TradeSignal, Signal, CandleAnalysis, StrategySettings
+    TradeSignal, Signal, CandleAnalysis, StrategySettings,
+    FundamentalsAnalysis
 )
 
 
@@ -14,6 +15,8 @@ def generate_trade_signal(
     settings: StrategySettings = None,
     current_price: float = None,
     tech_indicators = None,
+    volatility = None,
+    fundamentals: FundamentalsAnalysis = None,
     **kwargs
 ) -> TradeSignal:
     """
@@ -134,39 +137,77 @@ def generate_trade_signal(
         elif candle.is_bullish is not None:
              reasons.append(f"Price Action Trigger confirmed: {candle.description}")
 
+    # Hard Filter 4: Fundamental Event Guard (Macro Shield)
+    if trade_worthy and fundamentals and fundamentals.has_high_impact_events:
+        trade_worthy = False
+        score = max(score - 20, -100) if score > 0 else min(score + 20, 100)
+        reasons.append("Macro Shield Active: Trade blocked due to high-impact economic events or earnings within 48h.")
+
     action_plan = "Stand Aside"
     action_plan_details = "Market conditions do not support a high-probability trade."
     psychological_guard = "Discipline: Do not force a trade in choppy or uncertain markets."
     pyramiding_plan = "N/A"
+    scaling_plan = "Wait for clear trend alignment."
 
     if current_price and tech_indicators:
         pivots = tech_indicators.pivot_points
         fibs = tech_indicators.fibonacci
+        
+        # Base Scaling text
+        s_tp1 = s_tp2 = s_tp3 = ""
+        if volatility:
+            s_tp1 = f"${volatility.take_profit_level1:.2f}"
+            s_tp2 = f"${volatility.take_profit_level2:.2f}"
+            s_tp3 = f"${volatility.take_profit:.2f}"
+
         if recommendation == Signal.BULLISH:
-            psychological_guard = "NEVER average down into a losing position. If the price falls below support or hits your stop loss, cut the trade immediately. The market does not owe you a bounce."
+            psychological_guard = "NEVER average down into a losing trade. If price falls below support or hits your stop loss, cut the trade immediately. The market does not owe you a bounce."
             if trade_worthy:
                 action_plan = "Enter Long (Market)"
-                action_plan_details = f"Strong bullish setup confirmed. Consider entry near current price ${current_price:.2f}. Support below is Pivot (${pivots.pivot}). Primary target is R1 (${pivots.r1}). If trend accelerates strongly, target Fibonacci Extensions at ${fibs.ext_1272} (127.2%) and ${fibs.ext_1618} (161.8%)."
-                pyramiding_plan = f"Add 50% to position size only IF price successfully breaks and holds above R1 (${pivots.r1}), simultaneously moving your Stop Loss to break-even."
+                action_plan_details = f"Strong bullish setup confirmed near ${current_price:.2f}. Support is Pivot (${pivots.pivot}). If trend accelerates, target Fibonacci Extensions."
+                
+                if volatility:
+                    scaling_plan = (
+                        f"Stage 1 (De-risk): Exit 30% at {s_tp1} & Move SL to Break-even. "
+                        f"Stage 2 (Profit): Exit 40% at {s_tp2}. "
+                        f"Stage 3 (Runner): Leave 30% for {s_tp3} or trail by 2.0x ATR."
+                    )
+                else:
+                    scaling_plan = f"Target R1 (${pivots.r1}) for first exit, then trail."
+                
+                pyramiding_plan = f"Aggressive Addition: Add 50% to position size IF price holds above R1 (${pivots.r1}) AND RSI stays < 70."
             else:
                 action_plan = "Wait for Trigger / Pullback"
-                action_plan_details = f"Developing bullish bias. Ideal entry is on a pullback near support (S1: ${pivots.s1}) or the 38.2% Fib Retracement (${fibs.ret_382}) with a bullish reversal candle."
-                pyramiding_plan = "Do not pyramid until initial position is firmly in profit and a major resistance level is cleared."
+                action_plan_details = f"Ideal entry is on a pullback near support (S1: ${pivots.s1}) or the 38.2% Fib Retracement (${fibs.ret_382})."
+                scaling_plan = "Awaiting entry confirmation before finalizing exit stages."
+                pyramiding_plan = "Do not pyramid until initial position is firmly in profit."
         elif recommendation == Signal.BEARISH:
-            psychological_guard = "NEVER average up into a losing short position. If the price rallies past resistance or hits your stop loss, cover immediately to prevent infinite downside."
+            psychological_guard = "NEVER average up into a losing short. If price rallies past resistance, cover immediately. Infinite downside risk in shorts."
             if trade_worthy:
                 action_plan = "Enter Short (Market)"
-                action_plan_details = f"Strong bearish setup confirmed. Consider short entry near current price ${current_price:.2f}. Resistance above is Pivot (${pivots.pivot}). Primary target is S1 (${pivots.s1}). If trend accelerates strongly, target Fibonacci Extensions at ${fibs.ext_1272} (127.2%) and ${fibs.ext_1618} (161.8%)."
-                pyramiding_plan = f"Add 50% to short position only IF price successfully breaks and holds below S1 (${pivots.s1}), simultaneously moving your Stop Loss to break-even."
+                action_plan_details = f"Strong bearish setup confirmed near ${current_price:.2f}. Resistance is Pivot (${pivots.pivot}). If decline accelerates, target Fibonacci Extensions."
+                
+                if volatility:
+                    scaling_plan = (
+                        f"Stage 1 (De-risk): Exit 30% at {s_tp1} & Move SL to Break-even. "
+                        f"Stage 2 (Profit): Exit 40% at {s_tp2}. "
+                        f"Stage 3 (Runner): Leave 30% for {s_tp3} or trail by 2.0x ATR."
+                    )
+                else:
+                    scaling_plan = f"Target S1 (${pivots.s1}) for first exit, then trail."
+                
+                pyramiding_plan = f"Aggressive Addition: Add 50% to short position IF price holds below S1 (${pivots.s1}) AND RSI stays > 30."
             else:
                 action_plan = "Wait for Trigger / Bounce"
-                action_plan_details = f"Developing bearish bias. Ideal entry is on a bounce near resistance (R1: ${pivots.r1}) or the 38.2% Fib Retracement (${fibs.ret_382}) with a bearish reversal candle."
-                pyramiding_plan = "Do not pyramid until initial position is firmly in profit and a major support level is broken."
+                action_plan_details = f"Ideal entry is on a bounce near resistance (R1: ${pivots.r1}) or 38.2% Fib Retracement."
+                scaling_plan = "Awaiting entry confirmation."
+                pyramiding_plan = "Do not pyramid until initial position is firmly in profit."
         else:
-             action_plan = "Wait and Observe"
-             action_plan_details = f"Neutral bias. Key intraday levels: Breakout above R1 (${pivots.r1}) or Breakdown below S1 (${pivots.s1}). Reversal zones: {fibs.swing_low} (Low) to {fibs.swing_high} (High)."
-             psychological_guard = "Patience is a position. Awaiting clear structural setup to protect capital."
-             pyramiding_plan = "N/A"
+            action_plan = "Wait and Observe"
+            action_plan_details = f"Neutral bias. Key zones: R1 (${pivots.r1}) and S1 (${pivots.s1})."
+            psychological_guard = "Patience is a position. Awaiting clear structural setup."
+            pyramiding_plan = "N/A"
+            scaling_plan = "N/A - Sideways Market"
 
     return TradeSignal(
         recommendation=recommendation,
@@ -176,5 +217,6 @@ def generate_trade_signal(
         action_plan=action_plan,
         action_plan_details=action_plan_details,
         psychological_guard=psychological_guard,
-        pyramiding_plan=pyramiding_plan
+        pyramiding_plan=pyramiding_plan,
+        scaling_plan=scaling_plan
     )

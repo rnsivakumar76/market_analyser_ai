@@ -73,12 +73,15 @@ export interface TradeSignal {
   action_plan_details: string;
   psychological_guard: string;
   pyramiding_plan: string;
+  scaling_plan: string;
 }
 
 export interface VolatilityAnalysis {
   atr: number;
   stop_loss: number;
   take_profit: number;
+  take_profit_level1?: number;
+  take_profit_level2?: number;
   risk_reward_ratio: number;
   description: string;
 }

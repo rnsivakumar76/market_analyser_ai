@@ -45,7 +45,9 @@ class FundamentalsAnalysis(BaseModel):
 class VolatilityAnalysis(BaseModel):
     atr: float
     stop_loss: float
-    take_profit: float
+    take_profit: float  # Final target
+    take_profit_level1: Optional[float] = None  # Scale out 1
+    take_profit_level2: Optional[float] = None  # Scale out 2
     risk_reward_ratio: float
     description: str
 
@@ -131,6 +133,7 @@ class TradeSignal(BaseModel):
     action_plan_details: str = ""
     psychological_guard: str = ""
     pyramiding_plan: str = ""
+    scaling_plan: str = ""
 
 
 class PositionSizing(BaseModel):

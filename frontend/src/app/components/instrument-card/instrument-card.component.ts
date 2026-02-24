@@ -57,6 +57,13 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
                 <span class="pyramid-text"><strong>Pyramiding Range:</strong> {{ analysis.trade_signal.pyramiding_plan }}</span>
               </div>
             }
+
+            @if (analysis.trade_signal.scaling_plan && analysis.trade_signal.scaling_plan !== 'N/A') {
+              <div class="scaling-plan">
+                <span class="scaling-icon">⚖️</span>
+                <span class="scaling-text"><strong>Scaling Plan:</strong> {{ analysis.trade_signal.scaling_plan }}</span>
+              </div>
+            }
           </div>
 
           <!-- 2. PULLBACK WARNING (URGENT ALERT) -->
@@ -1006,7 +1013,7 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       margin: 0;
     }
 
-    .psych-guard, .pyramid-plan {
+    .psych-guard, .pyramid-plan, .scaling-plan {
       margin-top: 12px;
       padding: 10px;
       border-radius: 6px;
@@ -1027,8 +1034,14 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       border: 1px dashed rgba(166, 227, 161, 0.3);
       color: #a6e3a1;
     }
+
+    .scaling-plan {
+      background: rgba(203, 166, 247, 0.05); /* Purple tint */
+      border: 1px dashed rgba(203, 166, 247, 0.3);
+      color: #cba6f7;
+    }
     
-    .guard-text, .pyramid-text {
+    .guard-text, .pyramid-text, .scaling-text {
       line-height: 1.4;
       color: #cdd6f4;
     }
@@ -1039,6 +1052,10 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     
     .pyramid-text strong {
       color: #a6e3a1;
+    }
+
+    .scaling-text strong {
+      color: #cba6f7;
     }
 
     .reasons {

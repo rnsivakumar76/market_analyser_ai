@@ -107,6 +107,11 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     tech_indicators = analyze_technical_indicators(execution_data)
     news_sentiment = analyze_news_sentiment(symbol)
     
+    # Calculate volatility and fundamentals first to inform the action plan
+    volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value)
+    primary_yf_sym = _get_yf_symbols(symbol)[0]
+    fundamentals = analyze_fundamentals(symbol, primary_yf_sym)
+    
     trade_signal = generate_trade_signal(
         trend=trend, 
         pullback=pullback, 
@@ -115,7 +120,9 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         benchmark_direction=benchmark_direction,
         settings=strategy_settings,
         current_price=current_price,
-        tech_indicators=tech_indicators
+        tech_indicators=tech_indicators,
+        volatility=volatility,
+        fundamentals=fundamentals
     )
     
     # NEW: Pullback Warning Logic
@@ -147,10 +154,6 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         trade_signal.score = max(trade_signal.score - 10, -100)
         trade_signal.reasons.append(f"Negative News Sentiment (-10 penalty)")
 
-    volatility = analyze_volatility_and_risk(execution_data, current_price, trade_signal.recommendation.value)
-    # Use the primary mapping for fundamentals
-    primary_yf_sym = _get_yf_symbols(symbol)[0]
-    fundamentals = analyze_fundamentals(symbol, primary_yf_sym)
     backtest = get_backtest_results(symbol, execution_data, params)
     
     return InstrumentAnalysis(
