@@ -78,9 +78,9 @@ resource "aws_lambda_permission" "apigw" {
 # Scheduled EventBridge to replace apscheduler
 # ──────────────────────────────────────────────────────────────────────────────
 resource "aws_cloudwatch_event_rule" "hourly_analysis" {
-  name                = "${var.app_name}-hourly-analysis"
-  description         = "Trigger market analysis every hour"
-  schedule_expression = "cron(0 * * * ? *)" # Every hour at minute 0
+  name                = "${var.app_name}-15min-analysis"
+  description         = "Trigger market analysis every 15 minutes"
+  schedule_expression = "rate(15 minutes)"
 }
 
 resource "aws_cloudwatch_event_target" "lambda_target" {
@@ -100,7 +100,8 @@ resource "aws_cloudwatch_event_target" "lambda_target" {
     "requestContext": {
       "http": {
         "method": "GET",
-        "path": "/api/analyze"
+        "path": "/api/analyze",
+        "sourceIp": "127.0.0.1"
       }
     },
     "isBase64Encoded": false

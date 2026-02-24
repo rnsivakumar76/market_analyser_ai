@@ -84,12 +84,26 @@ class PivotPoints(BaseModel):
     pivot: float
     r1: float
     r2: float
+    r3: float
     s1: float
     s2: float
+    s3: float
+
+
+class FibonacciLevels(BaseModel):
+    trend: str
+    swing_high: float
+    swing_low: float
+    ret_382: float
+    ret_500: float
+    ret_618: float
+    ext_1272: float
+    ext_1618: float
 
 
 class TechnicalAnalysis(BaseModel):
     pivot_points: PivotPoints
+    fibonacci: FibonacciLevels
     least_resistance_line: str  # 'up', 'down', 'flat'
     trend_breakout: str  # 'bullish_breakout', 'bearish_breakout', 'none'
     breakout_confidence: float  # 0 to 1
@@ -101,6 +115,10 @@ class TradeSignal(BaseModel):
     score: int  # -100 to +100
     reasons: List[str]
     trade_worthy: bool
+    action_plan: str = ""
+    action_plan_details: str = ""
+    psychological_guard: str = ""
+    pyramiding_plan: str = ""
 
 
 class PositionSizing(BaseModel):
@@ -134,6 +152,7 @@ class InstrumentAnalysis(BaseModel):
     name: str
     current_price: float
     analysis_date: date
+    last_updated: str
     monthly_trend: TrendAnalysis
     weekly_pullback: PullbackAnalysis
     daily_strength: StrengthAnalysis

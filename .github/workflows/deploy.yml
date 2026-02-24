@@ -85,7 +85,10 @@ jobs:
           terraform apply -auto-approve \
             -var="aws_account_id=${{ vars.AWS_ACCOUNT_ID }}" \
             -var="aws_region=${{ vars.AWS_REGION }}" \
-            -var="backend_image=${{ env.ECR_BACKEND }}:latest"
+            -var="backend_image=${{ env.ECR_BACKEND }}:latest" \
+            -var="google_client_id=${{ secrets.GOOGLE_CLIENT_ID }}" \
+            -var="google_client_secret=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            -var="jwt_secret_key=${{ secrets.JWT_SECRET_KEY }}"
       - name: Save outputs
         run: |
           cd ${{ env.TF_ROOT }}

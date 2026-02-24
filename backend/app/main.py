@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from starlette.middleware.sessions import SessionMiddleware
 from mangum import Mangum
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import List, Dict, Any
 import logging
 import os
@@ -48,9 +48,12 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         analyze_news_sentiment
     )
     from .signal_generator import generate_trade_signal
-    from .models import InstrumentAnalysis
+    from .models import InstrumentAnalysis, Signal
     
     logger.info(f"Analyzing {symbol}...")
+    
+    if benchmark_direction is None:
+        benchmark_direction = Signal.NEUTRAL
     
     # Fetch data
     daily_data = fetch_historical_data(symbol, days=500)
@@ -73,7 +76,9 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     trade_signal = generate_trade_signal(
         trend, pullback, strength, 
         candle_res, benchmark_direction,
-        settings=strategy_settings
+        settings=strategy_settings,
+        current_price=current_price,
+        tech_indicators=tech_indicators
     )
     
     # Boost/adjust score based on technical indicators
@@ -103,6 +108,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         name=name,
         current_price=round(current_price, 2),
         analysis_date=date.today(),
+        last_updated=datetime.now(timezone.utc).isoformat(),
         monthly_trend=trend,
         weekly_pullback=pullback,
         daily_strength=strength,
@@ -198,7 +204,7 @@ async def analyze_all(user_id: str = Depends(get_current_user)):
     from .models import AnalysisResponse
     results, perf, corr = await run_scheduled_analysis(user_id=user_id)
     return AnalysisResponse(
-        analysis_timestamp=datetime.now().isoformat(),
+        analysis_timestamp=datetime.now(timezone.utc).isoformat(),
         instruments=results,
         weekly_performance=perf,
         correlation_data=corr
@@ -234,6 +240,9 @@ async def add_instrument(instrument_data: Dict[str, str], user_id: str = Depends
     from .config_loader import load_config, get_instruments, save_instruments
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
+    
+    if len(instruments) >= 5:
+        raise HTTPException(status_code=400, detail="Maximum limit of 5 instruments reached. Please remove an instrument before adding a new one.")
     
     symbol = instrument_data.get("symbol", "").upper()
     name = instrument_data.get("name", "")
@@ -293,7 +302,7 @@ async def get_chart_data(symbol: str):
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @app.get("/api/test/gold")
 async def test_gold():

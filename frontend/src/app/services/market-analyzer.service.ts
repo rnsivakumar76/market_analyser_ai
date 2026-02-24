@@ -38,12 +38,26 @@ export interface PivotPoints {
   pivot: number;
   r1: number;
   r2: number;
+  r3: number;
   s1: number;
   s2: number;
+  s3: number;
+}
+
+export interface FibonacciLevels {
+  trend: 'up' | 'down' | 'flat';
+  swing_high: number;
+  swing_low: number;
+  ret_382: number;
+  ret_500: number;
+  ret_618: number;
+  ext_1272: number;
+  ext_1618: number;
 }
 
 export interface TechnicalAnalysis {
   pivot_points: PivotPoints;
+  fibonacci: FibonacciLevels;
   least_resistance_line: 'up' | 'down' | 'flat';
   trend_breakout: 'bullish_breakout' | 'bearish_breakout' | 'none';
   breakout_confidence: number;
@@ -55,6 +69,10 @@ export interface TradeSignal {
   score: number;
   reasons: string[];
   trade_worthy: boolean;
+  action_plan: string;
+  action_plan_details: string;
+  psychological_guard: string;
+  pyramiding_plan: string;
 }
 
 export interface VolatilityAnalysis {
@@ -135,6 +153,7 @@ export interface InstrumentAnalysis {
   name: string;
   current_price: number;
   analysis_date: string;
+  last_updated: string;
   monthly_trend: TrendAnalysis;
   weekly_pullback: PullbackAnalysis;
   daily_strength: StrengthAnalysis;

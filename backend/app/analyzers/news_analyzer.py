@@ -14,7 +14,7 @@ def fetch_rss_news(symbol: str) -> List[Dict[str, str]]:
     # Financial symbols often work well with Yahoo Finance and Google News search
     # This is a robust free way to get headlines
     urls = [
-        f"https://www.google.com/search?q={symbol}+stock+news&tbm=nws",
+        f"https://www.google.com/search?q={symbol}+stock+news&tbm=nws&tbs=qdr:d",
     ]
     
     headers = {
