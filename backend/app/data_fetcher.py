@@ -219,15 +219,45 @@ def get_current_price(symbol: str) -> float:
         try:
             logger.info(f"Trying yfinance for current price of {symbol} (as {yf_sym})...")
             ticker = yf.Ticker(yf_sym)
-            data = ticker.history(period="1d")
             
+            # 1st attempt: fast_info (near real-time, no extra API call)
+            try:
+                fi = ticker.fast_info
+                if hasattr(fi, 'last_price') and fi.last_price and fi.last_price > 0:
+                    price = float(fi.last_price)
+                    logger.info(f"✅ yfinance fast_info price for {symbol} as {yf_sym}: {price}")
+                    return price
+            except Exception:
+                pass
+            
+            # 2nd attempt: info dict (regularMarketPrice, most up-to-date)
+            try:
+                info = ticker.info
+                for key in ['regularMarketPrice', 'currentPrice', 'ask', 'bid']:
+                    if info.get(key) and info[key] > 0:
+                        price = float(info[key])
+                        logger.info(f"✅ yfinance info[{key}] price for {symbol} as {yf_sym}: {price}")
+                        return price
+            except Exception:
+                pass
+            
+            # 3rd attempt: latest 1-minute candle for intraday precision
+            try:
+                data = ticker.history(period="1d", interval="1m")
+                if not data.empty:
+                    price = float(data['Close'].iloc[-1])
+                    logger.info(f"✅ yfinance 1m-candle price for {symbol} as {yf_sym}: {price}")
+                    return price
+            except Exception:
+                pass
+            
+            # 4th fallback: daily close (least accurate for live market)
+            data = ticker.history(period="1d")
             if data.empty:
-                # Fallback for weekends/gaps: try last 5 days
                 data = ticker.history(period="5d")
-                
             if not data.empty:
                 price = float(data['Close'].iloc[-1])
-                logger.info(f"✅ yfinance price success for {symbol} as {yf_sym}: {price}")
+                logger.info(f"✅ yfinance daily-close fallback for {symbol} as {yf_sym}: {price}")
                 return price
         except Exception as e:
             logger.error(f"❌ yfinance price failed for {symbol} as {yf_sym}: {e}")
