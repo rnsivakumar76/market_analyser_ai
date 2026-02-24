@@ -203,24 +203,90 @@ def fetch_historical_data(
 
 
 def get_current_price(symbol: str) -> float:
-    """Get the current/latest price for a symbol."""
+    """Get the current/latest price for a symbol.
+    
+    For commodities/forex (XAU, XAG, BCO, USDJPY, EURUSD), we prioritize
+    Twelve Data and FMP over yfinance, because yfinance frequently fails
+    for these symbols with "possibly delisted" errors.
+    """
     mock_env = os.getenv('USE_MOCK_DATA', 'false').lower()
     
     if mock_env == 'true':
-        # Fetch 5 days to ensure we hit a weekday
         mock_data = generate_mock_data(symbol, days=5)
         if not mock_data.empty:
             return float(mock_data['Close'].iloc[-1])
-        return 100.0 # Extreme fallback
+        return 100.0
 
-    # Try yfinance first
+    # Symbols where yfinance is unreliable (commodities, forex, indices)
+    PREFER_PAID_API = {'XAU', 'XAG', 'BCO', 'USDJPY', 'EURUSD', 'SPX', 'SPX500'}
+    use_paid_first = symbol.upper() in PREFER_PAID_API
+
+    if use_paid_first:
+        # Try paid APIs first for commodities/forex
+        price = _try_paid_apis(symbol)
+        if price:
+            return price
+        # If all paid APIs fail, try yfinance as last resort
+        price = _try_yfinance_price(symbol)
+        if price:
+            return price
+    else:
+        # Try yfinance first for stocks
+        price = _try_yfinance_price(symbol)
+        if price:
+            return price
+        # Fallback to paid APIs
+        price = _try_paid_apis(symbol)
+        if price:
+            return price
+
+    raise ValueError(f"Failed to get current price for {symbol} from all sources")
+
+
+def _try_paid_apis(symbol: str) -> float | None:
+    """Try Twelve Data, FMP, and Alpha Vantage in order."""
+    # Twelve Data first (most reliable for commodities/forex)
+    try:
+        logger.info(f"Trying Twelve Data for current price of {symbol}...")
+        price = get_td_fetcher().get_current_price(symbol)
+        if price and price > 0:
+            logger.info(f"✅ Twelve Data price for {symbol}: {price}")
+            return price
+    except Exception as e:
+        logger.error(f"❌ Twelve Data price failed for {symbol}: {e}")
+
+    # FMP second
+    try:
+        logger.info(f"Trying FMP for current price of {symbol}...")
+        price = get_fmp_fetcher().get_current_price(symbol)
+        if price and price > 0:
+            logger.info(f"✅ FMP price for {symbol}: {price}")
+            return price
+    except Exception as e:
+        logger.error(f"❌ FMP price failed for {symbol}: {e}")
+
+    # Alpha Vantage third
+    try:
+        logger.info(f"Trying Alpha Vantage for current price of {symbol}...")
+        price = get_av_fetcher().get_current_price(symbol)
+        if price and price > 0:
+            logger.info(f"✅ Alpha Vantage price for {symbol}: {price}")
+            return price
+    except Exception as e:
+        logger.error(f"❌ Alpha Vantage price failed for {symbol}: {e}")
+
+    return None
+
+
+def _try_yfinance_price(symbol: str) -> float | None:
+    """Try yfinance for current price using multiple strategies."""
     yf_symbols = _get_yf_symbols(symbol)
     for yf_sym in yf_symbols:
         try:
             logger.info(f"Trying yfinance for current price of {symbol} (as {yf_sym})...")
             ticker = yf.Ticker(yf_sym)
             
-            # 1st attempt: fast_info (near real-time, no extra API call)
+            # 1st: fast_info (near real-time)
             try:
                 fi = ticker.fast_info
                 if hasattr(fi, 'last_price') and fi.last_price and fi.last_price > 0:
@@ -230,7 +296,7 @@ def get_current_price(symbol: str) -> float:
             except Exception:
                 pass
             
-            # 2nd attempt: info dict (regularMarketPrice, most up-to-date)
+            # 2nd: info dict
             try:
                 info = ticker.info
                 for key in ['regularMarketPrice', 'currentPrice', 'ask', 'bid']:
@@ -241,7 +307,7 @@ def get_current_price(symbol: str) -> float:
             except Exception:
                 pass
             
-            # 3rd attempt: latest 1-minute candle for intraday precision
+            # 3rd: 1-minute candle
             try:
                 data = ticker.history(period="1d", interval="1m")
                 if not data.empty:
@@ -251,7 +317,7 @@ def get_current_price(symbol: str) -> float:
             except Exception:
                 pass
             
-            # 4th fallback: daily close (least accurate for live market)
+            # 4th: daily close (least accurate)
             data = ticker.history(period="1d")
             if data.empty:
                 data = ticker.history(period="5d")
@@ -262,36 +328,8 @@ def get_current_price(symbol: str) -> float:
         except Exception as e:
             logger.error(f"❌ yfinance price failed for {symbol} as {yf_sym}: {e}")
             continue
+    return None
 
-    # Try Alpha Vantage second
-    try:
-        logger.info(f"Trying Alpha Vantage for current price of {symbol}...")
-        price = get_av_fetcher().get_current_price(symbol)
-        logger.info(f"✅ Alpha Vantage price success for {symbol}: {price}")
-        return price
-    except Exception as e:
-        logger.error(f"❌ Alpha Vantage price failed for {symbol}: {e}")
-    
-    # Try Twelve Data third
-    try:
-        logger.info(f"Trying Twelve Data for current price of {symbol}...")
-        price = get_td_fetcher().get_current_price(symbol)
-        logger.info(f"✅ Twelve Data price success for {symbol}: {price}")
-        return price
-    except Exception as e:
-        logger.error(f"❌ Twelve Data price failed for {symbol}: {e}")
-    
-    # Try FMP fourth
-    try:
-        logger.info(f"Trying FMP for current price of {symbol}...")
-        price = get_fmp_fetcher().get_current_price(symbol)
-        logger.info(f"✅ FMP price success for {symbol}: {price}")
-        return price
-    except Exception as e:
-        logger.error(f"❌ FMP price failed for {symbol}: {e}")
-    
-    # No mock data fallback - return error if all sources fail
-    raise ValueError(f"Failed to get current price for {symbol} from all sources")
 
 
 def fetch_weekly_data(symbol: str, weeks: int = 12) -> pd.DataFrame:
