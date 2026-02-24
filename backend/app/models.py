@@ -71,6 +71,13 @@ class PullbackAnalysis(BaseModel):
     description: str
 
 
+class PullbackWarningAnalysis(BaseModel):
+    warning_score: int  # 0 to 6
+    is_warning: bool
+    reasons: List[str]
+    description: str
+
+
 class StrengthAnalysis(BaseModel):
     signal: Signal
     rsi: float
@@ -166,6 +173,7 @@ class InstrumentAnalysis(BaseModel):
     technical_indicators: Optional[TechnicalAnalysis] = None
     position_sizing: Optional[PositionSizing] = None
     news_sentiment: Optional[NewsSentiment] = None
+    pullback_warning: Optional[PullbackWarningAnalysis] = None
 
 
 class PerformanceSummary(BaseModel):

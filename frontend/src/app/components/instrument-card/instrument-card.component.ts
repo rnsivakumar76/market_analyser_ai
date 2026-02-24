@@ -1,6 +1,6 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { InstrumentAnalysis, MarketAnalyzerService, ChartData } from '../../services/market-analyzer.service';
+import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem } from '../../services/market-analyzer.service';
 import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
 
 @Component({
@@ -21,11 +21,17 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
           </div>
           <span class="name">{{ analysis.name }}</span>
         </div>
-        <div class="price-info">
-          <span class="price">\${{ analysis.current_price.toFixed(2) }}</span>
-          <span class="change" [class]="getPriceChangeClass()">
-            {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}%
-          </span>
+        <div class="header-actions-right">
+          <div class="price-info">
+            <span class="price" title="Current or Last Daily Close Price">\${{ analysis.current_price.toFixed(2) }}</span>
+            <span class="change" [class]="getPriceChangeClass()">
+              {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}%
+            </span>
+          </div>
+          <div class="last-updated-row">
+            <span class="last-updated-text">Updated: {{ getTimeAgo(analysis.last_updated) }}</span>
+            <button class="btn-refresh-local" (click)="onRefresh()" title="Refresh Instrument">🔄</button>
+          </div>
         </div>
       </div>
 
@@ -111,28 +117,18 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
               <p class="news-summary">{{ analysis.news_sentiment.sentiment_summary }}</p>
               <div class="news-items">
                 @for (item of analysis.news_sentiment.news_items.slice(0, 3); track item.title) {
-                  <a [href]="item.url" target="_blank" class="news-item-link">
+                  <div (click)="openNewsModal(item)" class="news-item-link">
                     <span class="news-item-title">{{ item.title }}</span>
                     <div class="news-item-meta">
                       <span class="news-source">{{ item.source }}</span>
                       <span class="news-sentiment" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
                     </div>
-                  </a>
+                  </div>
                 }
               </div>
             </div>
           }
 
-          @if (analysis.trade_signal.reasons.length > 0) {
-            <div class="reasons">
-              <h4>Analysis Summary</h4>
-              <ul>
-                @for (reason of analysis.trade_signal.reasons; track reason) {
-                  <li>{{ reason }}</li>
-                }
-              </ul>
-            </div>
-          }
         </div>
 
         <!-- Side Column (Right) -->
@@ -150,6 +146,37 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
               <span class="trade-worthy">✓ Trade Worthy</span>
             }
           </div>
+
+          <div class="action-plan" [class]="getSignalClass()">
+            <div class="plan-header">Actionable Plan</div>
+            <div class="plan-title">{{ analysis.trade_signal.action_plan }}</div>
+            <p class="plan-details">{{ analysis.trade_signal.action_plan_details }}</p>
+
+            @if (analysis.trade_signal.psychological_guard) {
+              <div class="psych-guard">
+                <span class="guard-icon">🛡️</span>
+                <span class="guard-text"><strong>Psychological Rule:</strong> {{ analysis.trade_signal.psychological_guard }}</span>
+              </div>
+            }
+
+            @if (analysis.trade_signal.pyramiding_plan && analysis.trade_signal.pyramiding_plan !== 'N/A') {
+              <div class="pyramid-plan">
+                <span class="pyramid-icon">🔼</span>
+                <span class="pyramid-text"><strong>Pyramiding Range:</strong> {{ analysis.trade_signal.pyramiding_plan }}</span>
+              </div>
+            }
+          </div>
+
+          @if (analysis.trade_signal.reasons.length > 0) {
+            <div class="reasons highlight-reasons">
+              <h4>Trustworthy Indicators</h4>
+              <ul>
+                @for (reason of analysis.trade_signal.reasons; track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
+            </div>
+          }
 
           <div class="indicators">
             <div class="indicator-item">
@@ -201,26 +228,38 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
 
           @if (analysis.technical_indicators) {
             <div class="tech-indicators-section">
-              <div class="tech-header">Strategic Pivot & Breakout</div>
+              <div class="tech-header">Strategic Pivot Matrix</div>
+              <div class="tech-grid pivot-matrix">
+                <div class="tech-item"><span class="tech-label">Resistance 3</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r3 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Resistance 2</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r2 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Resistance 1</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r1 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Support 1</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s1 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Support 2</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s2 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Support 3</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s3 }}</span></div>
+              </div>
+              
               <div class="tech-grid">
                 <div class="tech-item pivot-main">
-                  <span class="tech-label">Pivot Point</span>
+                  <span class="tech-label">Daily Pivot Point</span>
                   <span class="tech-value">\${{ analysis.technical_indicators.pivot_points.pivot }}</span>
                 </div>
                 <div class="tech-item">
-                  <span class="tech-label">Resistance 1</span>
-                  <span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r1 }}</span>
-                </div>
-                <div class="tech-item">
-                  <span class="tech-label">Support 1</span>
-                  <span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s1 }}</span>
-                </div>
-                <div class="tech-item">
-                  <span class="tech-label">LLR</span>
+                  <span class="tech-label">Least Resistance</span>
                   <span class="tech-value" [class]="getResistanceClass()">
                     {{ analysis.technical_indicators.least_resistance_line.toUpperCase() }}
                   </span>
                 </div>
+              </div>
+
+              <!-- Swing Fibonacci Ranges -->
+              <div class="tech-header fib-header">Swing Fibonacci Ranges <span class="fib-trend" [class]="analysis.technical_indicators.fibonacci.trend">({{ analysis.technical_indicators.fibonacci.trend.toUpperCase() }})</span></div>
+              <div class="tech-grid fib-matrix">
+                <div class="tech-item"><span class="tech-label">Ext 1.618</span><span class="tech-value ext">\${{ analysis.technical_indicators.fibonacci.ext_1618 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Ext 1.272</span><span class="tech-value ext">\${{ analysis.technical_indicators.fibonacci.ext_1272 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Swing High</span><span class="tech-value swing">\${{ analysis.technical_indicators.fibonacci.swing_high }}</span></div>
+                <div class="tech-item"><span class="tech-label">Ret 38.2%</span><span class="tech-value ret">\${{ analysis.technical_indicators.fibonacci.ret_382 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Ret 61.8%</span><span class="tech-value ret">\${{ analysis.technical_indicators.fibonacci.ret_618 }}</span></div>
+                <div class="tech-item"><span class="tech-label">Swing Low</span><span class="tech-value swing">\${{ analysis.technical_indicators.fibonacci.swing_low }}</span></div>
               </div>
               
               @if (analysis.technical_indicators.trend_breakout !== 'none') {
@@ -290,6 +329,30 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
           }
         </div>
       </div>
+      
+      @if (selectedNewsItem) {
+        <div class="news-modal-overlay" (click)="closeNewsModal()">
+          <div class="news-modal-content news-preview-card" (click)="$event.stopPropagation()">
+            <div class="news-modal-header">
+              <h3>Intelligence Viewer</h3>
+              <button class="close-btn" (click)="closeNewsModal()">×</button>
+            </div>
+            <div class="news-preview-body">
+              <span class="news-preview-source">{{ selectedNewsItem.source }}</span>
+              <h2 class="news-preview-title">{{ selectedNewsItem.title }}</h2>
+              <div class="news-preview-meta">
+                <span class="news-sentiment" [class]="selectedNewsItem.sentiment_label.toLowerCase()">
+                  Sentiment: {{ selectedNewsItem.sentiment_label }} (Score: {{ selectedNewsItem.sentiment_score.toFixed(2) }})
+                </span>
+              </div>
+              <p class="news-preview-text">
+                Direct embedded viewing is blocked by the news provider's security settings.
+              </p>
+              <a [href]="selectedNewsItem.url" target="_blank" class="btn-read-full">Read Full Article on {{ selectedNewsItem.source }} ↗</a>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -353,6 +416,43 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     .symbol-info {
       display: flex;
       flex-direction: column;
+    }
+
+    .header-actions-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .last-updated-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .last-updated-text {
+      font-size: 0.7rem;
+      color: #9399b2;
+      font-style: italic;
+    }
+
+    .btn-refresh-local {
+      background: rgba(137, 180, 250, 0.1);
+      border: 1px solid rgba(137, 180, 250, 0.2);
+      border-radius: 4px;
+      padding: 4px 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .btn-refresh-local:hover {
+      background: rgba(137, 180, 250, 0.3);
+      transform: rotate(15deg);
     }
 
     .symbol-row {
@@ -837,9 +937,86 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       margin: 4px 0 0 0;
     }
 
+    .action-plan {
+      background: rgba(30,30,46,0.5);
+      border: 1px solid #313244;
+      border-left: 4px solid #89b4fa;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 4px 8px 8px 4px;
+    }
+    
+    .action-plan.bullish { border-left-color: #a6e3a1; }
+    .action-plan.bearish { border-left-color: #f38ba8; }
+
+    .plan-header {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #9399b2;
+      margin-bottom: 6px;
+    }
+
+    .plan-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #cdd6f4;
+      margin-bottom: 8px;
+    }
+    
+    .action-plan.bullish .plan-title { color: #a6e3a1; }
+    .action-plan.bearish .plan-title { color: #f38ba8; }
+
+    .plan-details {
+      font-size: 0.85rem;
+      color: #a6adc8;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .psych-guard, .pyramid-plan {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    
+    .psych-guard {
+      background: rgba(243, 139, 168, 0.05); /* Red tint */
+      border: 1px dashed rgba(243, 139, 168, 0.3);
+      color: #f38ba8;
+    }
+
+    .pyramid-plan {
+      background: rgba(166, 227, 161, 0.05); /* Green tint */
+      border: 1px dashed rgba(166, 227, 161, 0.3);
+      color: #a6e3a1;
+    }
+    
+    .guard-text, .pyramid-text {
+      line-height: 1.4;
+      color: #cdd6f4;
+    }
+    
+    .guard-text strong {
+      color: #f38ba8;
+    }
+    
+    .pyramid-text strong {
+      color: #a6e3a1;
+    }
+
     .reasons {
-      padding-top: 12px;
-      border-top: 1px solid #313244;
+      padding: 16px;
+      border-radius: 8px;
+    }
+
+    .highlight-reasons {
+      background: rgba(137, 180, 250, 0.05);
+      border: 1px dashed rgba(137, 180, 250, 0.3);
     }
 
     .reasons h4 {
@@ -884,9 +1061,23 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
 
     .tech-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 8px;
       margin-bottom: 12px;
+    }
+
+    .tech-grid.pivot-matrix {
+      grid-template-columns: repeat(3, 1fr);
+      background: rgba(24, 24, 37, 0.5);
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .tech-grid.fib-matrix {
+      grid-template-columns: repeat(3, 1fr);
+      background: rgba(24, 24, 37, 0.5);
+      border-radius: 8px;
+      padding: 8px;
     }
 
     .tech-item {
@@ -899,6 +1090,24 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       color: #9399b2;
     }
 
+    .fib-header {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(137, 180, 250, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .fib-trend {
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    
+    .fib-trend.up { color: #a6e3a1; }
+    .fib-trend.down { color: #f38ba8; }
+    .fib-trend.flat { color: #9399b2; }
+
     .tech-value {
       font-weight: 700;
       color: #cdd6f4;
@@ -909,6 +1118,9 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     .tech-value.sup { color: #a6e3a1; }
     .tech-value.up { color: #a6e3a1; }
     .tech-value.down { color: #f38ba8; }
+    .tech-value.ext { color: #cba6f7; }
+    .tech-value.ret { color: #f9e2af; }
+    .tech-value.swing { color: #89b4fa; }
 
     .breakout-badge {
       display: inline-block;
@@ -1023,12 +1235,12 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     }
 
     .news-item-link {
-      text-decoration: none;
       display: block;
       padding: 8px;
       background: rgba(49, 50, 68, 0.5);
       border-radius: 6px;
       transition: background 0.2s;
+      cursor: pointer;
     }
 
     .news-item-link:hover {
@@ -1053,15 +1265,172 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     .news-sentiment.bullish { color: #a6e3a1; }
     .news-sentiment.bearish { color: #f38ba8; }
     .news-sentiment.neutral { color: #9399b2; }
+
+    .news-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(17, 17, 27, 0.8);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .news-modal-content {
+      background: #1e1e2e;
+      border: 1px solid #313244;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 1000px;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .news-modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #313244;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(30, 30, 46, 0.95);
+    }
+
+    .news-modal-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #cdd6f4;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #a6adc8;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .close-btn:hover {
+      color: #f38ba8;
+    }
+
+    .news-preview-card {
+      max-width: 600px;
+      height: auto;
+      max-height: 80vh;
+    }
+
+    .news-preview-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .news-preview-source {
+      font-size: 0.8rem;
+      color: #9399b2;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .news-preview-title {
+      font-size: 1.4rem;
+      color: #cdd6f4;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .news-preview-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .news-preview-text {
+      color: #a6adc8;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      padding: 16px;
+      background: rgba(24, 24, 37, 0.5);
+      border-radius: 8px;
+      border: 1px dashed #313244;
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .btn-read-full {
+      display: inline-block;
+      width: 100%;
+      text-align: center;
+      padding: 12px 20px;
+      background: #89b4fa;
+      color: #1e1e2e;
+      text-decoration: none;
+      font-weight: 700;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn-read-full:hover {
+      background: #b4befe;
+    }
   `]
 })
 export class InstrumentCardComponent {
   @Input({ required: true }) analysis!: InstrumentAnalysis;
+  @Output() refresh = new EventEmitter<string>();
 
   private marketAnalyzerService = inject(MarketAnalyzerService);
+
   showChart = false;
   chartData: ChartData[] = [];
   isLoadingChart = false;
+  selectedNewsItem: NewsItem | null = null;
+
+  openNewsModal(item: NewsItem) {
+    this.selectedNewsItem = item;
+  }
+
+  closeNewsModal() {
+    this.selectedNewsItem = null;
+  }
+
+  onRefresh() {
+    this.refresh.emit(this.analysis.symbol);
+  }
+
+  getTimeAgo(timestamp: string): string {
+    if (!timestamp) return 'Unknown';
+    const updatedDate = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - updatedDate.getTime();
+
+    // Convert to seconds
+    const diffSecs = Math.floor(diffMs / 1000);
+
+    if (diffSecs < 60) return `Just now`;
+    if (diffSecs < 3600) {
+      const mins = Math.floor(diffSecs / 60);
+      return `${mins} min${mins !== 1 ? 's' : ''} ago`;
+    }
+    if (diffSecs < 86400) {
+      const hours = Math.floor(diffSecs / 3600);
+      return `${hours} hr${hours !== 1 ? 's' : ''} ago`;
+    }
+    const days = Math.floor(diffSecs / 86400);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
+  }
 
   toggleChart() {
     this.showChart = !this.showChart;

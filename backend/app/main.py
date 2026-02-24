@@ -48,7 +48,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         analyze_news_sentiment
     )
     from .signal_generator import generate_trade_signal
-    from .models import InstrumentAnalysis, Signal
+    from .models import InstrumentAnalysis, Signal, CandleAnalysis
     
     logger.info(f"Analyzing {symbol}...")
     
@@ -69,13 +69,23 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     pullback = analyze_weekly_pullback(weekly_data, current_price, params.get('weekly', {}))
     strength = analyze_daily_strength(daily_data, params.get('daily', {}))
     phase = analyze_market_phase(daily_data, params.get('daily', {}))
-    candle_res = detect_candle_patterns(daily_data)
+    candle_data = detect_candle_patterns(daily_data)
+    # Wrap candle in the pydantic model for signal generator
+    candle_model = CandleAnalysis(
+        pattern=candle_data['pattern'],
+        description=candle_data['description'],
+        is_bullish=candle_data.get('is_bullish')
+    )
+    
     tech_indicators = analyze_technical_indicators(daily_data)
     news_sentiment = analyze_news_sentiment(symbol)
     
     trade_signal = generate_trade_signal(
-        trend, pullback, strength, 
-        candle_res, benchmark_direction,
+        trend=trend, 
+        pullback=pullback, 
+        strength=strength, 
+        candle=candle_model, 
+        benchmark_direction=benchmark_direction,
         settings=strategy_settings,
         current_price=current_price,
         tech_indicators=tech_indicators
@@ -116,7 +126,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         volatility_risk=volatility,
         fundamentals=fundamentals,
         backtest_results=backtest,
-        candle_patterns=candle_res,
+        candle_patterns=candle_model,
         benchmark_direction=benchmark_direction,
         trade_signal=trade_signal,
         technical_indicators=tech_indicators,

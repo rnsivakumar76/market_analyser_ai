@@ -11,7 +11,10 @@ def generate_trade_signal(
     strength: StrengthAnalysis,
     candle: CandleAnalysis,
     benchmark_direction: Signal = Signal.NEUTRAL,
-    settings: StrategySettings = None
+    settings: StrategySettings = None,
+    current_price: float = None,
+    tech_indicators = None,
+    **kwargs
 ) -> TradeSignal:
     """
     Generate a composite trade signal based on all analyses.
@@ -131,9 +134,47 @@ def generate_trade_signal(
         elif candle.is_bullish is not None:
              reasons.append(f"Price Action Trigger confirmed: {candle.description}")
 
+    action_plan = "Stand Aside"
+    action_plan_details = "Market conditions do not support a high-probability trade."
+    psychological_guard = "Discipline: Do not force a trade in choppy or uncertain markets."
+    pyramiding_plan = "N/A"
+
+    if current_price and tech_indicators:
+        pivots = tech_indicators.pivot_points
+        fibs = tech_indicators.fibonacci
+        if recommendation == Signal.BULLISH:
+            psychological_guard = "NEVER average down into a losing position. If the price falls below support or hits your stop loss, cut the trade immediately. The market does not owe you a bounce."
+            if trade_worthy:
+                action_plan = "Enter Long (Market)"
+                action_plan_details = f"Strong bullish setup confirmed. Consider entry near current price ${current_price:.2f}. Support below is Pivot (${pivots.pivot}). Primary target is R1 (${pivots.r1}). If trend accelerates strongly, target Fibonacci Extensions at ${fibs.ext_1272} (127.2%) and ${fibs.ext_1618} (161.8%)."
+                pyramiding_plan = f"Add 50% to position size only IF price successfully breaks and holds above R1 (${pivots.r1}), simultaneously moving your Stop Loss to break-even."
+            else:
+                action_plan = "Wait for Trigger / Pullback"
+                action_plan_details = f"Developing bullish bias. Ideal entry is on a pullback near support (S1: ${pivots.s1}) or the 38.2% Fib Retracement (${fibs.ret_382}) with a bullish reversal candle."
+                pyramiding_plan = "Do not pyramid until initial position is firmly in profit and a major resistance level is cleared."
+        elif recommendation == Signal.BEARISH:
+            psychological_guard = "NEVER average up into a losing short position. If the price rallies past resistance or hits your stop loss, cover immediately to prevent infinite downside."
+            if trade_worthy:
+                action_plan = "Enter Short (Market)"
+                action_plan_details = f"Strong bearish setup confirmed. Consider short entry near current price ${current_price:.2f}. Resistance above is Pivot (${pivots.pivot}). Primary target is S1 (${pivots.s1}). If trend accelerates strongly, target Fibonacci Extensions at ${fibs.ext_1272} (127.2%) and ${fibs.ext_1618} (161.8%)."
+                pyramiding_plan = f"Add 50% to short position only IF price successfully breaks and holds below S1 (${pivots.s1}), simultaneously moving your Stop Loss to break-even."
+            else:
+                action_plan = "Wait for Trigger / Bounce"
+                action_plan_details = f"Developing bearish bias. Ideal entry is on a bounce near resistance (R1: ${pivots.r1}) or the 38.2% Fib Retracement (${fibs.ret_382}) with a bearish reversal candle."
+                pyramiding_plan = "Do not pyramid until initial position is firmly in profit and a major support level is broken."
+        else:
+             action_plan = "Wait and Observe"
+             action_plan_details = f"Neutral bias. Key intraday levels: Breakout above R1 (${pivots.r1}) or Breakdown below S1 (${pivots.s1}). Reversal zones: {fibs.swing_low} (Low) to {fibs.swing_high} (High)."
+             psychological_guard = "Patience is a position. Awaiting clear structural setup to protect capital."
+             pyramiding_plan = "N/A"
+
     return TradeSignal(
         recommendation=recommendation,
         score=score,
         reasons=reasons,
-        trade_worthy=trade_worthy
+        trade_worthy=trade_worthy,
+        action_plan=action_plan,
+        action_plan_details=action_plan_details,
+        psychological_guard=psychological_guard,
+        pyramiding_plan=pyramiding_plan
     )
