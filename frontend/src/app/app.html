@@ -42,6 +42,12 @@
       <button class="settings-btn" (click)="showSettings.set(true)" title="Manage Symbols">
         ⚙️
       </button>
+      <button class="menu-btn journal-btn" (click)="showTradeJournal.set(true)" title="Trade Journal">
+        📒
+      </button>
+      <button class="menu-btn alerts-btn" (click)="showSmartAlerts.set(true)" title="Smart Alerts">
+        🔔
+      </button>
       <button class="mode-toggle-btn" (click)="toggleStrategyMode()"
         [class.short-term]="strategyMode() === 'short_term'">
         <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : 'Short Term' }}</span>
@@ -219,6 +225,14 @@
 
   @if (showUserManual()) {
   <app-user-manual (close)="showUserManual.set(false)"></app-user-manual>
+  }
+
+  @if (showTradeJournal()) {
+  <app-trade-journal (close)="showTradeJournal.set(false)"></app-trade-journal>
+  }
+
+  @if (showSmartAlerts()) {
+  <app-smart-alerts [instruments]="instruments()" (close)="showSmartAlerts.set(false)"></app-smart-alerts>
   }
 </div>
 } @else {

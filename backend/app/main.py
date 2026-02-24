@@ -465,5 +465,67 @@ async def test_gold():
             "xau_symbols": _get_yf_symbols("XAU")
         }
 
+# ─── Trade Journal ────────────────────────────────────────────────
+import uuid
+
+def _load_journal(user_id: str = "global_default") -> list:
+    """Load trade journal from S3 or local file."""
+    import json, os
+    from pathlib import Path
+    
+    if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+        import boto3
+        s3 = boto3.client('s3')
+        bucket = os.environ.get('CONFIG_BUCKET', 'market-analyzer-config')
+        key = f"users/{user_id}/trade_journal.json"
+        try:
+            obj = s3.get_object(Bucket=bucket, Key=key)
+            return json.loads(obj['Body'].read().decode('utf-8'))
+        except:
+            return []
+    else:
+        path = Path(__file__).parent.parent / "cache" / f"journal_{user_id}.json"
+        if path.exists():
+            with open(path, 'r') as f:
+                return json.load(f)
+        return []
+
+def _save_journal(trades: list, user_id: str = "global_default"):
+    """Save trade journal to S3 or local file."""
+    import json, os
+    from pathlib import Path
+    
+    if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+        import boto3
+        s3 = boto3.client('s3')
+        bucket = os.environ.get('CONFIG_BUCKET', 'market-analyzer-config')
+        key = f"users/{user_id}/trade_journal.json"
+        s3.put_object(Bucket=bucket, Key=key, Body=json.dumps(trades), ContentType='application/json')
+    else:
+        path = Path(__file__).parent.parent / "cache" / f"journal_{user_id}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w') as f:
+            json.dump(trades, f)
+
+@app.get("/api/journal")
+async def get_journal(user_id: str = Depends(get_current_user)):
+    return _load_journal(user_id)
+
+@app.post("/api/journal")
+async def add_trade(trade: Dict[str, Any], user_id: str = Depends(get_current_user)):
+    trades = _load_journal(user_id)
+    trade["id"] = str(uuid.uuid4())
+    trade["created_at"] = datetime.now(timezone.utc).isoformat()
+    trades.append(trade)
+    _save_journal(trades, user_id)
+    return {"message": "Trade logged", "trade": trade}
+
+@app.delete("/api/journal/{trade_id}")
+async def delete_trade(trade_id: str, user_id: str = Depends(get_current_user)):
+    trades = _load_journal(user_id)
+    trades = [t for t in trades if t.get("id") != trade_id]
+    _save_journal(trades, user_id)
+    return {"message": "Trade removed"}
+
 # Handler for AWS Lambda
 handler = Mangum(app)

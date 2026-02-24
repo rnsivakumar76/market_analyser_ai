@@ -265,4 +265,16 @@ export class MarketAnalyzerService {
   updateSettings(settings: StrategySettings): Observable<any> {
     return this.http.post(`${this.apiUrl}/settings`, settings);
   }
+
+  getJournal(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/journal`);
+  }
+
+  addTrade(trade: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/journal`, trade);
+  }
+
+  deleteTrade(tradeId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/journal/${tradeId}`);
+  }
 }

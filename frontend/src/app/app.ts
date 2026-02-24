@@ -13,11 +13,13 @@ import { InstrumentSummaryComponent } from './components/instrument-summary/inst
 import { WatchlistHeatmapComponent } from './components/watchlist-heatmap/watchlist-heatmap.component';
 import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component';
 import { MultiTimeframeOverlayComponent } from './components/multi-timeframe-overlay/multi-timeframe-overlay.component';
+import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
+import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, InstrumentSummaryComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, MultiTimeframeOverlayComponent],
+  imports: [CommonModule, InstrumentCardComponent, InstrumentSummaryComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, MultiTimeframeOverlayComponent, TradeJournalComponent, SmartAlertsComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -33,6 +35,8 @@ export class App implements OnInit {
   showStrategySettings = signal(false);
   showCorrelationModal = signal(false);
   showUserManual = signal(false);
+  showTradeJournal = signal(false);
+  showSmartAlerts = signal(false);
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
   psychologicalGuardrail = signal<PsychologicalGuardrail | null>(null);

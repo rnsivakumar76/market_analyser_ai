@@ -900,16 +900,268 @@
   }
 }
 
-@media (max-width: 500px) {
-  .header {
+/* ─── RESPONSIVE: Tablet (<= 1024px) ──────────────────────────────── */
+@media (max-width: 1024px) {
+  .split-view-container {
     flex-direction: column;
-    gap: 16px;
-    padding: 16px;
+    height: auto;
+    min-height: calc(100vh - 146px);
   }
 
-  .status-bar {
+  .sidebar-panel {
+    width: 100%;
+    min-width: unset;
+    max-height: 320px;
+    border-right: none;
+    border-bottom: 1px solid #313244;
+  }
+
+  .detail-panel {
+    padding: 16px 20px;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 20px;
+  }
+
+  .header-content {
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+/* ─── RESPONSIVE: Small Tablet / Large Phone (<= 768px) ──────────── */
+@media (max-width: 768px) {
+  .header {
     flex-direction: column;
+    align-items: stretch;
     gap: 12px;
     padding: 12px 16px;
+  }
+
+  .header-content {
+    text-align: center;
+  }
+
+  .header h1 {
+    font-size: 1.3rem;
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+  }
+
+  .header-actions {
+    justify-content: center;
+  }
+
+  .bottom-bar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 16px;
+  }
+
+  .bottom-bar-left {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .bottom-perf {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .sidebar-panel {
+    max-height: 260px;
+  }
+
+  .detail-panel {
+    padding: 12px 16px;
+  }
+
+  .mode-toggle-btn {
+    padding: 6px 12px;
+  }
+
+  .copilot-bar {
+    margin: 8px 12px;
+  }
+
+  .lockdown-content {
+    padding: 24px;
+    margin: 16px;
+
+    h2 {
+      font-size: 1.2rem;
+    }
+
+    .lockdown-icon {
+      font-size: 3rem;
+    }
+  }
+}
+
+/* ─── RESPONSIVE: Phone (<= 500px) ────────────────────────────────── */
+@media (max-width: 500px) {
+  .header h1 {
+    font-size: 1.1rem;
+  }
+
+  .badge {
+    font-size: 0.55rem;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .user-profile {
+    gap: 8px;
+    padding-right: 8px;
+  }
+
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .user-name {
+    font-size: 0.8rem;
+  }
+
+  .action-divider {
+    display: none;
+  }
+
+  .menu-btn,
+  .manual-btn,
+  .strategy-btn,
+  .settings-btn {
+    padding: 6px;
+    font-size: 1rem;
+  }
+
+  .refresh-btn {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+  }
+
+  .mode-toggle-btn {
+    padding: 5px 10px;
+
+    .mode-name {
+      font-size: 0.72rem;
+    }
+  }
+
+  .bottom-bar-left {
+    gap: 8px;
+  }
+
+  .stat {
+    font-size: 0.7rem;
+  }
+
+  .last-updated {
+    font-size: 0.7rem;
+  }
+
+  .bar-divider {
+    display: none;
+  }
+
+  .bottom-perf {
+    padding: 4px 10px;
+    gap: 8px;
+
+    .perf-divider {
+      font-size: 0.55rem;
+      padding-right: 6px;
+    }
+
+    .perf-value {
+      font-size: 0.85rem;
+      min-width: 40px;
+    }
+
+    .perf-mini .pm-label {
+      font-size: 0.5rem;
+    }
+
+    .perf-mini .pm-value {
+      font-size: 0.72rem;
+    }
+  }
+
+  .sidebar-panel {
+    max-height: 220px;
+  }
+
+  .instruments-list {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .detail-panel {
+    padding: 10px 12px;
+  }
+
+  .detail-view-inner {
+    gap: 12px;
+  }
+
+  .glitch-text {
+    font-size: 1rem;
+    letter-spacing: 2px;
+  }
+
+  .loading-note {
+    font-size: 0.7rem;
+  }
+
+  .empty-state {
+    padding: 24px;
+
+    h2 {
+      font-size: 1.2rem;
+    }
+
+    p {
+      font-size: 0.85rem;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+    }
+  }
+
+  .lockdown-content {
+    padding: 20px;
+    border-radius: 16px;
+
+    h2 {
+      font-size: 1rem;
+      letter-spacing: 1px;
+    }
+
+    .lockdown-message {
+      font-size: 0.9rem;
+    }
+
+    .lockdown-stats {
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px;
+    }
   }
 }
