@@ -23,6 +23,13 @@
 
       <div class="action-divider"></div>
 
+      @if (psychologicalGuardrail(); as guard) {
+      <div class="shield-indicator" [class.restricted]="guard.status === 'restricted'" [title]="guard.message">
+        <span class="shield-icon">{{ guard.status === 'active' ? '🛡️' : '🚨' }}</span>
+        <span class="shield-label">{{ guard.status === 'active' ? 'Shield Active' : 'Restricted' }}</span>
+      </div>
+      }
+
       <button class="menu-btn correlation-btn" (click)="showCorrelationModal.set(true)" title="Market Correlation">
         📊
       </button>
@@ -85,7 +92,7 @@
   </div>
   }
 
-  <main class="split-view-container">
+  <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
     <div class="sidebar-panel">
       <div class="instruments-list">
         @for (instrument of instruments(); track instrument.symbol) {
@@ -111,6 +118,31 @@
       </div>
       }
     </div>
+
+    <!-- Lockdown Overlay -->
+    @if (psychologicalGuardrail(); as guard) {
+    @if (guard.status === 'restricted') {
+    <div class="lockdown-overlay">
+      <div class="lockdown-content">
+        <div class="lockdown-icon">🛑</div>
+        <h2>PSYCHOLOGICAL LOCKDOWN</h2>
+        <p class="lockdown-message">{{ guard.message }}</p>
+        <div class="lockdown-stats">
+          <div class="stat">
+            <span class="label">Current PnL:</span>
+            <span class="value bad">{{ guard.daily_pnl.toFixed(2) }}%</span>
+          </div>
+          <div class="stat">
+            <span class="label">Loss Limit:</span>
+            <span class="value">{{ guard.daily_loss_limit.toFixed(2) }}%</span>
+          </div>
+        </div>
+        <p class="lockdown-hint">Trading is disabled until the next market cycle or until a new strategy mode is
+          selected to reset your focus.</p>
+      </div>
+    </div>
+    }
+    }
   </main>
 
   @if (showSettings()) {

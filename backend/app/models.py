@@ -24,6 +24,11 @@ class StrategyMode(str, Enum):
     SHORT_TERM = "short_term" # Daily -> 4Hour -> 1Hour
 
 
+class SystemStatus(str, Enum):
+    ACTIVE = "active"
+    RESTRICTED = "restricted"
+
+
 class PhaseAnalysis(BaseModel):
     phase: MarketPhase
     score: float
@@ -211,11 +216,22 @@ class CorrelationData(BaseModel):
     matrix: List[List[float]]
 
 
+class PsychologicalGuardrail(BaseModel):
+    status: SystemStatus
+    daily_pnl: float
+    daily_loss_limit: float
+    consecutive_losses: int
+    max_consecutive_losses: int
+    lockdown_reason: str
+    message: str
+
+
 class AnalysisResponse(BaseModel):
     analysis_timestamp: str
     instruments: List[InstrumentAnalysis]
     weekly_performance: Optional[PerformanceSummary] = None
     correlation_data: Optional[CorrelationData] = None
+    psychological_guardrail: Optional[PsychologicalGuardrail] = None
 
 
 class InstrumentConfig(BaseModel):

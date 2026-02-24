@@ -209,11 +209,22 @@ export interface CorrelationData {
   matrix: number[][];
 }
 
+export interface PsychologicalGuardrail {
+  status: 'active' | 'restricted';
+  daily_pnl: number;
+  daily_loss_limit: number;
+  consecutive_losses: number;
+  max_consecutive_losses: number;
+  lockdown_reason: string;
+  message: string;
+}
+
 export interface AnalysisResponse {
   analysis_timestamp: string;
   instruments: InstrumentAnalysis[];
   weekly_performance: WeeklyPerformance;
   correlation_data: CorrelationData;
+  psychological_guardrail: PsychologicalGuardrail;
 }
 
 @Injectable({

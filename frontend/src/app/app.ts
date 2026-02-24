@@ -1,6 +1,6 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode } from './services/market-analyzer.service';
+import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { PerformanceBannerComponent } from './components/performance-banner/performance-banner.component';
@@ -32,6 +32,7 @@ export class App implements OnInit {
   showUserManual = signal(false);
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
+  psychologicalGuardrail = signal<PsychologicalGuardrail | null>(null);
   selectedInstrument = signal<InstrumentAnalysis | null>(null);
   strategyMode = signal<StrategyMode>('long_term');
 
@@ -87,6 +88,7 @@ export class App implements OnInit {
 
         this.weeklyPerformance.set(response.weekly_performance);
         this.correlationData.set(response.correlation_data);
+        this.psychologicalGuardrail.set(response.psychological_guardrail);
         this.lastUpdated.set(new Date(response.analysis_timestamp).toLocaleString());
         this.loading.set(false);
       },

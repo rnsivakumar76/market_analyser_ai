@@ -223,7 +223,10 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     from .config_loader import load_config, get_instruments, get_analysis_params, get_alert_config, get_strategy_config
     from .models import StrategySettings, Signal, StrategyMode
     from .data_fetcher import fetch_historical_data
-    from .analyzers import analyze_monthly_trend, calculate_weekly_performance, calculate_correlations, apply_position_sizing
+    from .analyzers import (
+        analyze_monthly_trend, calculate_weekly_performance, 
+        calculate_correlations, apply_position_sizing, analyze_psychological_state
+    )
     from .notifier import send_alerts
     from concurrent.futures import ThreadPoolExecutor, as_completed
     
@@ -299,8 +302,17 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC-USD": btc_bench}, strategy_settings)
     correlation_results = calculate_correlations(data_map)
     results = apply_position_sizing(results, correlation_results, strategy_settings)
-    logger.info(f"Analysis complete. Returning results for: {[a.symbol for a in results]}")
-    return results, perf_summary, correlation_results
+    
+    # NEW: Psychological Guardrail (Lockdown Logic)
+    # Default limits: -2% Max Loss, 3 Losing Streak
+    guardrail = analyze_psychological_state(
+        perf_summary, 
+        daily_loss_limit=-2.5 if mode == StrategyMode.LONG_TERM else -1.5,
+        max_losing_streak=3
+    )
+
+    logger.info(f"Analysis complete. Status: {guardrail.status}. Returning results for: {[a.symbol for a in results]}")
+    return results, perf_summary, correlation_results, guardrail
 
 @app.get("/api/analyze")
 async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)):
@@ -310,12 +322,13 @@ async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)
     if isinstance(mode, str):
         mode = StrategyMode(mode)
     
-    results, perf, corr = await run_scheduled_analysis(user_id=user_id, mode=mode)
+    results, perf, corr, guardrail = await run_scheduled_analysis(user_id=user_id, mode=mode)
     return AnalysisResponse(
         analysis_timestamp=datetime.now(timezone.utc).isoformat(),
         instruments=results,
         weekly_performance=perf,
-        correlation_data=corr
+        correlation_data=corr,
+        psychological_guardrail=guardrail
     )
 
 @app.get("/api/analyze/{symbol}")
