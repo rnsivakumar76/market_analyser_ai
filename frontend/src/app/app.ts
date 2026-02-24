@@ -1,6 +1,6 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData } from './services/market-analyzer.service';
+import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { PerformanceBannerComponent } from './components/performance-banner/performance-banner.component';
@@ -33,6 +33,7 @@ export class App implements OnInit {
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
   selectedInstrument = signal<InstrumentAnalysis | null>(null);
+  strategyMode = signal<StrategyMode>('long_term');
 
   ngOnInit() {
     // Check for auth token in URL (from Google callback)
@@ -59,11 +60,16 @@ export class App implements OnInit {
     }
   }
 
+  toggleStrategyMode() {
+    this.strategyMode.set(this.strategyMode() === 'long_term' ? 'short_term' : 'long_term');
+    this.runAnalysis();
+  }
+
   runAnalysis() {
     this.loading.set(true);
     this.error.set(null);
 
-    this.analyzerService.analyzeAll().subscribe({
+    this.analyzerService.analyzeAll(this.strategyMode()).subscribe({
       next: (response: AnalysisResponse) => {
         // Sort instruments: Highest magnitude score at the top (Absolute value)
         const sortedInstruments = [...response.instruments].sort((a, b) => {
@@ -94,7 +100,7 @@ export class App implements OnInit {
 
   refreshInstrument(symbol: string) {
     this.loading.set(true);
-    this.analyzerService.analyzeSingle(symbol).subscribe({
+    this.analyzerService.analyzeSingle(symbol, this.strategyMode()).subscribe({
       next: (updatedAnalysis) => {
         const sortedInstruments = this.instruments().map(i => i.symbol === symbol ? updatedAnalysis : i).sort((a, b) => {
           return Math.abs(b.trade_signal.score) - Math.abs(a.trade_signal.score);

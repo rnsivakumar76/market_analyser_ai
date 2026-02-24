@@ -26,6 +26,19 @@ export class UserManualComponent {
       `
     },
     {
+      id: 'strategy-modes',
+      title: 'Strategy & Timeframes',
+      icon: '⏱️',
+      content: `
+        You can now toggle between <strong>Long Term</strong> and <strong>Short Term</strong> operational modes using the toggle next to the Refresh button.
+        <ul>
+          <li><strong>Long Term (Swing/Position):</strong> Analyzes the Monthly trend, Weekly pullbacks, and Daily execution. Best for building portfolios over months.</li>
+          <li><strong>Short Term (Day/Swing):</strong> Analyzes the Daily trend, 4-Hour pullbacks, and 1-Hour execution. Best for capturing moves over days.</li>
+          <li><em>Switching modes will trigger a complete re-analysis of your watchlist across the new timeframes.</em></li>
+        </ul>
+      `
+    },
+    {
       id: 'philosophy',
       title: 'Core Design Philosophy',
       icon: '🏛️',

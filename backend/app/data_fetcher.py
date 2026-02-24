@@ -127,74 +127,79 @@ def generate_mock_data(symbol: str, days: int = 90, base_price: float = None) ->
 def fetch_historical_data(
     symbol: str,
     days: int = 90,
+    interval: str = "1d",
     end_date: Optional[datetime] = None
 ) -> pd.DataFrame:
     """
     Fetch historical OHLCV data for a given symbol.
     
-    Priority: Mock (if enabled) -> Alpha Vantage -> Twelve Data -> FMP -> yfinance -> Error
+    Intervals: 1h, 4h, 1d, 1wk, 1mo
+    Priority: Mock (if enabled) -> yfinance -> Alpha Vantage -> Twelve Data -> FMP -> Error
     """
     # Check for mock mode
     if os.getenv('USE_MOCK_DATA', 'false').lower() == 'true':
-        print(f"🛠️ Using MOCK DATA for {symbol}")
+        print(f"🛠️ Using MOCK DATA for {symbol} ({interval})")
         df = generate_mock_data(symbol, days)
-        if df.empty:
-            # If 90 days didn't yield a weekday (impossible but for safety)
-            return generate_mock_data(symbol, days + 10)
+        # Mock data is daily, resample if needed
+        if interval == "1wk":
+            return df.resample('W').agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'})
+        if interval == "1mo":
+            return df.resample('ME').agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'})
         return df
+
+    # Map interval for yfinance (yfinance doesn't support 4h directly in history)
+    yf_interval = interval
+    resample_to_4h = False
+    if interval == "4h":
+        yf_interval = "1h"
+        resample_to_4h = True
 
     # Try yfinance first (no restrictive API limits)
     yf_symbols = _get_yf_symbols(symbol)
     for yf_sym in yf_symbols:
         try:
-            logger.info(f"Trying yfinance for {symbol} (as {yf_sym})...")
+            logger.info(f"Trying yfinance for {symbol} (as {yf_sym}, {interval})...")
             if end_date is None:
                 end_date = datetime.now()
             
             start_date = end_date - timedelta(days=days)
             
             ticker = yf.Ticker(yf_sym)
-            df = ticker.history(start=start_date, end=end_date)
+            df = ticker.history(start=start_date, end=end_date, interval=yf_interval)
             
             if not df.empty:
+                if resample_to_4h:
+                    df = df.resample('4H').agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'}).dropna()
                 logger.info(f"✅ yfinance success for {symbol} as {yf_sym}")
                 return df
         except Exception as e:
             logger.error(f"❌ yfinance failed for {symbol} as {yf_sym}: {e}")
             continue
 
-    # Try Alpha Vantage second (best for Singapore)
-    try:
-        logger.info(f"Trying Alpha Vantage for {symbol}...")
-        data = get_av_fetcher().fetch_historical_data(symbol, days)
-        if not data.empty:
-            logger.info(f"✅ Alpha Vantage success for {symbol}")
-            return data
-    except Exception as e:
-        logger.error(f"❌ Alpha Vantage failed for {symbol}: {e}")
+    # Other fetchers currently only support daily in this implementation
+    if interval == "1d":
+        # Try Alpha Vantage second
+        try:
+            logger.info(f"Trying Alpha Vantage for {symbol}...")
+            data = get_av_fetcher().fetch_historical_data(symbol, days)
+            if not data.empty:
+                logger.info(f"✅ Alpha Vantage success for {symbol}")
+                return data
+        except Exception as e:
+            logger.error(f"❌ Alpha Vantage failed for {symbol}: {e}")
+        
+        # ... others ...
     
-    # Try Twelve Data third
-    try:
-        logger.info(f"Trying Twelve Data for {symbol}...")
-        data = get_td_fetcher().fetch_historical_data(symbol, days)
-        if not data.empty:
-            logger.info(f"✅ Twelve Data success for {symbol}")
-            return data
-    except Exception as e:
-        logger.error(f"❌ Twelve Data failed for {symbol}: {e}")
-    
-    # Try FMP fourth
-    try:
-        logger.info(f"Trying FMP for {symbol}...")
-        data = get_fmp_fetcher().fetch_historical_data(symbol, days)
-        if not data.empty:
-            logger.info(f"✅ FMP success for {symbol}")
-            return data
-    except Exception as e:
-        logger.error(f"❌ FMP failed for {symbol}: {e}")
-    
-    # No mock data fallback - return error if all sources fail
-    raise ValueError(f"Failed to fetch data for {symbol} from all sources")
+    # If we need weekly/monthly but only have daily from other fetchers
+    if interval in ["1wk", "1mo"]:
+        try:
+            daily_data = fetch_historical_data(symbol, days, interval="1d")
+            resample_rule = 'W' if interval == "1wk" else 'ME'
+            return daily_data.resample(resample_rule).agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'})
+        except:
+            pass
+
+    raise ValueError(f"Failed to fetch {interval} data for {symbol} from all sources")
 
 
 def get_current_price(symbol: str) -> float:

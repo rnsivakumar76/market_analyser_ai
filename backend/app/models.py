@@ -19,6 +19,11 @@ class MarketPhase(str, Enum):
     CONSOLIDATION = "consolidation" # General sideways
 
 
+class StrategyMode(str, Enum):
+    LONG_TERM = "long_term"   # Monthly -> Weekly -> Daily
+    SHORT_TERM = "short_term" # Daily -> 4Hour -> 1Hour
+
+
 class PhaseAnalysis(BaseModel):
     phase: MarketPhase
     score: float
@@ -174,6 +179,7 @@ class InstrumentAnalysis(BaseModel):
     position_sizing: Optional[PositionSizing] = None
     news_sentiment: Optional[NewsSentiment] = None
     pullback_warning: Optional[PullbackWarningAnalysis] = None
+    strategy_mode: StrategyMode = StrategyMode.LONG_TERM
 
 
 class PerformanceSummary(BaseModel):

@@ -181,6 +181,58 @@
   box-shadow: 0 0 15px rgba(250, 179, 135, 0.3);
 }
 
+.mode-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #313244;
+  color: #a6adc8;
+  border: 1px solid #45475a;
+  padding: 8px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  .mode-icon {
+    font-size: 1.2rem;
+    transition: transform 0.4s;
+  }
+
+  .mode-name {
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  &:hover {
+    border-color: #89b4fa;
+    color: #cdd6f4;
+    background: rgba(137, 180, 250, 0.1);
+    transform: translateY(-1px);
+
+    .mode-icon {
+      transform: scale(1.2) rotate(10deg);
+    }
+  }
+
+  &.short-term {
+    background: rgba(249, 226, 175, 0.05);
+    border-color: #f9e2af;
+    color: #f9e2af;
+    box-shadow: 0 0 20px rgba(249, 226, 175, 0.1);
+
+    &:hover {
+      background: rgba(249, 226, 175, 0.15);
+      box-shadow: 0 0 25px rgba(249, 226, 175, 0.2);
+    }
+
+    .mode-icon {
+      filter: drop-shadow(0 0 5px rgba(249, 226, 175, 0.5));
+    }
+  }
+}
+
 .refresh-btn {
   display: flex;
   align-items: center;

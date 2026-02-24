@@ -155,6 +155,8 @@ export interface PullbackWarningAnalysis {
   description: string;
 }
 
+export type StrategyMode = 'long_term' | 'short_term';
+
 export interface InstrumentAnalysis {
   symbol: string;
   name: string;
@@ -175,6 +177,7 @@ export interface InstrumentAnalysis {
   position_sizing?: PositionSizing;
   news_sentiment?: NewsSentiment;
   pullback_warning?: PullbackWarningAnalysis;
+  strategy_mode: StrategyMode;
 }
 
 export interface WeeklyPerformance {
@@ -207,12 +210,12 @@ export class MarketAnalyzerService {
   private http = inject(HttpClient);
   private apiUrl = 'https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api';
 
-  analyzeAll(): Observable<AnalysisResponse> {
-    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze`);
+  analyzeAll(mode: StrategyMode = 'long_term'): Observable<AnalysisResponse> {
+    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}`);
   }
 
-  analyzeSingle(symbol: string): Observable<InstrumentAnalysis> {
-    return this.http.get<InstrumentAnalysis>(`${this.apiUrl}/analyze/${symbol}`);
+  analyzeSingle(symbol: string, mode: StrategyMode = 'long_term'): Observable<InstrumentAnalysis> {
+    return this.http.get<InstrumentAnalysis>(`${this.apiUrl}/analyze/${symbol}?mode=${mode}`);
   }
 
   getInstruments(): Observable<{ instruments: { symbol: string; name: string }[] }> {

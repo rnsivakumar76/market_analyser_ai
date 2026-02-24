@@ -38,7 +38,7 @@ app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET"
 app.include_router(auth_router, prefix="/api")
 
 # Lazy analysis helper to keep imports deferred
-def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_direction: Any = None, strategy_settings: Any = None) -> Any:
+def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_direction: Any = None, strategy_settings: Any = None, mode: Any = None) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
     from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price, _get_yf_symbols
     from .analyzers import (
@@ -48,36 +48,63 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         analyze_news_sentiment, analyze_pullback_warning
     )
     from .signal_generator import generate_trade_signal
-    from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis
+    from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode
     
-    logger.info(f"Analyzing {symbol}...")
+    # Default to Long Term if not specified
+    if mode is None:
+        mode = StrategyMode.LONG_TERM
+        
+    logger.info(f"Analyzing {symbol} in {mode.value} mode...")
     
     if benchmark_direction is None:
         benchmark_direction = Signal.NEUTRAL
     
-    # Fetch data
-    daily_data = fetch_historical_data(symbol, days=500)
-    weekly_data = fetch_weekly_data(symbol, weeks=12)
-    
+    # Timeframe selection based on mode
+    if mode == StrategyMode.LONG_TERM:
+        # Long Term: Monthly (Trend) -> Weekly (Pullback) -> Daily (Execution)
+        macro_data = fetch_historical_data(symbol, days=1000, interval="1mo")
+        pullback_data = fetch_historical_data(symbol, days=250, interval="1wk")
+        execution_data = fetch_historical_data(symbol, days=500, interval="1d")
+        
+        macro_label = "Monthly"
+        pullback_label = "Weekly"
+        execution_label = "Daily"
+    else:
+        # Short Term: Daily (Trend) -> 4-Hour (Pullback) -> 1-Hour (Execution)
+        macro_data = fetch_historical_data(symbol, days=500, interval="1d")
+        pullback_data = fetch_historical_data(symbol, days=60, interval="4h")
+        execution_data = fetch_historical_data(symbol, days=20, interval="1h")
+        
+        macro_label = "Daily"
+        pullback_label = "4-Hour"
+        execution_label = "1-Hour"
+
     try:
         current_price = get_current_price(symbol)
     except Exception as e:
-        logger.warning(f"Could not fetch current price for {symbol}: {e}. Using last daily close.")
-        current_price = float(daily_data['Close'].iloc[-1])
+        logger.warning(f"Could not fetch current price for {symbol}: {e}. Using last execution close.")
+        current_price = float(execution_data['Close'].iloc[-1])
     
-    trend = analyze_monthly_trend(daily_data, params.get('monthly', {}))
-    pullback = analyze_weekly_pullback(weekly_data, current_price, params.get('weekly', {}))
-    strength = analyze_daily_strength(daily_data, params.get('daily', {}))
-    phase = analyze_market_phase(daily_data, params.get('daily', {}))
-    candle_data = detect_candle_patterns(daily_data)
-    # Wrap candle in the pydantic model for signal generator
+    trend = analyze_monthly_trend(macro_data, params.get('monthly', {}))
+    # Update description to reflect timeframe
+    trend.description = f"[{macro_label}] " + trend.description
+    
+    pullback = analyze_weekly_pullback(pullback_data, current_price, params.get('weekly', {}))
+    pullback.description = f"[{pullback_label}] " + pullback.description
+    
+    strength = analyze_daily_strength(execution_data, params.get('daily', {}))
+    strength.description = f"[{execution_label}] " + strength.description
+    
+    phase = analyze_market_phase(execution_data, params.get('daily', {}))
+    candle_data = detect_candle_patterns(execution_data)
+    
     candle_model = CandleAnalysis(
         pattern=candle_data['pattern'],
         description=candle_data['description'],
         is_bullish=candle_data.get('is_bullish')
     )
     
-    tech_indicators = analyze_technical_indicators(daily_data)
+    tech_indicators = analyze_technical_indicators(execution_data)
     news_sentiment = analyze_news_sentiment(symbol)
     
     trade_signal = generate_trade_signal(
@@ -92,7 +119,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     )
     
     # NEW: Pullback Warning Logic
-    pullback_warning = analyze_pullback_warning(daily_data, trend.direction)
+    pullback_warning = analyze_pullback_warning(execution_data, trend.direction)
     
     # Boost/adjust score based on technical indicators
     if tech_indicators.trend_breakout == 'bullish_breakout':
@@ -120,11 +147,11 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         trade_signal.score = max(trade_signal.score - 10, -100)
         trade_signal.reasons.append(f"Negative News Sentiment (-10 penalty)")
 
-    volatility = analyze_volatility_and_risk(daily_data, current_price, trade_signal.recommendation.value)
+    volatility = analyze_volatility_and_risk(execution_data, current_price, trade_signal.recommendation.value)
     # Use the primary mapping for fundamentals
     primary_yf_sym = _get_yf_symbols(symbol)[0]
     fundamentals = analyze_fundamentals(symbol, primary_yf_sym)
-    backtest = get_backtest_results(symbol, daily_data, params)
+    backtest = get_backtest_results(symbol, execution_data, params)
     
     return InstrumentAnalysis(
         symbol=symbol,
@@ -144,8 +171,9 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         trade_signal=trade_signal,
         technical_indicators=tech_indicators,
         news_sentiment=news_sentiment,
-        pullback_warning=pullback_warning
-    ), daily_data
+        pullback_warning=pullback_warning,
+        strategy_mode=mode
+    ), execution_data
 
 @app.get("/")
 async def root():
@@ -154,27 +182,33 @@ async def root():
 # In-memory store for sent alerts
 SENT_ALERTS = set()
 
-async def run_scheduled_analysis(user_id: str = "global_default"):
+async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = None):
     from .config_loader import load_config, get_instruments, get_analysis_params, get_alert_config, get_strategy_config
-    from .models import StrategySettings, Signal
+    from .models import StrategySettings, Signal, StrategyMode
     from .data_fetcher import fetch_historical_data
     from .analyzers import analyze_monthly_trend, calculate_weekly_performance, calculate_correlations, apply_position_sizing
     from .notifier import send_alerts
     from concurrent.futures import ThreadPoolExecutor, as_completed
     
-    logger.info(f"Running parallel market scan for user: {user_id}...")
+    if mode is None:
+        mode = StrategyMode.LONG_TERM
+
+    logger.info(f"Running parallel market scan for user: {user_id} ({mode.value})...")
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
     params = get_analysis_params(config)
     alert_config = get_alert_config(config)
     strategy_settings = StrategySettings(**get_strategy_config(config))
     
+    # Benchmarks use mode-specific trend interval
+    bench_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
+    
     # Parallel Fetch
     benchmarks_data = {}
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = {
-            executor.submit(fetch_historical_data, "SPX", days=60): "SPX",
-            executor.submit(fetch_historical_data, "BTC-USD", days=60): "BTC-USD"
+            executor.submit(fetch_historical_data, "SPX", days=1000, interval=bench_interval): "SPX",
+            executor.submit(fetch_historical_data, "BTC-USD", days=1000, interval=bench_interval): "BTC-USD"
         }
         for future in as_completed(futures):
             sym = futures[future]
@@ -198,7 +232,7 @@ async def run_scheduled_analysis(user_id: str = "global_default"):
         sym = inst['symbol'].upper()
         try:
             bench = btc_bench if ("-USD" in sym or "BTC" in sym or "ETH" in sym) else spy_bench
-            analysis, hist_data = analyze_instrument_lazy(sym, inst['name'], params, bench, strategy_settings)
+            analysis, hist_data = analyze_instrument_lazy(sym, inst['name'], params, bench, strategy_settings, mode=mode)
             return sym, analysis, hist_data
         except Exception as e:
             logger.error(f"Error analyzing {sym}: {e}")
@@ -212,7 +246,7 @@ async def run_scheduled_analysis(user_id: str = "global_default"):
                 results.append(analysis)
                 data_map[sym] = hist_data
                 if analysis.trade_signal.trade_worthy:
-                    alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}"
+                    alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}_{mode.value}"
                     if alert_key not in SENT_ALERTS:
                         send_alerts(analysis, alert_config)
                         SENT_ALERTS.add(alert_key)
@@ -224,9 +258,14 @@ async def run_scheduled_analysis(user_id: str = "global_default"):
     return results, perf_summary, correlation_results
 
 @app.get("/api/analyze")
-async def analyze_all(user_id: str = Depends(get_current_user)):
-    from .models import AnalysisResponse
-    results, perf, corr = await run_scheduled_analysis(user_id=user_id)
+async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)):
+    from .models import AnalysisResponse, StrategyMode
+    
+    # Cast mode if string
+    if isinstance(mode, str):
+        mode = StrategyMode(mode)
+    
+    results, perf, corr = await run_scheduled_analysis(user_id=user_id, mode=mode)
     return AnalysisResponse(
         analysis_timestamp=datetime.now(timezone.utc).isoformat(),
         instruments=results,
@@ -235,9 +274,15 @@ async def analyze_all(user_id: str = Depends(get_current_user)):
     )
 
 @app.get("/api/analyze/{symbol}")
-async def analyze_single(symbol: str, user_id: str = Depends(get_current_user)):
+async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(get_current_user)):
     from .config_loader import load_config, get_instruments, get_analysis_params, get_strategy_config
-    from .models import StrategySettings
+    from .models import StrategySettings, StrategyMode
+    
+    # Cast mode if string
+    if isinstance(mode, str):
+        mode = StrategyMode(mode)
+    if mode is None:
+        mode = StrategyMode.LONG_TERM
     
     config = load_config(user_id=user_id)
     params = get_analysis_params(config)
@@ -250,7 +295,11 @@ async def analyze_single(symbol: str, user_id: str = Depends(get_current_user)):
             name = inst['name']
             break
             
-    analysis, _ = analyze_instrument_lazy(symbol.upper(), name, params, strategy_settings=strategy_settings)
+    # Benchmark status
+    spy_df = fetch_historical_data("SPX", days=1000, interval=("1mo" if mode == StrategyMode.LONG_TERM else "1d"))
+    spy_bench_info = analyze_monthly_trend(spy_df, params.get('monthly', {}))
+    
+    analysis, _ = analyze_instrument_lazy(symbol.upper(), name, params, spy_bench_info.direction, strategy_settings, mode=mode)
     return analysis
 
 @app.get("/api/instruments")

@@ -35,6 +35,12 @@
       <button class="settings-btn" (click)="showSettings.set(true)" title="Manage Symbols">
         ⚙️
       </button>
+      <button class="mode-toggle-btn" (click)="toggleStrategyMode()"
+        [class.short-term]="strategyMode() === 'short_term'">
+        <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : 'Short Term' }}</span>
+        <span class="mode-icon">{{ strategyMode() === 'long_term' ? '📅' : '⏱️' }}</span>
+      </button>
+
       <button class="refresh-btn" (click)="runAnalysis()" [disabled]="loading()">
         @if (loading()) {
         <span class="spinner"></span> Analyzing...
