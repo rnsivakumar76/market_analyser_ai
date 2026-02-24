@@ -97,6 +97,12 @@
     }
   </div>
 
+  @if (instruments().length > 0) {
+  <app-ai-copilot [instruments]="instruments()" [performance]="weeklyPerformance()"
+    [correlationData]="correlationData()">
+  </app-ai-copilot>
+  }
+
   @if (error()) {
   <div class="error-banner">
     <span>{{ error() }}</span>
@@ -130,6 +136,22 @@
 
   <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
     <div class="sidebar-panel">
+      <div class="sidebar-header">
+        <div class="view-toggle">
+          <button class="vt-btn" [class.active]="sidebarView() === 'heatmap'" (click)="sidebarView.set('heatmap')">
+            🗺️ Heatmap
+          </button>
+          <button class="vt-btn" [class.active]="sidebarView() === 'list'" (click)="sidebarView.set('list')">
+            📋 List
+          </button>
+        </div>
+      </div>
+
+      @if (sidebarView() === 'heatmap') {
+      <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
+        (select)="selectedInstrument.set($event)">
+      </app-watchlist-heatmap>
+      } @else {
       <div class="instruments-list">
         @for (instrument of instruments(); track instrument.symbol) {
         <div class="summary-wrapper" [class.selected]="selectedInstrument()?.symbol === instrument.symbol">
@@ -138,11 +160,13 @@
         </div>
         }
       </div>
+      }
     </div>
 
     <div class="detail-panel">
       @if (selectedInstrument()) {
       <div class="detail-view-inner">
+        <app-multi-timeframe-overlay [analysis]="selectedInstrument()!"></app-multi-timeframe-overlay>
         <app-instrument-card [analysis]="selectedInstrument()!"
           (refresh)="refreshInstrument($event)"></app-instrument-card>
       </div>

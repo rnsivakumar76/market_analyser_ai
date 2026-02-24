@@ -10,11 +10,14 @@ import { UserManualComponent } from './components/user-manual/user-manual.compon
 import { LoginComponent } from './components/login/login.component';
 import { AuthService, User } from './services/auth.service';
 import { InstrumentSummaryComponent } from './components/instrument-summary/instrument-summary.component';
+import { WatchlistHeatmapComponent } from './components/watchlist-heatmap/watchlist-heatmap.component';
+import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component';
+import { MultiTimeframeOverlayComponent } from './components/multi-timeframe-overlay/multi-timeframe-overlay.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, InstrumentSummaryComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent],
+  imports: [CommonModule, InstrumentCardComponent, InstrumentSummaryComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, MultiTimeframeOverlayComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -35,6 +38,7 @@ export class App implements OnInit {
   psychologicalGuardrail = signal<PsychologicalGuardrail | null>(null);
   selectedInstrument = signal<InstrumentAnalysis | null>(null);
   strategyMode = signal<StrategyMode>('long_term');
+  sidebarView = signal<'list' | 'heatmap'>('heatmap');
 
   ngOnInit() {
     // Check for auth token in URL (from Google callback)
