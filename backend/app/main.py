@@ -66,18 +66,18 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         pullback_data = fetch_historical_data(symbol, days=250, interval="1wk")
         execution_data = fetch_historical_data(symbol, days=500, interval="1d")
         
-        macro_label = "Monthly"
-        pullback_label = "Weekly"
-        execution_label = "Daily"
+        macro_label = "Institutional (Long-Term)"
+        pullback_label = "Swing Portfolio"
+        execution_label = "Tactical Entry"
     else:
         # Short Term: Daily (Trend) -> 4-Hour (Pullback) -> 1-Hour (Execution)
         macro_data = fetch_historical_data(symbol, days=500, interval="1d")
-        pullback_data = fetch_historical_data(symbol, days=60, interval="4h")
-        execution_data = fetch_historical_data(symbol, days=20, interval="1h")
+        pullback_data = fetch_historical_data(symbol, days=120, interval="4h")
+        execution_data = fetch_historical_data(symbol, days=300, interval="1h")
         
-        macro_label = "Daily"
-        pullback_label = "4-Hour"
-        execution_label = "1-Hour"
+        macro_label = "Institutional (Short-Term)"
+        pullback_label = "Day Trading"
+        execution_label = "Execution (H1)"
 
     try:
         current_price = get_current_price(symbol)

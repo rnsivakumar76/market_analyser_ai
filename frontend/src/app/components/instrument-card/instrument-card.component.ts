@@ -115,8 +115,10 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
           <div class="analysis-grid">
             <div class="analysis-item">
               <div class="analysis-header">
-                <span class="indicator" [class]="getTrendClass()">●</span>
-                <span class="label">Monthly Trend</span>
+                <span class="trend-badge" [class]="getTrendClass()">
+                  {{ analysis.monthly_trend.direction.toUpperCase() }}
+                </span>
+                <span class="label">Primary Trend ({{ macroLabel }})</span>
               </div>
               <p class="description">{{ analysis.monthly_trend.description }}</p>
             </div>
@@ -126,23 +128,27 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
                 <span class="phase-badge" [class]="getPhaseClass()">
                   {{ analysis.market_phase.phase.toUpperCase() }}
                 </span>
-                <span class="label">Market Structure Phase</span>
+                <span class="label">Structure Phase</span>
               </div>
               <p class="description">{{ analysis.market_phase.description }}</p>
             </div>
 
             <div class="analysis-item">
               <div class="analysis-header">
-                <span class="indicator" [class]="getPullbackClass()">●</span>
-                <span class="label">Weekly Pullback</span>
+                <span class="trend-badge" [class]="getPullbackClass()">
+                  {{ analysis.weekly_pullback.detected ? 'PULLBACK' : 'EXTENDED' }}
+                </span>
+                <span class="label">Intermediate State ({{ pullbackLabel }})</span>
               </div>
               <p class="description">{{ analysis.weekly_pullback.description }}</p>
             </div>
 
             <div class="analysis-item">
               <div class="analysis-header">
-                <span class="indicator" [class]="getStrengthClass()">●</span>
-                <span class="label">Daily Strength</span>
+                <span class="trend-badge" [class]="getStrengthClass()">
+                  {{ analysis.daily_strength.signal.toUpperCase() }}
+                </span>
+                <span class="label">Tactical Momentum ({{ executionLabel }})</span>
               </div>
               <p class="description">{{ analysis.daily_strength.description }}</p>
             </div>
@@ -432,16 +438,44 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       align-items: start;
     }
 
-    .main-column {
+    .analysis-header {
       display: flex;
-      flex-direction: column;
-      gap: 16px;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .trend-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .trend-badge.bullish { background: rgba(166, 227, 161, 0.15); color: #a6e3a1; border: 1px solid rgba(166, 227, 161, 0.3); }
+    .trend-badge.bearish { background: rgba(243, 139, 168, 0.15); color: #f38ba8; border: 1px solid rgba(243, 139, 168, 0.3); }
+    .trend-badge.neutral { background: rgba(249, 226, 175, 0.15); color: #f9e2af; border: 1px solid rgba(249, 226, 175, 0.3); }
+
+    .label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #6c7086;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .description {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #cdd6f4;
+      margin: 0;
     }
 
     .side-column {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 20px;
     }
 
     @media (max-width: 1000px) {
@@ -1620,6 +1654,18 @@ export class InstrumentCardComponent {
     if (label.includes('leader')) return 'leader';
     if (label.includes('laggard')) return 'laggard';
     return 'neutral';
+  }
+
+  get macroLabel(): string {
+    return this.analysis.strategy_mode === 'long_term' ? 'Monthly' : 'Daily';
+  }
+
+  get pullbackLabel(): string {
+    return this.analysis.strategy_mode === 'long_term' ? 'Weekly' : '4-Hour';
+  }
+
+  get executionLabel(): string {
+    return this.analysis.strategy_mode === 'long_term' ? 'Daily' : '1-Hour';
   }
 
   getTrendClass(): string {

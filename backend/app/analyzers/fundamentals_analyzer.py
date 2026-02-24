@@ -48,8 +48,8 @@ def _detect_relevant_currencies(symbol: str) -> List[str]:
         if pegged in symbol:
             currencies.append("USD")
             
-    # Include generic USD mapping for safety if it ends with USD
-    if symbol.endswith("USD"):
+    # Include generic USD mapping for safety if it ends with USD or is a US stock (1-5 chars)
+    if symbol.endswith("USD") or (len(symbol) <= 5 and not currencies):
         currencies.append("USD")
         
     return list(set(currencies))

@@ -28,6 +28,13 @@ export class InstrumentChartComponent implements AfterViewInit, OnDestroy, OnCha
 
     ngAfterViewInit() {
         this.initChart();
+        // If data arrived before chart was ready, set it now
+        if (this.data && this.data.length > 0 && this.candleSeries) {
+            this.candleSeries.setData(this.data);
+            if (this.chart) {
+                this.chart.timeScale().fitContent();
+            }
+        }
     }
 
     ngOnChanges(changes: SimpleChanges) {
