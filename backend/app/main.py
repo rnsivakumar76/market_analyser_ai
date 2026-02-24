@@ -45,10 +45,10 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         analyze_monthly_trend, analyze_weekly_pullback, analyze_daily_strength,
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
         get_backtest_results, detect_candle_patterns, analyze_technical_indicators,
-        analyze_news_sentiment
+        analyze_news_sentiment, analyze_pullback_warning
     )
     from .signal_generator import generate_trade_signal
-    from .models import InstrumentAnalysis, Signal, CandleAnalysis
+    from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis
     
     logger.info(f"Analyzing {symbol}...")
     
@@ -91,6 +91,9 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         tech_indicators=tech_indicators
     )
     
+    # NEW: Pullback Warning Logic
+    pullback_warning = analyze_pullback_warning(daily_data, trend.direction)
+    
     # Boost/adjust score based on technical indicators
     if tech_indicators.trend_breakout == 'bullish_breakout':
         trade_signal.score = min(trade_signal.score + 15, 100)
@@ -98,6 +101,16 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     elif tech_indicators.trend_breakout == 'bearish_breakout':
         trade_signal.score = max(trade_signal.score - 15, -100)
         trade_signal.reasons.append(f"Bearish Breakout ({tech_indicators.breakout_confidence*100:.0f}% confidence)")
+
+    # Adjust score based on pullback warning
+    if pullback_warning.is_warning:
+        # Penalize score if extended
+        if trend.direction == Signal.BULLISH:
+            trade_signal.score = max(trade_signal.score - 20, 0)
+            trade_signal.reasons.append(f"Caution: {pullback_warning.description}")
+        elif trend.direction == Signal.BEARISH:
+            trade_signal.score = min(trade_signal.score + 20, 0)
+            trade_signal.reasons.append(f"Caution: {pullback_warning.description}")
 
     # Boost/adjust based on news sentiment
     if news_sentiment.label == "Bullish":
@@ -130,7 +143,8 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         benchmark_direction=benchmark_direction,
         trade_signal=trade_signal,
         technical_indicators=tech_indicators,
-        news_sentiment=news_sentiment
+        news_sentiment=news_sentiment,
+        pullback_warning=pullback_warning
     ), daily_data
 
 @app.get("/")

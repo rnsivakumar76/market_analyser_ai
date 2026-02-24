@@ -11,7 +11,8 @@ from .correlation_analyzer import calculate_correlations
 from .position_sizer import apply_position_sizing
 from .technical_analyzer import analyze_technical_indicators
 from .news_analyzer import analyze_news_sentiment
-from ..models import CandleAnalysis, PerformanceSummary, CorrelationData
+from .pullback_warning_analyzer import analyze_pullback_warning
+from ..models import CandleAnalysis, PerformanceSummary, CorrelationData, PullbackWarningAnalysis
 
 __all__ = [
     'analyze_monthly_trend',
@@ -32,5 +33,7 @@ __all__ = [
     'CorrelationData',
     'apply_position_sizing',
     'analyze_technical_indicators',
-    'analyze_news_sentiment'
+    'analyze_news_sentiment',
+    'analyze_pullback_warning',
+    'PullbackWarningAnalysis'
 ]

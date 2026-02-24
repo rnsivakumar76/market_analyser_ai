@@ -148,6 +148,13 @@ export interface ChartData {
   volume: number;
 }
 
+export interface PullbackWarningAnalysis {
+  warning_score: number;
+  is_warning: boolean;
+  reasons: string[];
+  description: string;
+}
+
 export interface InstrumentAnalysis {
   symbol: string;
   name: string;
@@ -167,6 +174,7 @@ export interface InstrumentAnalysis {
   technical_indicators?: TechnicalAnalysis;
   position_sizing?: PositionSizing;
   news_sentiment?: NewsSentiment;
+  pullback_warning?: PullbackWarningAnalysis;
 }
 
 export interface WeeklyPerformance {

@@ -92,6 +92,26 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             </div>
           </div>
 
+          @if (analysis.pullback_warning) {
+            <div class="pullback-warning-section" [class.active-warning]="analysis.pullback_warning.is_warning">
+              <div class="warning-header">
+                <span class="warning-icon">⚠️</span>
+                Pullback Risk Assessment
+                <span class="warning-score" [class.risky]="analysis.pullback_warning.is_warning">
+                  Score: {{ analysis.pullback_warning.warning_score }}/8
+                </span>
+              </div>
+              <p class="description">{{ analysis.pullback_warning.description }}</p>
+              @if (analysis.pullback_warning.reasons.length > 0) {
+                <ul class="warning-reasons">
+                  @for (reason of analysis.pullback_warning.reasons; track reason) {
+                    <li>{{ reason }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
           @if (analysis.fundamentals) {
             <div class="fundamentals-section" [class.warning]="analysis.fundamentals.has_high_impact_events">
               <div class="fundamentals-header">Fundamental Context</div>
@@ -1384,6 +1404,67 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
 
     .btn-read-full:hover {
       background: #b4befe;
+    }
+
+    .pullback-warning-section {
+      background: rgba(30, 30, 46, 0.6);
+      border: 1px solid #313244;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+    }
+
+    .pullback-warning-section.active-warning {
+      border: 1px solid #fab387;
+      background: rgba(250, 179, 135, 0.05);
+      box-shadow: 0 0 15px rgba(250, 179, 135, 0.1);
+    }
+
+    .warning-header {
+      color: #9399b2;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .active-warning .warning-header {
+      color: #fab387;
+    }
+
+    .warning-score {
+      margin-left: auto;
+      font-size: 0.75rem;
+      background: #313244;
+      padding: 2px 8px;
+      border-radius: 10px;
+      color: #a6adc8;
+    }
+
+    .warning-score.risky {
+      background: #fab387;
+      color: #1e1e2e;
+    }
+
+    .warning-reasons {
+      margin: 8px 0 0 0;
+      padding-left: 18px;
+      list-style-type: "•";
+    }
+
+    .warning-reasons li {
+      color: #bac2de;
+      font-size: 0.75rem;
+      margin-bottom: 4px;
+      padding-left: 6px;
+    }
+
+    .active-warning .warning-reasons li {
+      color: #fab387;
     }
   `]
 })
