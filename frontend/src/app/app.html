@@ -9,35 +9,6 @@
       <p class="subtitle">Multi-timeframe analysis for institutional decisions</p>
     </div>
 
-    @if (weeklyPerformance(); as perf) {
-    <div class="header-stats" [class.positive]="perf.total_pnl_percent > 0">
-      <div class="stat-main">
-        <span class="v-label">WEEKLY PNL</span>
-        <span class="v-value">{{ perf.total_pnl_percent > 0 ? '+' : '' }}{{ perf.total_pnl_percent }}%</span>
-      </div>
-      <div class="stat-group">
-        <div class="stat-mini">
-          <span class="m-label">SETUPS</span>
-          <span class="m-value">{{ perf.total_trades }}</span>
-        </div>
-        <div class="stat-mini">
-          <span class="m-label">WIN RATE</span>
-          <span class="m-value">{{ perf.win_rate }}%</span>
-        </div>
-      </div>
-      <div class="stat-group">
-        <div class="stat-mini">
-          <span class="m-label">BEST ({{ perf.best_trade_symbol }})</span>
-          <span class="m-value good">+{{ perf.best_trade_pnl }}%</span>
-        </div>
-        <div class="stat-mini">
-          <span class="m-label">WORST ({{ perf.worst_trade_symbol }})</span>
-          <span class="m-value bad">{{ perf.worst_trade_pnl }}%</span>
-        </div>
-      </div>
-    </div>
-    }
-
     <div class="header-actions">
       <!-- User Profile Section -->
       @if (authService.user(); as user) {
@@ -87,18 +58,44 @@
     </div>
   </header>
 
-  <!-- ... rest of the status bar and grid ... -->
-  @if (lastUpdated()) {
-  <div class="status-bar">
-    <span class="last-updated">Last updated: {{ lastUpdated() }}</span>
-    <div class="summary">
+  <!-- Bottom Status Bar -->
+  <div class="bottom-bar">
+    <div class="bottom-bar-left">
+      @if (lastUpdated()) {
+      <span class="last-updated">🕐 {{ lastUpdated() }}</span>
+      }
+      <div class="bar-divider"></div>
       <span class="stat">{{ instruments().length }} instruments</span>
-      <span class="stat bullish">{{ bullishCount }} bullish</span>
-      <span class="stat bearish">{{ bearishCount }} bearish</span>
-      <span class="stat highlight">{{ tradeWorthyCount }} trade-worthy</span>
+      <span class="stat bullish">▲ {{ bullishCount }} bullish</span>
+      <span class="stat bearish">▼ {{ bearishCount }} bearish</span>
+      <span class="stat highlight">⚡ {{ tradeWorthyCount }} trade-worthy</span>
     </div>
+
+    @if (weeklyPerformance(); as perf) {
+    <div class="bottom-perf" [class.positive]="perf.total_pnl_percent > 0">
+      <div class="perf-divider">WEEKLY PNL</div>
+      <span class="perf-value">{{ perf.total_pnl_percent > 0 ? '+' : '' }}{{ perf.total_pnl_percent }}%</span>
+      <div class="bar-divider"></div>
+      <div class="perf-mini">
+        <span class="pm-label">SETUPS</span>
+        <span class="pm-value">{{ perf.total_trades }}</span>
+      </div>
+      <div class="perf-mini">
+        <span class="pm-label">WIN RATE</span>
+        <span class="pm-value">{{ perf.win_rate }}%</span>
+      </div>
+      <div class="bar-divider"></div>
+      <div class="perf-mini">
+        <span class="pm-label">BEST ({{ perf.best_trade_symbol }})</span>
+        <span class="pm-value good">+{{ perf.best_trade_pnl }}%</span>
+      </div>
+      <div class="perf-mini">
+        <span class="pm-label">WORST ({{ perf.worst_trade_symbol }})</span>
+        <span class="pm-value bad">{{ perf.worst_trade_pnl }}%</span>
+      </div>
+    </div>
+    }
   </div>
-  }
 
   @if (error()) {
   <div class="error-banner">
