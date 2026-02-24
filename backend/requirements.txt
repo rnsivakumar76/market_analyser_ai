@@ -1,6 +1,6 @@
 fastapi==0.109.0
 uvicorn==0.27.0
-yfinance>=1.2.0
+yfinance>=0.2.0
 pandas==2.2.0
 numpy==1.26.3
 pyyaml==6.0.1
@@ -22,3 +22,5 @@ httpx
 email-validator
 vaderSentiment
 beautifulsoup4
+boto3
+botocore

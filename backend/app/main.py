@@ -239,6 +239,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     
     # Parallel Fetch for BOTH Macro and Execution Benchmarks
     benchmarks_data = {}
+    bench_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
     exec_interval = "1d" if mode == StrategyMode.LONG_TERM else "1h"
     exec_days = 500 if mode == StrategyMode.LONG_TERM else 20
 
@@ -320,7 +321,9 @@ async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)
 @app.get("/api/analyze/{symbol}")
 async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(get_current_user)):
     from .config_loader import load_config, get_instruments, get_analysis_params, get_strategy_config
-    from .models import StrategySettings, StrategyMode
+    from .models import StrategySettings, StrategyMode, Signal
+    from .data_fetcher import fetch_historical_data
+    from .analyzers import analyze_monthly_trend
     
     # Cast mode if string
     if isinstance(mode, str):
