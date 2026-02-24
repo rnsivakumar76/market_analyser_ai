@@ -12,6 +12,7 @@ from .position_sizer import apply_position_sizing
 from .technical_analyzer import analyze_technical_indicators
 from .news_analyzer import analyze_news_sentiment
 from .pullback_warning_analyzer import analyze_pullback_warning
+from .relative_strength_analyzer import analyze_relative_strength
 from ..models import CandleAnalysis, PerformanceSummary, CorrelationData, PullbackWarningAnalysis
 
 __all__ = [
@@ -35,5 +36,6 @@ __all__ = [
     'analyze_technical_indicators',
     'analyze_news_sentiment',
     'analyze_pullback_warning',
-    'PullbackWarningAnalysis'
+    'PullbackWarningAnalysis',
+    'analyze_relative_strength'
 ]

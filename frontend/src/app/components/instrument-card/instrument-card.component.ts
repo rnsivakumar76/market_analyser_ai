@@ -18,6 +18,11 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             } @else if (analysis.benchmark_direction === 'bearish') {
               <span class="beta-status bad" title="Market Beta: Major market index is bearish. High risk of failure for buy setups.">⚠️ Beta Risk</span>
             }
+            @if (analysis.relative_strength) {
+              <span class="alpha-status" [class]="getAlphaClass()" [title]="analysis.relative_strength.description">
+                {{ analysis.relative_strength.label === 'Leader' ? '🌟' : '📊' }} Alpha: {{ analysis.relative_strength.alpha > 0 ? '+' : '' }}{{ analysis.relative_strength.alpha.toFixed(1) }}%
+              </span>
+            }
           </div>
           <span class="name">{{ analysis.name }}</span>
         </div>
@@ -526,6 +531,30 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       background: rgba(243, 139, 168, 0.1);
       color: #f38ba8;
       border: 1px solid rgba(243, 139, 168, 0.2);
+    }
+
+    .alpha-status {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: rgba(137, 180, 250, 0.1);
+      color: #89b4fa;
+      border: 1px solid rgba(137, 180, 250, 0.2);
+      
+      &.leader {
+        background: rgba(249, 226, 175, 0.1);
+        border-color: #f9e2af;
+        color: #f9e2af;
+        box-shadow: 0 0 10px rgba(249, 226, 175, 0.1);
+      }
+      
+      &.laggard {
+        background: rgba(243, 139, 168, 0.1);
+        border-color: #f38ba8;
+        color: #f38ba8;
+      }
     }
 
     .name {
@@ -1582,6 +1611,14 @@ export class InstrumentCardComponent {
   getScoreClass(): string {
     if (this.analysis.trade_signal.score > 20) return 'positive';
     if (this.analysis.trade_signal.score < -20) return 'negative';
+    return 'neutral';
+  }
+
+  getAlphaClass(): string {
+    if (!this.analysis.relative_strength) return '';
+    const label = this.analysis.relative_strength.label.toLowerCase();
+    if (label.includes('leader')) return 'leader';
+    if (label.includes('laggard')) return 'laggard';
     return 'neutral';
   }
 

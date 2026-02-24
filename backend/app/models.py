@@ -94,6 +94,15 @@ class StrengthAnalysis(BaseModel):
     description: str
 
 
+class RelativeStrengthAnalysis(BaseModel):
+    is_outperforming: bool
+    symbol_return: float
+    benchmark_return: float
+    alpha: float
+    label: str
+    description: str
+
+
 class PivotPoints(BaseModel):
     pivot: float
     r1: float
@@ -182,6 +191,7 @@ class InstrumentAnalysis(BaseModel):
     position_sizing: Optional[PositionSizing] = None
     news_sentiment: Optional[NewsSentiment] = None
     pullback_warning: Optional[PullbackWarningAnalysis] = None
+    relative_strength: Optional[RelativeStrengthAnalysis] = None
     strategy_mode: StrategyMode = StrategyMode.LONG_TERM
 
 

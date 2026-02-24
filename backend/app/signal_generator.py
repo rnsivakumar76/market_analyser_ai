@@ -2,7 +2,7 @@ from typing import List
 from .models import (
     TrendAnalysis, PullbackAnalysis, StrengthAnalysis, 
     TradeSignal, Signal, CandleAnalysis, StrategySettings,
-    FundamentalsAnalysis
+    FundamentalsAnalysis, RelativeStrengthAnalysis
 )
 
 
@@ -17,6 +17,7 @@ def generate_trade_signal(
     tech_indicators = None,
     volatility = None,
     fundamentals: FundamentalsAnalysis = None,
+    relative_strength: RelativeStrengthAnalysis = None,
     **kwargs
 ) -> TradeSignal:
     """
@@ -142,6 +143,15 @@ def generate_trade_signal(
         trade_worthy = False
         score = max(score - 20, -100) if score > 0 else min(score + 20, 100)
         reasons.append("Macro Shield Active: Trade blocked due to high-impact economic events or earnings within 48h.")
+
+    # Hard Filter 5: Relative Strength (Alpha Shield)
+    if trade_worthy and relative_strength:
+        if recommendation == Signal.BULLISH and not relative_strength.is_outperforming:
+            trade_worthy = False
+            reasons.append("Alpha Filter: Trade blocked. This instrument is a market laggard (underperforming its benchmark). Institutional money flows into leaders.")
+        elif recommendation == Signal.BEARISH and relative_strength.is_outperforming:
+            trade_worthy = False
+            reasons.append("Alpha Filter: Trade blocked. This instrument is showing resilient strength vs the market. Dangerous to short market leaders.")
 
     action_plan = "Stand Aside"
     action_plan_details = "Market conditions do not support a high-probability trade."

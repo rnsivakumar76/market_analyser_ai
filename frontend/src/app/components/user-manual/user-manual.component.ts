@@ -110,6 +110,27 @@ export class UserManualComponent {
       `
     },
     {
+      id: 'pro-tools',
+      title: 'Institutional Alpha & Scaling',
+      icon: '🚀',
+      content: `
+        Professional setups require more than just a chart. These tools separate the "retail" behavior from "institutional" systems.
+        <ul>
+          <li><strong>The Alpha Shield (Relative Strength):</strong> Compares the asset directly against its benchmark (SPX for stocks, BTC for crypto). 
+              The system <strong>actively blocks</strong> long trades on instruments that are underperforming the market (laggards). We only buy the strongest horses.</li>
+          <li><strong>Multi-Stage Scaling (TP1, TP2, TP3):</strong> Institutional traders rarely exit all at once.
+              <ul>
+                <li><em>Stage 1 (De-risk):</em> Take 30% profit at 1.0x ATR and move SL to break-even.</li>
+                <li><em>Stage 2 (Bank Profit):</em> Take 40% at 2.0x ATR.</li>
+                <li><em>Stage 3 (Runner):</em> Leave 30% to capture massive trends, trailing with a 2.0x ATR buffer.</li>
+              </ul>
+          </li>
+          <li><strong>The Macro Event Guard:</strong> Automatically scans the global economic calendar and corporate earnings. 
+              If a high-impact event (NFP, CPI, FOMC) occurs within 48h, the <strong>Macro Shield</strong> blocks the trade to prevent "gap" risk.</li>
+        </ul>
+      `
+    },
+    {
       id: 'backtesting',
       title: 'Backtesting Methodology',
       icon: '⏱️',

@@ -38,14 +38,14 @@ app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET"
 app.include_router(auth_router, prefix="/api")
 
 # Lazy analysis helper to keep imports deferred
-def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_direction: Any = None, strategy_settings: Any = None, mode: Any = None) -> Any:
+def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_direction: Any = None, strategy_settings: Any = None, mode: Any = None, benchmark_data_df: Any = None) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
     from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price, _get_yf_symbols
     from .analyzers import (
         analyze_monthly_trend, analyze_weekly_pullback, analyze_daily_strength,
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
         get_backtest_results, detect_candle_patterns, analyze_technical_indicators,
-        analyze_news_sentiment, analyze_pullback_warning
+        analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode
@@ -112,6 +112,30 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     primary_yf_sym = _get_yf_symbols(symbol)[0]
     fundamentals = analyze_fundamentals(symbol, primary_yf_sym)
     
+    # NEW: Relative Strength Analysis (Alpha vs Beta)
+    # Determine which benchmark to use
+    is_crypto = any(word in symbol.upper() for word in ["BTC", "ETH", "USD", "CRYPTO", "BITCOIN"]) 
+    bench_sym = "BTC-USD" if is_crypto else "SPX"
+    
+    # Use pre-fetched data if available, otherwise fetch on the fly
+    if benchmark_data_df is not None:
+        bench_data = benchmark_data_df
+    else:
+        # Fetch benchmark data at the SAME execution interval
+        bench_data = fetch_historical_data(
+            bench_sym, 
+            days=(500 if mode == StrategyMode.LONG_TERM else 20), 
+            interval=("1d" if mode == StrategyMode.LONG_TERM else "1h")
+        )
+    
+    rs_analysis = analyze_relative_strength(
+        execution_data,
+        bench_data,
+        symbol,
+        bench_sym,
+        lookback_periods=20
+    )
+    
     trade_signal = generate_trade_signal(
         trend=trend, 
         pullback=pullback, 
@@ -122,7 +146,8 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         current_price=current_price,
         tech_indicators=tech_indicators,
         volatility=volatility,
-        fundamentals=fundamentals
+        fundamentals=fundamentals,
+        relative_strength=rs_analysis
     )
     
     # NEW: Pullback Warning Logic
@@ -154,6 +179,14 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         trade_signal.score = max(trade_signal.score - 10, -100)
         trade_signal.reasons.append(f"Negative News Sentiment (-10 penalty)")
 
+    # Boost/adjust based on Relative Strength
+    if rs_analysis.label == "Leader":
+        trade_signal.score = min(trade_signal.score + 15, 100)
+        trade_signal.reasons.append(f"Market Leader: Strong Relative Strength vs {bench_sym} (+15 boost)")
+    elif rs_analysis.label == "Laggard":
+        trade_signal.score = max(trade_signal.score - 15, -100)
+        trade_signal.reasons.append(f"Market Laggard: Weak Relative Strength vs {bench_sym} (-15 penalty)")
+
     backtest = get_backtest_results(symbol, execution_data, params)
     
     return InstrumentAnalysis(
@@ -175,6 +208,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         technical_indicators=tech_indicators,
         news_sentiment=news_sentiment,
         pullback_warning=pullback_warning,
+        relative_strength=rs_analysis,
         strategy_mode=mode
     ), execution_data
 
@@ -203,15 +237,17 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     alert_config = get_alert_config(config)
     strategy_settings = StrategySettings(**get_strategy_config(config))
     
-    # Benchmarks use mode-specific trend interval
-    bench_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
-    
-    # Parallel Fetch
+    # Parallel Fetch for BOTH Macro and Execution Benchmarks
     benchmarks_data = {}
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    exec_interval = "1d" if mode == StrategyMode.LONG_TERM else "1h"
+    exec_days = 500 if mode == StrategyMode.LONG_TERM else 20
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
-            executor.submit(fetch_historical_data, "SPX", days=1000, interval=bench_interval): "SPX",
-            executor.submit(fetch_historical_data, "BTC-USD", days=1000, interval=bench_interval): "BTC-USD"
+            executor.submit(fetch_historical_data, "SPX", days=1000, interval=bench_interval): "SPX_macro",
+            executor.submit(fetch_historical_data, "BTC-USD", days=1000, interval=bench_interval): "BTC_macro",
+            executor.submit(fetch_historical_data, "SPX", days=exec_days, interval=exec_interval): "SPX_exec",
+            executor.submit(fetch_historical_data, "BTC-USD", days=exec_days, interval=exec_interval): "BTC_exec"
         }
         for future in as_completed(futures):
             sym = futures[future]
@@ -223,10 +259,10 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
 
     spy_bench = Signal.NEUTRAL
     btc_bench = Signal.NEUTRAL
-    if benchmarks_data.get("SPX") is not None and not benchmarks_data["SPX"].empty:
-        spy_bench = analyze_monthly_trend(benchmarks_data["SPX"], params.get('monthly', {})).direction
-    if benchmarks_data.get("BTC-USD") is not None and not benchmarks_data["BTC-USD"].empty:
-        btc_bench = analyze_monthly_trend(benchmarks_data["BTC-USD"], params.get('monthly', {})).direction
+    if benchmarks_data.get("SPX_macro") is not None and not benchmarks_data["SPX_macro"].empty:
+        spy_bench = analyze_monthly_trend(benchmarks_data["SPX_macro"], params.get('monthly', {})).direction
+    if benchmarks_data.get("BTC_macro") is not None and not benchmarks_data["BTC_macro"].empty:
+        btc_bench = analyze_monthly_trend(benchmarks_data["BTC_macro"], params.get('monthly', {})).direction
             
     results = []
     data_map = {}
@@ -234,8 +270,13 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     def process_instrument(inst):
         sym = inst['symbol'].upper()
         try:
-            bench = btc_bench if ("-USD" in sym or "BTC" in sym or "ETH" in sym) else spy_bench
-            analysis, hist_data = analyze_instrument_lazy(sym, inst['name'], params, bench, strategy_settings, mode=mode)
+            is_crypto = any(word in sym for word in ["BTC", "ETH", "USD", "CRYPTO", "BITCOIN"])
+            bench = btc_bench if is_crypto else spy_bench
+            bench_exec_df = benchmarks_data.get("BTC_exec") if is_crypto else benchmarks_data.get("SPX_exec")
+            
+            analysis, hist_data = analyze_instrument_lazy(
+                sym, inst['name'], params, bench, strategy_settings, mode=mode, benchmark_data_df=bench_exec_df
+            )
             return sym, analysis, hist_data
         except Exception as e:
             logger.error(f"Error analyzing {sym}: {e}")

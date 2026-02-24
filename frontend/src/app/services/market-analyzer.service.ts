@@ -158,6 +158,15 @@ export interface PullbackWarningAnalysis {
   description: string;
 }
 
+export interface RelativeStrengthAnalysis {
+  is_outperforming: boolean;
+  symbol_return: number;
+  benchmark_return: number;
+  alpha: number;
+  label: string;
+  description: string;
+}
+
 export type StrategyMode = 'long_term' | 'short_term';
 
 export interface InstrumentAnalysis {
@@ -180,6 +189,7 @@ export interface InstrumentAnalysis {
   position_sizing?: PositionSizing;
   news_sentiment?: NewsSentiment;
   pullback_warning?: PullbackWarningAnalysis;
+  relative_strength?: RelativeStrengthAnalysis;
   strategy_mode: StrategyMode;
 }
 
