@@ -108,10 +108,25 @@
   }
 
   @if (loading() && instruments().length === 0) {
-  <div class="loading-container">
-    <div class="loading-spinner"></div>
-    <p>Fetching market data and running analysis...</p>
-    <p class="loading-note">This may take a moment for the first load</p>
+  <div class="loading-screen">
+    <div class="loading-content">
+      <div class="pulse-container">
+        <div class="pulse-ring"></div>
+        <div class="pulse-core">🛡️</div>
+        <div class="scanning-line"></div>
+      </div>
+
+      <div class="loading-text">
+        <h2 class="glitch-text">INITIALIZING MARKET INTELLIGENCE</h2>
+        <div class="status-steps">
+          <span class="status-item active">Deciphering Market Sentiment...</span>
+          <span class="status-item">Synchronizing Exchange Data...</span>
+          <span class="status-item">Calculating Theoretical PnL...</span>
+          <span class="status-item">Deploying Psychological Guardrails...</span>
+        </div>
+        <p class="loading-note">Primary sequence active. High-precision analysis in progress.</p>
+      </div>
+    </div>
   </div>
   }
 
