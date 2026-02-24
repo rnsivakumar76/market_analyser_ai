@@ -36,8 +36,51 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       </div>
 
       <div class="card-content">
-        <!-- Main Column (Left) -->
+        <!-- Main Column (Left): Execution & Warnings -->
         <div class="main-column">
+          <!-- 1. ACTIONABLE PLAN (PROMINENT AT TOP) -->
+          <div class="action-plan" [class]="getSignalClass()">
+            <div class="plan-header">Strategic Action Plan</div>
+            <div class="plan-title">{{ analysis.trade_signal.action_plan }}</div>
+            <p class="plan-details">{{ analysis.trade_signal.action_plan_details }}</p>
+
+            @if (analysis.trade_signal.psychological_guard) {
+              <div class="psych-guard">
+                <span class="guard-icon">🛡️</span>
+                <span class="guard-text"><strong>Psychological Rule:</strong> {{ analysis.trade_signal.psychological_guard }}</span>
+              </div>
+            }
+
+            @if (analysis.trade_signal.pyramiding_plan && analysis.trade_signal.pyramiding_plan !== 'N/A') {
+              <div class="pyramid-plan">
+                <span class="pyramid-icon">🔼</span>
+                <span class="pyramid-text"><strong>Pyramiding Range:</strong> {{ analysis.trade_signal.pyramiding_plan }}</span>
+              </div>
+            }
+          </div>
+
+          <!-- 2. PULLBACK WARNING (URGENT ALERT) -->
+          @if (analysis.pullback_warning) {
+            <div class="pullback-warning-section" [class.active-warning]="analysis.pullback_warning.is_warning">
+              <div class="warning-header">
+                <span class="warning-icon">⚠️</span>
+                Pullback Risk Assessment
+                <span class="warning-score" [class.risky]="analysis.pullback_warning.is_warning">
+                  Score: {{ analysis.pullback_warning.warning_score }}/8
+                </span>
+              </div>
+              <p class="description">{{ analysis.pullback_warning.description }}</p>
+              @if (analysis.pullback_warning.reasons.length > 0) {
+                <ul class="warning-reasons">
+                  @for (reason of analysis.pullback_warning.reasons; track reason) {
+                    <li>{{ reason }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
+          <!-- 3. CHART INTERACTION -->
           <div class="chart-action">
             <button class="btn-chart" (click)="toggleChart()" [class.active]="showChart">
               {{ showChart ? '📊 Close Chart' : '📊 View Interactive Chart' }}
@@ -56,6 +99,7 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             </div>
           }
 
+          <!-- 4. CORE ANALYSIS GRID -->
           <div class="analysis-grid">
             <div class="analysis-item">
               <div class="analysis-header">
@@ -92,40 +136,16 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             </div>
           </div>
 
-          @if (analysis.pullback_warning) {
-            <div class="pullback-warning-section" [class.active-warning]="analysis.pullback_warning.is_warning">
-              <div class="warning-header">
-                <span class="warning-icon">⚠️</span>
-                Pullback Risk Assessment
-                <span class="warning-score" [class.risky]="analysis.pullback_warning.is_warning">
-                  Score: {{ analysis.pullback_warning.warning_score }}/8
-                </span>
-              </div>
-              <p class="description">{{ analysis.pullback_warning.description }}</p>
-              @if (analysis.pullback_warning.reasons.length > 0) {
-                <ul class="warning-reasons">
-                  @for (reason of analysis.pullback_warning.reasons; track reason) {
-                    <li>{{ reason }}</li>
-                  }
-                </ul>
-              }
+          <!-- 5. CANDLE TRIGGERS -->
+          @if (analysis.candle_patterns && analysis.candle_patterns.pattern !== 'none') {
+            <div class="candle-trigger" [class.bullish]="analysis.candle_patterns.is_bullish === true" [class.bearish]="analysis.candle_patterns.is_bullish === false">
+              <span class="trigger-label">Trigger Candle:</span>
+              <span class="trigger-value">{{ analysis.candle_patterns.pattern.replace('_', ' ').toUpperCase() }}</span>
+              <p class="trigger-desc">{{ analysis.candle_patterns.description }}</p>
             </div>
           }
 
-          @if (analysis.fundamentals) {
-            <div class="fundamentals-section" [class.warning]="analysis.fundamentals.has_high_impact_events">
-              <div class="fundamentals-header">Fundamental Context</div>
-              <p class="description fund-desc">{{ analysis.fundamentals.description }}</p>
-              @if (analysis.fundamentals.events.length > 0) {
-                <ul class="fund-events">
-                  @for (event of analysis.fundamentals.events; track event) {
-                    <li>{{ event }}</li>
-                  }
-                </ul>
-              }
-            </div>
-          }
-
+          <!-- 6. NEWS INTELLIGENCE (BOTTOM OF MAIN) -->
           @if (analysis.news_sentiment && analysis.news_sentiment.news_items.length > 0) {
             <div class="news-section">
               <div class="news-header">
@@ -148,11 +168,11 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
               </div>
             </div>
           }
-
         </div>
 
-        <!-- Side Column (Right) -->
+        <!-- Side Column (Right): Technical Specs -->
         <div class="side-column">
+          <!-- 1. SIGNAL & SCORE -->
           <div class="trade-signal">
             <div class="signal-badge" [class]="getSignalClass()">
               <span class="signal-icon">{{ getSignalIcon() }}</span>
@@ -167,58 +187,7 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             }
           </div>
 
-          <div class="action-plan" [class]="getSignalClass()">
-            <div class="plan-header">Actionable Plan</div>
-            <div class="plan-title">{{ analysis.trade_signal.action_plan }}</div>
-            <p class="plan-details">{{ analysis.trade_signal.action_plan_details }}</p>
-
-            @if (analysis.trade_signal.psychological_guard) {
-              <div class="psych-guard">
-                <span class="guard-icon">🛡️</span>
-                <span class="guard-text"><strong>Psychological Rule:</strong> {{ analysis.trade_signal.psychological_guard }}</span>
-              </div>
-            }
-
-            @if (analysis.trade_signal.pyramiding_plan && analysis.trade_signal.pyramiding_plan !== 'N/A') {
-              <div class="pyramid-plan">
-                <span class="pyramid-icon">🔼</span>
-                <span class="pyramid-text"><strong>Pyramiding Range:</strong> {{ analysis.trade_signal.pyramiding_plan }}</span>
-              </div>
-            }
-          </div>
-
-          @if (analysis.trade_signal.reasons.length > 0) {
-            <div class="reasons highlight-reasons">
-              <h4>Trustworthy Indicators</h4>
-              <ul>
-                @for (reason of analysis.trade_signal.reasons; track reason) {
-                  <li>{{ reason }}</li>
-                }
-              </ul>
-            </div>
-          }
-
-          <div class="indicators">
-            <div class="indicator-item">
-              <span class="ind-label">RSI</span>
-              <span class="ind-value">{{ analysis.daily_strength.rsi.toFixed(1) }}</span>
-            </div>
-            <div class="indicator-item" title="Average Directional Index - Trend Strength">
-              <span class="ind-label">ADX</span>
-              <span class="ind-value" [class.strong]="analysis.daily_strength.adx > 25" [class.weak]="analysis.daily_strength.adx < 20">
-                {{ analysis.daily_strength.adx.toFixed(1) }}
-              </span>
-            </div>
-            <div class="indicator-item">
-              <span class="ind-label">Volume</span>
-              <span class="ind-value">{{ analysis.daily_strength.volume_ratio.toFixed(2) }}x</span>
-            </div>
-            <div class="indicator-item">
-              <span class="ind-label">20 MA</span>
-              <span class="ind-value">\${{ analysis.monthly_trend.fast_ma.toFixed(2) }}</span>
-            </div>
-          </div>
-
+          <!-- 2. POSITION SIZING -->
           @if (analysis.position_sizing) {
             <div class="sizing-section">
               <div class="sizing-header">Risk-Adjusted Sizing</div>
@@ -246,9 +215,42 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             </div>
           }
 
+          <!-- 3. VOLATILITY & RISK -->
+          @if (analysis.volatility_risk) {
+            <div class="risk-section">
+              <div class="risk-header">Risk & Volatility Management</div>
+              <div class="risk-grid">
+                <div class="risk-item">
+                  <span class="risk-label">ATR (14D)</span>
+                  <span class="risk-value">{{ analysis.volatility_risk.atr.toFixed(3) }}</span>
+                </div>
+                <div class="risk-item">
+                  <span class="risk-label">Stop Loss</span>
+                  <span class="risk-value sl">\${{ analysis.volatility_risk.stop_loss.toFixed(3) }}</span>
+                </div>
+                <div class="risk-item">
+                  <span class="risk-label">Take Profit</span>
+                  <span class="risk-value tp">\${{ analysis.volatility_risk.take_profit.toFixed(3) }}</span>
+                </div>
+                <div class="risk-item">
+                  <span class="risk-label">RR Ratio</span>
+                  <span class="risk-value">{{ analysis.volatility_risk.risk_reward_ratio.toFixed(2) }}</span>
+                </div>
+              </div>
+              <p class="description risk-desc">{{ analysis.volatility_risk.description }}</p>
+            </div>
+          }
+
+          <!-- 4. PIVOT MATRIX & BREAKOUT -->
           @if (analysis.technical_indicators) {
             <div class="tech-indicators-section">
               <div class="tech-header">Strategic Pivot Matrix</div>
+              @if (analysis.technical_indicators.trend_breakout !== 'none') {
+                <div class="breakout-badge" [class]="getBreakoutClass()">
+                  🎯 {{ analysis.technical_indicators.trend_breakout.replace('_', ' ').toUpperCase() }} 
+                  ({{ (analysis.technical_indicators.breakout_confidence * 100).toFixed(0) }}%)
+                </div>
+              }
               <div class="tech-grid pivot-matrix">
                 <div class="tech-item"><span class="tech-label">Resistance 3</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r3 }}</span></div>
                 <div class="tech-item"><span class="tech-label">Resistance 2</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r2 }}</span></div>
@@ -282,41 +284,11 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
                 <div class="tech-item"><span class="tech-label">Swing Low</span><span class="tech-value swing">\${{ analysis.technical_indicators.fibonacci.swing_low }}</span></div>
               </div>
               
-              @if (analysis.technical_indicators.trend_breakout !== 'none') {
-                <div class="breakout-badge" [class]="getBreakoutClass()">
-                  🎯 {{ analysis.technical_indicators.trend_breakout.replace('_', ' ').toUpperCase() }} 
-                  ({{ (analysis.technical_indicators.breakout_confidence * 100).toFixed(0) }}%)
-                </div>
-              }
               <p class="description tech-desc">{{ analysis.technical_indicators.description }}</p>
             </div>
           }
 
-          @if (analysis.volatility_risk) {
-            <div class="risk-section">
-              <div class="risk-header">Risk & Volatility Management</div>
-              <div class="risk-grid">
-                <div class="risk-item">
-                  <span class="risk-label">ATR (14D)</span>
-                  <span class="risk-value">{{ analysis.volatility_risk.atr.toFixed(3) }}</span>
-                </div>
-                <div class="risk-item">
-                  <span class="risk-label">Stop Loss</span>
-                  <span class="risk-value sl">\${{ analysis.volatility_risk.stop_loss.toFixed(3) }}</span>
-                </div>
-                <div class="risk-item">
-                  <span class="risk-label">Take Profit</span>
-                  <span class="risk-value tp">\${{ analysis.volatility_risk.take_profit.toFixed(3) }}</span>
-                </div>
-                <div class="risk-item">
-                  <span class="risk-label">RR Ratio</span>
-                  <span class="risk-value">{{ analysis.volatility_risk.risk_reward_ratio.toFixed(2) }}</span>
-                </div>
-              </div>
-              <p class="description risk-desc">{{ analysis.volatility_risk.description }}</p>
-            </div>
-          }
-
+          <!-- 5. BACKTEST PERFORMANCE -->
           @if (analysis.backtest_results) {
             <div class="backtest-section" [class.low-confidence]="analysis.backtest_results.win_rate < 45">
               <div class="backtest-header">Strategy Probability (1Y Backtest)</div>
@@ -340,11 +312,51 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
             </div>
           }
 
-          @if (analysis.candle_patterns && analysis.candle_patterns.pattern !== 'none') {
-            <div class="candle-trigger" [class.bullish]="analysis.candle_patterns.is_bullish === true" [class.bearish]="analysis.candle_patterns.is_bullish === false">
-              <span class="trigger-label">Trigger Candle:</span>
-              <span class="trigger-value">{{ analysis.candle_patterns.pattern.replace('_', ' ').toUpperCase() }}</span>
-              <p class="trigger-desc">{{ analysis.candle_patterns.description }}</p>
+          <!-- 6. FUNDAMENTAL CONTEXT -->
+          @if (analysis.fundamentals) {
+            <div class="fundamentals-section" [class.warning]="analysis.fundamentals.has_high_impact_events">
+              <div class="fundamentals-header">Fundamental Context</div>
+              <p class="description fund-desc">{{ analysis.fundamentals.description }}</p>
+              @if (analysis.fundamentals.events.length > 0) {
+                <ul class="fund-events">
+                  @for (event of analysis.fundamentals.events; track event) {
+                    <li>{{ event }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
+          <!-- 7. INDICATORS & REASONS -->
+          <div class="indicators">
+            <div class="indicator-item">
+              <span class="ind-label">RSI</span>
+              <span class="ind-value">{{ analysis.daily_strength.rsi.toFixed(1) }}</span>
+            </div>
+            <div class="indicator-item" title="Average Directional Index - Trend Strength">
+              <span class="ind-label">ADX</span>
+              <span class="ind-value" [class.strong]="analysis.daily_strength.adx > 25" [class.weak]="analysis.daily_strength.adx < 20">
+                {{ analysis.daily_strength.adx.toFixed(1) }}
+              </span>
+            </div>
+            <div class="indicator-item">
+              <span class="ind-label">Volume</span>
+              <span class="ind-value">{{ analysis.daily_strength.volume_ratio.toFixed(2) }}x</span>
+            </div>
+            <div class="indicator-item">
+              <span class="ind-label">20 MA</span>
+              <span class="ind-value">\${{ analysis.monthly_trend.fast_ma.toFixed(2) }}</span>
+            </div>
+          </div>
+
+          @if (analysis.trade_signal.reasons.length > 0) {
+            <div class="reasons highlight-reasons">
+              <h4>Trustworthy Signals</h4>
+              <ul>
+                @for (reason of analysis.trade_signal.reasons; track reason) {
+                  <li>{{ reason }}</li>
+                }
+              </ul>
             </div>
           }
         </div>
