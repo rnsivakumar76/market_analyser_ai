@@ -60,7 +60,7 @@ resource "aws_apigatewayv2_integration" "lambda" {
 }
 
 # Ensure all routes proxy directly to the FastAPI Mangum handler
-resource "aws_apigatewayv2_route" "default" {
+resource "aws_apigatewayv2_route" "proxy" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "ANY /{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
