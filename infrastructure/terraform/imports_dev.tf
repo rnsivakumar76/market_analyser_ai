@@ -39,6 +39,16 @@ import {
   id = "market-analyser-api-dev"
 }
 
+import {
+  to = aws_lambda_permission.apigw
+  id = "market-analyser-api-dev/AllowExecutionFromAPIGateway"
+}
+
+import {
+  to = aws_lambda_permission.eventbridge
+  id = "market-analyser-api-dev/AllowExecutionFromEventBridge"
+}
+
 # API Gateway
 import {
   to = aws_apigatewayv2_api.http_api
