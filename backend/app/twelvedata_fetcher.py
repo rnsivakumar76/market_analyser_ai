@@ -102,50 +102,54 @@ class TwelveDataFetcher:
                 map_back[fallback] = s
         
         try:
-            self._rate_limit_wait()
-            logger.info(f"Batch fetching {len(requested_td_symbols)} tickers for {len(symbols)} instruments...")
+            logger.info(f"Batch fetching {len(requested_td_symbols)} tickers in chunks for {len(symbols)} instruments...")
             
             outputsize = days
             if "h" in interval: outputsize = days * 24
             outputsize = min(outputsize, 5000)
 
-            # TwelveData SDK supports batch by passing comma-separated string
-            ts = self.client.time_series(
-                symbol=",".join(requested_td_symbols),
-                interval=interval,
-                outputsize=outputsize,
-                timezone="UTC"
-            )
-            
-            batch_data = ts.as_pandas()
-            
-            if batch_data is None:
-                logger.error(f"TwelveData Batch returned None for {symbols}")
-                return self._fallback_serial(symbols, interval, days)
+            # CHUNK logic to solve "8 symbols per call" limit on TwelveData Free/Basic
+            CHUNK_SIZE = 8 
+            for i in range(0, len(requested_td_symbols), CHUNK_SIZE):
+                chunk = requested_td_symbols[i:i + CHUNK_SIZE]
+                
+                try:
+                    self._rate_limit_wait()
+                    ts = self.client.time_series(
+                        symbol=",".join(chunk),
+                        interval=interval,
+                        outputsize=outputsize,
+                        timezone="UTC"
+                    )
+                    
+                    batch_data = ts.as_pandas()
+                    
+                    if batch_data is None: continue
 
-            if isinstance(batch_data, pd.DataFrame):
-                if not batch_data.empty:
-                    td_sym = requested_td_symbols[0]
-                    orig_sym = map_back.get(td_sym, symbols[0])
-                    results[orig_sym] = self._normalize_df(batch_data)
-            else:
-                for td_sym, df in batch_data.items():
-                    if isinstance(df, pd.DataFrame) and not df.empty:
-                        orig_sym = map_back.get(td_sym)
-                        if not orig_sym: continue
-                        
-                        # Prioritize: If we already have a DF (likely the spot rate), only replace if this ticker is explicitly "/"
-                        # (This ensures XAU/USD is used over GLD if both are available)
-                        if orig_sym in results:
-                            is_spot = "/" in td_sym
-                            if not is_spot: continue # Keep existing spot/primary
-                        
-                        results[orig_sym] = self._normalize_df(df)
+                    if isinstance(batch_data, pd.DataFrame):
+                        if not batch_data.empty:
+                            td_sym = chunk[0]
+                            orig_sym = map_back.get(td_sym)
+                            if orig_sym: results[orig_sym] = self._normalize_df(batch_data)
+                    else:
+                        for td_sym, df in batch_data.items():
+                            if isinstance(df, pd.DataFrame) and not df.empty:
+                                orig_sym = map_back.get(td_sym)
+                                if not orig_sym: continue
+                                
+                                # Priority: Spot > ETF
+                                if orig_sym in results:
+                                    if "/" not in td_sym: continue # Keep existing spot
+                                
+                                results[orig_sym] = self._normalize_df(df)
+                except Exception as chunk_e:
+                    logger.warning(f"Batch chunk failed: {chunk_e}")
+                    continue
             
             return results
 
         except Exception as e:
-            logger.error(f"Batch fetch failed: {e}. Falling back to serial fetch.")
+            logger.error(f"Global Batch fetch failed: {e}. Falling back to serial.")
             return self._fallback_serial(symbols, interval, days)
 
     def _fallback_serial(self, symbols: List[str], interval: str, days: int) -> Dict[str, pd.DataFrame]:
