@@ -253,11 +253,11 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240) # 4 min cache
         if cached:
             logger.info(f"Serving cached results for {user_id} ({mode.value})")
-            from .models import InstrumentAnalysis, WeeklyPerformance, CorrelationData, PsychologicalGuardrail
+            from .models import InstrumentAnalysis, PerformanceSummary, CorrelationData, PsychologicalGuardrail
             # Reconstruct models from dict
             try:
                 results = [InstrumentAnalysis(**i) for i in cached.get('instruments', [])]
-                perf = WeeklyPerformance(**cached.get('weekly_performance', {}))
+                perf = PerformanceSummary(**cached.get('weekly_performance', {}))
                 corr = CorrelationData(**cached.get('correlation_data', {}))
                 # guardrail might be missing in old cache
                 guard_dict = cached.get('psychological_guardrail')
