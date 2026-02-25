@@ -402,15 +402,115 @@ async def delete_instrument(symbol: str, user_id: str = Depends(get_current_user
 
 @app.get("/api/settings")
 async def get_settings(user_id: str = Depends(get_current_user)):
+    """Get strategy settings — DynamoDB first, then YAML config."""
+    # Try DynamoDB for user-specific overrides
+    if nexus_db.is_dynamo_enabled():
+        try:
+            saved = nexus_db.get_settings(user_id)
+            if saved and 'strategy' in saved:
+                return saved['strategy']
+        except Exception as e:
+            logger.error(f"DynamoDB settings read failed: {e}")
+
+    # Fallback to YAML config
     from .config_loader import load_config, get_strategy_config
     config = load_config(user_id=user_id)
     return get_strategy_config(config)
 
 @app.post("/api/settings")
 async def update_settings(settings: Dict[str, Any], user_id: str = Depends(get_current_user)):
+    """Save strategy settings — DynamoDB + YAML config."""
+    # Save to DynamoDB (user-specific)
+    if nexus_db.is_dynamo_enabled():
+        try:
+            existing = nexus_db.get_settings(user_id) or {}
+            existing['strategy'] = settings
+            nexus_db.save_settings(user_id, existing)
+            logger.info(f"Strategy settings saved to DynamoDB for {user_id}")
+        except Exception as e:
+            logger.error(f"DynamoDB settings save failed: {e}")
+
+    # Also save to YAML/S3 config (backward compat)
     from .config_loader import save_strategy_config
     save_strategy_config(settings, user_id=user_id)
     return {"message": "Strategy settings updated successfully"}
+
+# ─── User Preferences ────────────────────────────────────────────
+
+@app.get("/api/preferences")
+async def get_preferences(user_id: str = Depends(get_current_user)):
+    """Get all user preferences — theme, display, notifications, strategy."""
+    defaults = {
+        "theme": "dark",
+        "view_mode": "heatmap",       # heatmap | list
+        "strategy_mode": "long_term", # long_term | short_term
+        "auto_refresh": True,
+        "refresh_interval": 900,      # seconds (15 min)
+        "show_news": True,
+        "show_copilot": True,
+        "notifications": {
+            "enabled": False,
+            "trade_worthy_alerts": True,
+            "pullback_warnings": True,
+            "score_threshold": 50,
+        },
+        "strategy": {
+            "conviction_threshold": 70,
+            "adx_threshold": 25,
+            "atr_multiplier_tp": 3.0,
+            "atr_multiplier_sl": 1.5,
+            "portfolio_value": 10000.0,
+            "risk_per_trade_percent": 1.0,
+        }
+    }
+
+    if nexus_db.is_dynamo_enabled():
+        try:
+            saved = nexus_db.get_settings(user_id)
+            if saved:
+                # Merge saved over defaults (deep merge)
+                for key in defaults:
+                    if key in saved:
+                        if isinstance(defaults[key], dict) and isinstance(saved[key], dict):
+                            defaults[key].update(saved[key])
+                        else:
+                            defaults[key] = saved[key]
+                return defaults
+        except Exception as e:
+            logger.error(f"DynamoDB preferences read failed: {e}")
+
+    # Fallback: load strategy from YAML, return rest as defaults
+    from .config_loader import load_config, get_strategy_config
+    config = load_config(user_id=user_id)
+    defaults['strategy'] = get_strategy_config(config)
+    return defaults
+
+@app.put("/api/preferences")
+async def update_preferences(request: Request, user_id: str = Depends(get_current_user)):
+    """Update user preferences (partial update supported)."""
+    prefs = await request.json()
+
+    if nexus_db.is_dynamo_enabled():
+        try:
+            existing = nexus_db.get_settings(user_id) or {}
+            # Merge incoming prefs into existing
+            for key, value in prefs.items():
+                if isinstance(value, dict) and isinstance(existing.get(key), dict):
+                    existing[key].update(value)
+                else:
+                    existing[key] = value
+            nexus_db.save_settings(user_id, existing)
+            logger.info(f"Preferences saved to DynamoDB for {user_id}")
+            return {"message": "Preferences updated", "preferences": existing}
+        except Exception as e:
+            logger.error(f"DynamoDB preferences save failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to save preferences: {str(e)}")
+    else:
+        # Fallback: only save strategy to YAML
+        if 'strategy' in prefs:
+            from .config_loader import save_strategy_config
+            save_strategy_config(prefs['strategy'], user_id=user_id)
+        return {"message": "Preferences updated (strategy only, DynamoDB not available)", "preferences": prefs}
 
 @app.get("/api/chart/{symbol}")
 async def get_chart_data(symbol: str):

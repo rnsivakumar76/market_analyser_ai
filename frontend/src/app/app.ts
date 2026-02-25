@@ -1,6 +1,6 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail } from './services/market-analyzer.service';
+import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { PerformanceBannerComponent } from './components/performance-banner/performance-banner.component';
@@ -43,6 +43,8 @@ export class App implements OnInit {
   selectedInstrument = signal<InstrumentAnalysis | null>(null);
   strategyMode = signal<StrategyMode>('long_term');
   sidebarView = signal<'list' | 'heatmap'>('heatmap');
+  userPreferences = signal<UserPreferences | null>(null);
+  prefsLoaded = signal(false);
 
   ngOnInit() {
     // Check for auth token in URL (from Google callback)
@@ -65,13 +67,37 @@ export class App implements OnInit {
     }
 
     if (this.authService.isLoggedIn) {
+      this.loadPreferences();
       this.runAnalysis();
     }
   }
 
+  loadPreferences() {
+    this.analyzerService.getPreferences().subscribe({
+      next: (prefs) => {
+        this.userPreferences.set(prefs);
+        this.strategyMode.set(prefs.strategy_mode || 'long_term');
+        this.sidebarView.set(prefs.view_mode || 'heatmap');
+        this.prefsLoaded.set(true);
+      },
+      error: () => { this.prefsLoaded.set(true); }
+    });
+  }
+
+  savePreference(key: string, value: any) {
+    this.analyzerService.updatePreferences({ [key]: value }).subscribe();
+  }
+
   toggleStrategyMode() {
-    this.strategyMode.set(this.strategyMode() === 'long_term' ? 'short_term' : 'long_term');
+    const newMode = this.strategyMode() === 'long_term' ? 'short_term' : 'long_term';
+    this.strategyMode.set(newMode);
+    this.savePreference('strategy_mode', newMode);
     this.runAnalysis();
+  }
+
+  toggleSidebarView(view: 'list' | 'heatmap') {
+    this.sidebarView.set(view);
+    this.savePreference('view_mode', view);
   }
 
   runAnalysis() {

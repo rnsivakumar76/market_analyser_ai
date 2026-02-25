@@ -227,6 +227,25 @@ export interface AnalysisResponse {
   psychological_guardrail: PsychologicalGuardrail;
 }
 
+export interface NotificationPrefs {
+  enabled: boolean;
+  trade_worthy_alerts: boolean;
+  pullback_warnings: boolean;
+  score_threshold: number;
+}
+
+export interface UserPreferences {
+  theme: 'dark' | 'light';
+  view_mode: 'heatmap' | 'list';
+  strategy_mode: StrategyMode;
+  auto_refresh: boolean;
+  refresh_interval: number;
+  show_news: boolean;
+  show_copilot: boolean;
+  notifications: NotificationPrefs;
+  strategy: StrategySettings;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -265,6 +284,18 @@ export class MarketAnalyzerService {
   updateSettings(settings: StrategySettings): Observable<any> {
     return this.http.post(`${this.apiUrl}/settings`, settings);
   }
+
+  // ─── Preferences API ───────────────────────────────────
+
+  getPreferences(): Observable<UserPreferences> {
+    return this.http.get<UserPreferences>(`${this.apiUrl}/preferences`);
+  }
+
+  updatePreferences(prefs: Partial<UserPreferences>): Observable<any> {
+    return this.http.put(`${this.apiUrl}/preferences`, prefs);
+  }
+
+  // ─── Trade Journal ─────────────────────────────────────
 
   getJournal(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/journal`);
