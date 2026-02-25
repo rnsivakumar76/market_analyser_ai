@@ -108,10 +108,11 @@ def generate_trade_signal(
     adx_value = strength.adx
     adx_threshold = settings.adx_threshold if settings else 25
     
-    if trade_worthy and adx_value <= adx_threshold:
+    if trade_worthy and (adx_value is None or adx_value <= adx_threshold):
         trade_worthy = False
-        reasons.append(f"Filter: Trend strength (ADX={adx_value:.1f}) too low. Threshold: {adx_threshold}")
-    elif adx_value > adx_threshold:
+        adx_str = f"{adx_value:.1f}" if adx_value is not None else "N/A"
+        reasons.append(f"Filter: Trend strength (ADX={adx_str}) too low. Threshold: {adx_threshold}")
+    elif adx_value is not None and adx_value > adx_threshold:
         reasons.append(f"Trend strength high (ADX={adx_value:.1f})")
 
     # Hard Filter 2: Market Beta (Benchmark Correlation)
@@ -164,17 +165,19 @@ def generate_trade_signal(
         fibs = tech_indicators.fibonacci
         
         # Base Scaling text
-        s_tp1 = s_tp2 = s_tp3 = ""
+        s_tp1 = s_tp2 = s_tp3 = "N/A"
         if volatility:
-            s_tp1 = f"${volatility.take_profit_level1:.2f}"
-            s_tp2 = f"${volatility.take_profit_level2:.2f}"
-            s_tp3 = f"${volatility.take_profit:.2f}"
+            s_tp1 = f"${volatility.take_profit_level1:.2f}" if volatility.take_profit_level1 is not None else "N/A"
+            s_tp2 = f"${volatility.take_profit_level2:.2f}" if volatility.take_profit_level2 is not None else "N/A"
+            s_tp3 = f"${volatility.take_profit:.2f}" if volatility.take_profit is not None else "N/A"
 
         if recommendation == Signal.BULLISH:
             psychological_guard = "NEVER average down into a losing trade. If price falls below support or hits your stop loss, cut the trade immediately. The market does not owe you a bounce."
             if trade_worthy:
                 action_plan = "Enter Long (Market)"
-                action_plan_details = f"Strong bullish setup confirmed near ${current_price:.2f}. Support is Pivot (${pivots.pivot}). If trend accelerates, target Fibonacci Extensions."
+                price_str = f"${current_price:.2f}" if current_price else "current price"
+                pivot_str = f"${pivots.pivot:.2f}" if pivots.pivot else "N/A"
+                action_plan_details = f"Strong bullish setup confirmed near {price_str}. Support is Pivot ({pivot_str}). If trend accelerates, target Fibonacci Extensions."
                 
                 if volatility:
                     scaling_plan = (
@@ -188,14 +191,18 @@ def generate_trade_signal(
                 pyramiding_plan = f"Aggressive Addition: Add 50% to position size IF price holds above R1 (${pivots.r1}) AND RSI stays < 70."
             else:
                 action_plan = "Wait for Trigger / Pullback"
-                action_plan_details = f"Ideal entry is on a pullback near support (S1: ${pivots.s1}) or the 38.2% Fib Retracement (${fibs.ret_382})."
+                s1_str = f"${pivots.s1:.2f}" if pivots.s1 else "N/A"
+                fib_str = f"${fibs.ret_382:.2f}" if fibs.ret_382 else "N/A"
+                action_plan_details = f"Ideal entry is on a pullback near support (S1: {s1_str}) or the 38.2% Fib Retracement ({fib_str})."
                 scaling_plan = "Awaiting entry confirmation before finalizing exit stages."
                 pyramiding_plan = "Do not pyramid until initial position is firmly in profit."
         elif recommendation == Signal.BEARISH:
             psychological_guard = "NEVER average up into a losing short. If price rallies past resistance, cover immediately. Infinite downside risk in shorts."
             if trade_worthy:
                 action_plan = "Enter Short (Market)"
-                action_plan_details = f"Strong bearish setup confirmed near ${current_price:.2f}. Resistance is Pivot (${pivots.pivot}). If decline accelerates, target Fibonacci Extensions."
+                price_str = f"${current_price:.2f}" if current_price else "current price"
+                pivot_str = f"${pivots.pivot:.2f}" if pivots.pivot else "N/A"
+                action_plan_details = f"Strong bearish setup confirmed near {price_str}. Resistance is Pivot ({pivot_str}). If decline accelerates, target Fibonacci Extensions."
                 
                 if volatility:
                     scaling_plan = (
@@ -209,12 +216,15 @@ def generate_trade_signal(
                 pyramiding_plan = f"Aggressive Addition: Add 50% to short position IF price holds below S1 (${pivots.s1}) AND RSI stays > 30."
             else:
                 action_plan = "Wait for Trigger / Bounce"
-                action_plan_details = f"Ideal entry is on a bounce near resistance (R1: ${pivots.r1}) or 38.2% Fib Retracement."
+                r1_str = f"${pivots.r1:.2f}" if pivots.r1 else "N/A"
+                action_plan_details = f"Ideal entry is on a bounce near resistance (R1: {r1_str}) or 38.2% Fib Retracement."
                 scaling_plan = "Awaiting entry confirmation."
                 pyramiding_plan = "Do not pyramid until initial position is firmly in profit."
         else:
             action_plan = "Wait and Observe"
-            action_plan_details = f"Neutral bias. Key zones: R1 (${pivots.r1}) and S1 (${pivots.s1})."
+            r1_str = f"${pivots.r1:.2f}" if pivots.r1 else "N/A"
+            s1_str = f"${pivots.s1:.2f}" if pivots.s1 else "N/A"
+            action_plan_details = f"Neutral bias. Key zones: R1 ({r1_str}) and S1 ({s1_str})."
             psychological_guard = "Patience is a position. Awaiting clear structural setup."
             pyramiding_plan = "N/A"
             scaling_plan = "N/A - Sideways Market"

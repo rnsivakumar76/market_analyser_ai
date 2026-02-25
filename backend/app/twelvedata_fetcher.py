@@ -46,16 +46,20 @@ class TwelveDataFetcher:
     def get_symbol_mapping(self, symbol: str) -> str:
         """Map our symbols to Twelve Data symbols."""
         symbol_mappings = {
-            # Commodities (Twelve Data uses forex pairs)
+            # Commodities
             'XAU': 'XAU/USD',      # Gold
             'XAG': 'XAG/USD',      # Silver
-            'BCO': 'BCO/USD',       # Brent Crude Oil
+            'BCO': 'BRENT/USD',    # Brent Crude Oil (TwelveData uses BRENT/USD)
             
             # Forex pairs
             'USDJPY': 'USD/JPY',
             'EURUSD': 'EUR/USD',
             
-            # Indices (Twelve Data uses standard symbols)
+            # Crypto
+            'BTC-USD': 'BTC/USD',
+            'ETH-USD': 'ETH/USD',
+            
+            # Indices
             'SPX': 'SPX',           # S&P 500
         }
         
