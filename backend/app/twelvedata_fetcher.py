@@ -45,18 +45,26 @@ class TwelveDataFetcher:
             # Commodities
             'XAU': 'XAU/USD',      # Gold
             'XAG': 'XAG/USD',      # Silver
-            'BCO': 'UKOIL',        # Brent Crude Oil (TwelveData symbol)
+            'BCO': 'UKOIL',        # Brent Crude Oil (TwelveData common ticker)
+            'WTI': 'WTI/USD',      # WTI Crude Oil
             
             # Forex pairs
             'USDJPY': 'USD/JPY',
             'EURUSD': 'EUR/USD',
+            'GBPUSD': 'GBP/USD',
+            'AUDUSD': 'AUD/USD',
             
             # Crypto
             'BTC-USD': 'BTC/USD',
             'ETH-USD': 'ETH/USD',
+            'BTC': 'BTC/USD',
+            'ETH': 'ETH/USD',
             
             # Indices
-            'SPX': 'SPX',           # S&P 500
+            'SPX': 'SPX',           # S&P 500 Index
+            'IXIC': 'IXIC',         # Nasdaq Composite
+            'DJI': 'DJI',           # Dow Jones Industrial Average
+            'SPY': 'SPY',           # S&P 500 ETF (Alternative for indices)
         }
         
         return symbol_mappings.get(symbol.upper(), symbol)
