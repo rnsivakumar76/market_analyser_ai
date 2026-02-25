@@ -246,7 +246,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     exec_interval = "1d" if mode == StrategyMode.LONG_TERM else "1h"
     exec_days = 500 if mode == StrategyMode.LONG_TERM else 20
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    # Optimized Benchmarks: Fetch once and share
+    with ThreadPoolExecutor(max_workers=2) as executor:
         futures = {
             executor.submit(fetch_historical_data, "SPX", days=1000, interval=bench_interval): "SPX_macro",
             executor.submit(fetch_historical_data, "BTC-USD", days=1000, interval=bench_interval): "BTC_macro",
@@ -258,7 +259,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             try:
                 benchmarks_data[sym] = future.result()
             except Exception as e:
-                logger.error(f"Failed to fetch benchmark {sym}: {e}")
+                logger.warning(f"Benchmark {sym} fetch failed (will try fallback): {e}")
                 benchmarks_data[sym] = None
 
     spy_bench = Signal.NEUTRAL
@@ -286,7 +287,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             logger.error(f"Error analyzing {sym}: {e}")
             return sym, None, None
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    # Reduced workers to 4 to stay under 55 req/min (Basic Plan limit)
+    with ThreadPoolExecutor(max_workers=4) as executor:
         future_to_inst = {executor.submit(process_instrument, inst): inst for inst in instruments}
         for future in as_completed(future_to_inst):
             sym, analysis, hist_data = future.result()
