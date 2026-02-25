@@ -135,6 +135,11 @@ jobs:
           # Select or create workspace
           terraform workspace select $WORKSPACE || terraform workspace new $WORKSPACE
           
+          # Enable dev imports if in dev workspace to adopt orphaned resources
+          if [ "$WORKSPACE" = "dev" ]; then
+            mv imports_dev.tf.disabled imports_dev.tf || echo "No imports to enable"
+          fi
+          
           terraform apply -auto-approve \
             -var="aws_account_id=${{ vars.AWS_ACCOUNT_ID }}" \
             -var="aws_region=${{ vars.AWS_REGION }}" \
