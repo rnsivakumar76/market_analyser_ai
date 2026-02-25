@@ -254,8 +254,9 @@ export class MarketAnalyzerService {
   private http = inject(HttpClient);
   private apiUrl = environment.apiUrl;
 
-  analyzeAll(mode: StrategyMode = 'long_term'): Observable<AnalysisResponse> {
-    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}`);
+  analyzeAll(mode: StrategyMode = 'long_term', refresh: boolean = false): Observable<AnalysisResponse> {
+    const refreshParam = refresh ? '&refresh=true' : '';
+    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}${refreshParam}`);
   }
 
   analyzeSingle(symbol: string, mode: StrategyMode = 'long_term'): Observable<InstrumentAnalysis> {

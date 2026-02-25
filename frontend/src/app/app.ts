@@ -27,6 +27,7 @@ import { interval, Subscription, timer } from 'rxjs';
 export class App implements OnInit, OnDestroy {
   private analyzerService = inject(MarketAnalyzerService);
   public authService = inject(AuthService);
+  private analysisSub?: Subscription;
 
   instruments = signal<InstrumentAnalysis[]>([]);
   loading = signal(false);
@@ -83,6 +84,7 @@ export class App implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.refreshSubscription?.unsubscribe();
     this.countdownSubscription?.unsubscribe();
+    this.analysisSub?.unsubscribe();
   }
 
   private startAutoRefresh() {
@@ -126,14 +128,22 @@ export class App implements OnInit, OnDestroy {
     this.secondsRemaining = this.REFRESH_INTERVAL_SEC; // Reset countdown on manual toggle
   }
 
+  refreshAnalysis() {
+    this.runAnalysis(false, true);
+    this.secondsRemaining = this.REFRESH_INTERVAL_SEC;
+  }
 
-  runAnalysis(silent: boolean = false) {
+  runAnalysis(silent: boolean = false, refresh: boolean = false) {
+    if (this.analysisSub) {
+      this.analysisSub.unsubscribe();
+    }
+
     if (!silent) {
       this.loading.set(true);
     }
     this.error.set(null);
 
-    this.analyzerService.analyzeAll(this.strategyMode()).subscribe({
+    this.analysisSub = this.analyzerService.analyzeAll(this.strategyMode(), refresh).subscribe({
       next: (response: AnalysisResponse) => {
         const currentInstruments = this.instruments();
         let newInstruments = [...response.instruments];

@@ -365,39 +365,66 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     return results, perf_summary, correlation_results, guardrail
 
 @app.get("/api/analyze")
-async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)):
+async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = Depends(get_current_user)):
     from .models import AnalysisResponse, StrategyMode
     
     # Cast mode if string
     if isinstance(mode, str):
-        mode = StrategyMode(mode)
+        try:
+            mode = StrategyMode(mode)
+        except ValueError:
+            mode = StrategyMode.LONG_TERM
     if mode is None:
         mode = StrategyMode.LONG_TERM
     
-    # Check Cache (Reduced to 120s to ensure 5-min polls get fresh data eventually)
-    if nexus_db.is_dynamo_enabled():
-        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=120)
+    # 1. Optimistic Cache check (if not forced refresh)
+    # If we have something in cache less than 5 minutes old, serve it fast.
+    if not refresh and nexus_db.is_dynamo_enabled():
+        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=300)
         if cached:
-            # Update the analysis_timestamp to reflect when it WAS analyzed
+            logger.info(f"Fast-path: Serving cached {mode.value} for {user_id}")
             return AnalysisResponse(**cached)
     
-    results, perf, corr, guardrail = await run_scheduled_analysis(user_id=user_id, mode=mode)
-    response = AnalysisResponse(
-        analysis_timestamp=datetime.now(timezone.utc).isoformat(),
-        instruments=results,
-        weekly_performance=perf,
-        correlation_data=corr,
-        psychological_guardrail=guardrail
-    )
+    # 2. Perform Fresh Analysis
+    try:
+        results, perf, corr, guardrail = await run_scheduled_analysis(user_id=user_id, mode=mode)
+        
+        # Ensure we have results before building response
+        if not results and nexus_db.is_dynamo_enabled():
+            # If fresh scan returned empty (e.g. TwelveData partial outage), try stale cache fallback
+            stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=7200) # 2 hours
+            if stale:
+                logger.warning(f"Fresh scan empty, falling back to STALE cache for {user_id}")
+                return AnalysisResponse(**stale)
 
-    # Save to Cache
-    if nexus_db.is_dynamo_enabled():
-        try:
-            nexus_db.save_analysis_results(user_id, response.dict(), mode.value)
-        except Exception as e:
-            logger.error(f"Failed to cache analysis: {e}")
+        response = AnalysisResponse(
+            analysis_timestamp=datetime.now(timezone.utc).isoformat(),
+            instruments=results,
+            weekly_performance=perf,
+            correlation_data=corr,
+            psychological_guardrail=guardrail
+        )
 
-    return response
+        # Save to Cache
+        if nexus_db.is_dynamo_enabled() and results:
+            try:
+                nexus_db.save_analysis_results(user_id, response.dict(), mode.value)
+            except Exception as e:
+                logger.error(f"Failed to cache analysis: {e}")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Analysis Failed for {user_id}: {e}")
+        # 3. Emergency Fallback: Serve ANY cache available (up to 4 hours)
+        if nexus_db.is_dynamo_enabled():
+            emergency_stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=14400)
+            if emergency_stale:
+                logger.info(f"Returning EMERGENCY STALE data for {user_id} due to error: {e}")
+                return AnalysisResponse(**emergency_stale)
+        
+        # If absolutely nothing works, raise the error
+        raise HTTPException(status_code=503, detail="Market analysis currently unavailable. Please try again later.")
 
 @app.get("/api/analyze/{symbol}")
 async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(get_current_user)):
