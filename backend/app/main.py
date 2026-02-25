@@ -40,7 +40,7 @@ app.include_router(auth_router, prefix="/api")
 # Lazy analysis helper to keep imports deferred
 def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_direction: Any = None, strategy_settings: Any = None, mode: Any = None, benchmark_data_df: Any = None) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
-    from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price, _get_yf_symbols
+    from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price
     from .analyzers import (
         analyze_monthly_trend, analyze_weekly_pullback, analyze_daily_strength,
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
@@ -109,8 +109,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     
     # Calculate volatility and fundamentals first to inform the action plan
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value)
-    primary_yf_sym = _get_yf_symbols(symbol)[0]
-    fundamentals = analyze_fundamentals(symbol, primary_yf_sym)
+    fundamentals = analyze_fundamentals(symbol)
     
     # NEW: Relative Strength Analysis (Alpha vs Beta)
     # Determine which benchmark to use

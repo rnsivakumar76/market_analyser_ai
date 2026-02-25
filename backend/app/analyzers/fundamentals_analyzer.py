@@ -1,5 +1,4 @@
 import requests
-import yfinance as yf
 from datetime import datetime, timedelta
 import logging
 from typing import List, Optional
@@ -55,7 +54,7 @@ def _detect_relevant_currencies(symbol: str) -> List[str]:
     return list(set(currencies))
 
 
-def analyze_fundamentals(symbol: str, yf_symbol: str) -> FundamentalsAnalysis:
+def analyze_fundamentals(symbol: str) -> FundamentalsAnalysis:
     """Check macro events and corporate earnings."""
     now = datetime.now()
     cutoff_48h = now + timedelta(hours=48)
@@ -88,33 +87,8 @@ def analyze_fundamentals(symbol: str, yf_symbol: str) -> FundamentalsAnalysis:
                 except Exception:
                     pass
     
-    # 2. Corporate Earnings (Stocks)
-    # Exclude obvious non-stocks
-    if len(symbol) <= 5 and not any(sym in symbol for sym in ['XAU', 'XAG', 'EUR', 'USD', 'JPY', 'GBP', 'BCO', 'SPX']):
-        try:
-            ticker = yf.Ticker(yf_symbol)
-            cal = ticker.calendar
-            
-            if isinstance(cal, dict) and 'Earnings Date' in cal:
-                earnings_dates = cal['Earnings Date']
-                if not isinstance(earnings_dates, list):
-                    earnings_dates = [earnings_dates]
-                    
-                for e_date in earnings_dates:
-                    if hasattr(e_date, 'date'):
-                        e_date = e_date.date()
-                    # If it's datetime.date format
-                    if isinstance(e_date, datetime):
-                        e_date = e_date.date()
-                        
-                    days_away = (e_date - now.date()).days
-                    if 0 <= days_away <= 7:
-                        has_high_impact = True
-                        events.append(f"📊 Earnings Report in {days_away} days ({e_date})!")
-                    elif days_away < 0 and days_away > -3:
-                        events.append(f"📊 Earnings Report just occurred ({abs(days_away)} days ago). Proceed with caution.")
-        except Exception as e:
-            logger.debug(f"Could not fetch earnings for {symbol}: {e}")
+    # 2. Corporate Earnings (Stocks) - DISABLED (Used yfinance)
+    # logger.debug("Corporate Earnings currently disabled to maintain pure professional data flow.")
 
     # Build description
     if not events:
