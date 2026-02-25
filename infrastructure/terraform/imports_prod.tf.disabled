@@ -59,8 +59,23 @@ import {
   id = "market-analyser-5min-analysis"
 }
 
-# 7. API Gateway
+# 7. API Gateway Core
 import {
   to = aws_apigatewayv2_api.http_api
   id = "market-analyser-http-api"
+}
+
+import {
+  to = aws_apigatewayv2_stage.default
+  id = "market-analyser-http-api/$default"
+}
+
+import {
+  to = aws_apigatewayv2_integration.lambda
+  id = "market-analyser-http-api/pf2wgy9" # From user logs
+}
+
+import {
+  to = aws_apigatewayv2_route.proxy
+  id = "market-analyser-http-api/4fqqxah" # From user logs
 }
