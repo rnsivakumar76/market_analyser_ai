@@ -79,39 +79,29 @@ class TwelveDataFetcher:
 
     def fetch_batch_data(self, symbols: List[str], interval: str, days: int = 90) -> Dict[str, pd.DataFrame]:
         """
-        Fetch OHLCV data for multiple symbols in a SINGLE API call.
-        Drastically reduces latency and prevents AWS Gateway Timeouts.
+        Fetch OHLCV data for multiple symbols.
+        Optimized to ONLY fetch Fallback ETFs if the Primary Spot rate fails, saving API credits.
         """
         if not symbols: return {}
         
         results = {}
-        # Map symbols for TwelveData - include BOTH primary and fallback in the batch
-        requested_td_symbols = []
-        map_back = {} # Maps TD ticker (e.g. GLD) back to internal symbol (e.g. XAU)
-        
-        for s in symbols:
-            primary = self.get_symbol_mapping(s)
-            fallback = self.get_fallback_mapping(s)
-            
-            requested_td_symbols.append(primary)
-            map_back[primary] = s
-            
-            if fallback and fallback not in requested_td_symbols:
-                requested_td_symbols.append(fallback)
-                map_back[fallback] = s
-        
-        try:
-            logger.info(f"Batch fetching {len(requested_td_symbols)} tickers in chunks for {len(symbols)} instruments...")
-            
-            outputsize = days
-            if "h" in interval: outputsize = days * 24
-            outputsize = min(outputsize, 5000)
+        outputsize = min(days * 24 if "h" in interval else days, 5000)
 
-            # CHUNK logic to solve "8 symbols per call" limit on TwelveData Free/Basic
+        def _fetch_chunked(symbols_to_fetch: List[str], get_td_ticker_fn) -> None:
+            """Helper to fetch a list of internal symbols and populate results."""
+            requested_td_symbols = []
+            map_back = {}
+            for s in symbols_to_fetch:
+                td_sym = get_td_ticker_fn(s)
+                if not td_sym: continue
+                requested_td_symbols.append(td_sym)
+                map_back[td_sym] = s
+                
+            if not requested_td_symbols: return
+
             CHUNK_SIZE = 8 
             for i in range(0, len(requested_td_symbols), CHUNK_SIZE):
                 chunk = requested_td_symbols[i:i + CHUNK_SIZE]
-                
                 try:
                     self._rate_limit_wait()
                     ts = self.client.time_series(
@@ -120,9 +110,7 @@ class TwelveDataFetcher:
                         outputsize=outputsize,
                         timezone="UTC"
                     )
-                    
                     batch_data = ts.as_pandas()
-                    
                     if batch_data is None: continue
 
                     if isinstance(batch_data, pd.DataFrame):
@@ -134,16 +122,20 @@ class TwelveDataFetcher:
                         for td_sym, df in batch_data.items():
                             if isinstance(df, pd.DataFrame) and not df.empty:
                                 orig_sym = map_back.get(td_sym)
-                                if not orig_sym: continue
-                                
-                                # Priority: Spot > ETF
-                                if orig_sym in results:
-                                    if "/" not in td_sym: continue # Keep existing spot
-                                
-                                results[orig_sym] = self._normalize_df(df)
+                                if orig_sym and orig_sym not in results:
+                                    results[orig_sym] = self._normalize_df(df)
                 except Exception as chunk_e:
                     logger.warning(f"Batch chunk failed: {chunk_e}")
-                    continue
+
+        try:
+            # 1. First Pass: Fetch Primary Symbols (Spot Rates)
+            _fetch_chunked(symbols, self.get_symbol_mapping)
+
+            # 2. Second Pass: Fetch Fallbacks (ETFs) ONLY for failed symbols
+            missing_symbols = [s for s in symbols if s not in results]
+            if missing_symbols:
+                logger.info(f"Missing primary data for {missing_symbols}. Attempting ETF fallbacks...")
+                _fetch_chunked(missing_symbols, self.get_fallback_mapping)
             
             return results
 
@@ -200,6 +192,11 @@ class TwelveDataFetcher:
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'])
             df = df.set_index('Date')
+            
+        # Fix missing Volume for Indices/Forex
+        if 'Volume' not in df.columns:
+            df['Volume'] = 0.0
+            
         return df.sort_index(ascending=True)
 
     def get_current_price(self, symbol: str) -> float:
