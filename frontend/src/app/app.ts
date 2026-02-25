@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
@@ -15,6 +15,7 @@ import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component
 import { MultiTimeframeOverlayComponent } from './components/multi-timeframe-overlay/multi-timeframe-overlay.component';
 import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
 import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
+import { interval, Subscription, timer } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -23,7 +24,7 @@ import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.com
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   private analyzerService = inject(MarketAnalyzerService);
   public authService = inject(AuthService);
 
@@ -45,6 +46,13 @@ export class App implements OnInit {
   sidebarView = signal<'list' | 'heatmap'>('heatmap');
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
+
+  // Auto-refresh properties
+  nextRefreshCountdown = signal<string>('05:00');
+  private refreshSubscription?: Subscription;
+  private countdownSubscription?: Subscription;
+  private readonly REFRESH_INTERVAL_SEC = 300; // 5 minutes
+  private secondsRemaining = 300;
 
   ngOnInit() {
     // Check for auth token in URL (from Google callback)
@@ -69,7 +77,31 @@ export class App implements OnInit {
     if (this.authService.isLoggedIn) {
       this.loadPreferences();
       this.runAnalysis();
+      this.startAutoRefresh();
     }
+  }
+
+  ngOnDestroy() {
+    this.refreshSubscription?.unsubscribe();
+    this.countdownSubscription?.unsubscribe();
+  }
+
+  private startAutoRefresh() {
+    // 1. Scheduler for Analysis
+    this.refreshSubscription = interval(this.REFRESH_INTERVAL_SEC * 1000).subscribe(() => {
+      this.runAnalysis();
+      this.secondsRemaining = this.REFRESH_INTERVAL_SEC;
+    });
+
+    // 2. Scheduler for Countdown Timer
+    this.countdownSubscription = interval(1000).subscribe(() => {
+      if (this.secondsRemaining > 0) {
+        this.secondsRemaining--;
+      }
+      const mins = Math.floor(this.secondsRemaining / 60);
+      const secs = this.secondsRemaining % 60;
+      this.nextRefreshCountdown.set(`${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+    });
   }
 
   loadPreferences() {
@@ -93,6 +125,7 @@ export class App implements OnInit {
     this.strategyMode.set(newMode);
     this.savePreference('strategy_mode', newMode);
     this.runAnalysis();
+    this.secondsRemaining = this.REFRESH_INTERVAL_SEC; // Reset countdown on manual toggle
   }
 
   toggleSidebarView(view: 'list' | 'heatmap') {

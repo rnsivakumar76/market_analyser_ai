@@ -72,6 +72,7 @@
     <div class="bottom-bar-left">
       @if (lastUpdated()) {
       <span class="last-updated">🕐 {{ lastUpdated() }}</span>
+      <span class="next-update" [class.syncing]="loading()">(Next: {{ nextRefreshCountdown() }})</span>
       }
       <div class="bar-divider"></div>
       <span class="stat">{{ instruments().length }} instruments</span>
