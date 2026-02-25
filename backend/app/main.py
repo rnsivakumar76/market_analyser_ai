@@ -467,10 +467,21 @@ async def test_gold():
 
 # ─── Trade Journal ────────────────────────────────────────────────
 import uuid
+from . import db as nexus_db
 
 def _load_journal(user_id: str = "global_default") -> list:
-    """Load trade journal from S3 or local file."""
-    import json, os
+    """Load trade journal — DynamoDB first, then S3, then local file."""
+    # DynamoDB (preferred)
+    if nexus_db.is_dynamo_enabled():
+        try:
+            trades = nexus_db.get_trades(user_id)
+            logger.info(f"Loaded {len(trades)} trades from DynamoDB for {user_id}")
+            return trades
+        except Exception as e:
+            logger.error(f"DynamoDB read failed, falling back to S3: {e}")
+
+    # S3 fallback (for production until DynamoDB migration is complete)
+    import json
     from pathlib import Path
     
     if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
@@ -484,15 +495,16 @@ def _load_journal(user_id: str = "global_default") -> list:
         except:
             return []
     else:
+        # Local file (development)
         path = Path(__file__).parent.parent / "cache" / f"journal_{user_id}.json"
         if path.exists():
             with open(path, 'r') as f:
                 return json.load(f)
         return []
 
-def _save_journal(trades: list, user_id: str = "global_default"):
-    """Save trade journal to S3 or local file."""
-    import json, os
+def _save_journal_legacy(trades: list, user_id: str = "global_default"):
+    """Save trade journal to S3 or local file (legacy fallback)."""
+    import json
     from pathlib import Path
     
     if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
@@ -514,19 +526,90 @@ async def get_journal(user_id: str = Depends(get_current_user)):
 @app.post("/api/journal")
 async def add_trade(request: Request, user_id: str = Depends(get_current_user)):
     trade = await request.json()
-    trades = _load_journal(user_id)
     trade["id"] = str(uuid.uuid4())
     trade["created_at"] = datetime.now(timezone.utc).isoformat()
+
+    # DynamoDB (preferred)
+    if nexus_db.is_dynamo_enabled():
+        try:
+            saved = nexus_db.save_trade(user_id, trade)
+            logger.info(f"Trade saved to DynamoDB: {trade['id']}")
+            return {"message": "Trade logged", "trade": trade}
+        except Exception as e:
+            logger.error(f"DynamoDB save failed, falling back to S3: {e}")
+
+    # Fallback: S3/local
+    trades = _load_journal(user_id)
     trades.append(trade)
-    _save_journal(trades, user_id)
+    _save_journal_legacy(trades, user_id)
     return {"message": "Trade logged", "trade": trade}
 
 @app.delete("/api/journal/{trade_id}")
 async def delete_trade(trade_id: str, user_id: str = Depends(get_current_user)):
+    # DynamoDB (preferred)
+    if nexus_db.is_dynamo_enabled():
+        try:
+            nexus_db.delete_trade(user_id, trade_id)
+            logger.info(f"Trade deleted from DynamoDB: {trade_id}")
+            return {"message": "Trade removed"}
+        except Exception as e:
+            logger.error(f"DynamoDB delete failed, falling back to S3: {e}")
+
+    # Fallback: S3/local
     trades = _load_journal(user_id)
     trades = [t for t in trades if t.get("id") != trade_id]
-    _save_journal(trades, user_id)
+    _save_journal_legacy(trades, user_id)
     return {"message": "Trade removed"}
+
+# ─── Admin: Migration & Status ───────────────────────────────────
+
+@app.get("/api/db-status")
+async def db_status():
+    """Check which storage backend is active."""
+    return {
+        "dynamodb_enabled": nexus_db.is_dynamo_enabled(),
+        "dynamodb_table": os.environ.get('DYNAMODB_TABLE', 'not set'),
+        "s3_bucket": os.environ.get('CONFIG_S3_BUCKET', 'not set'),
+        "environment": os.environ.get('ENVIRONMENT', 'local'),
+    }
+
+@app.post("/api/admin/migrate-journal")
+async def migrate_journal_to_dynamodb(user_id: str = Depends(get_current_user)):
+    """One-time migration: copy trades from S3 to DynamoDB."""
+    if not nexus_db.is_dynamo_enabled():
+        raise HTTPException(status_code=400, detail="DynamoDB not configured")
+    
+    # Load from S3 (legacy)
+    import json
+    s3_trades = []
+    if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+        import boto3
+        s3 = boto3.client('s3')
+        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET', 'market-analyser-config-614686365382')
+        key = f"users/{user_id}/trade_journal.json"
+        try:
+            obj = s3.get_object(Bucket=bucket, Key=key)
+            s3_trades = json.loads(obj['Body'].read().decode('utf-8'))
+        except:
+            pass
+    
+    if not s3_trades:
+        return {"message": "No S3 trades to migrate", "migrated": 0}
+    
+    # Write each to DynamoDB
+    migrated = 0
+    for trade in s3_trades:
+        try:
+            nexus_db.save_trade(user_id, trade)
+            migrated += 1
+        except Exception as e:
+            logger.error(f"Failed to migrate trade {trade.get('id')}: {e}")
+    
+    return {
+        "message": f"Migrated {migrated}/{len(s3_trades)} trades to DynamoDB",
+        "migrated": migrated,
+        "total": len(s3_trades)
+    }
 
 # Handler for AWS Lambda
 handler = Mangum(app)
