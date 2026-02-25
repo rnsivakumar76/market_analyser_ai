@@ -51,15 +51,32 @@ class TwelveDataFetcher:
                 time.sleep(wait_time)
             TwelveDataFetcher._last_call_time = time.time()
             
+    # Primary tickers (Spot Rates / Indices)
+    PRIMARY_MAPPINGS = {
+        'XAU': 'XAU/USD', 'XAG': 'XAG/USD', 'BCO': 'BZ/USD', 'WTI': 'WTI/USD',
+        'SPX': 'SPY', 'IXIC': 'QQQ', 'DJI': 'DIA',
+        'BTC-USD': 'BTC/USD', 'ETH-USD': 'ETH/USD', 'BTC': 'BTC/USD', 'ETH': 'ETH/USD',
+        'USDJPY': 'USD/JPY', 'EURUSD': 'EUR/USD', 'GBPUSD': 'GBP/USD', 'AUDUSD': 'AUD/USD',
+    }
+
+    # Fallback tickers (ETFs) for restricted API keys
+    FALLBACK_MAPPINGS = {
+        'XAU': 'GLD',
+        'XAG': 'SLV',
+        'BCO': 'USO',
+        'WTI': 'USO',
+        'BTC-USD': 'BITO',
+        'BTC': 'BITO',
+        'SPX': 'VOO'
+    }
+
     def get_symbol_mapping(self, symbol: str) -> str:
-        """Maps internal symbols to Twelve Data tickers."""
-        mappings = {
-            'XAU': 'XAU/USD', 'XAG': 'XAG/USD', 'BCO': 'BZ/USD', 'WTI': 'WTI/USD',
-            'SPX': 'SPY', 'IXIC': 'QQQ', 'DJI': 'DIA',
-            'BTC-USD': 'BTC/USD', 'ETH-USD': 'ETH/USD', 'BTC': 'BTC/USD', 'ETH': 'ETH/USD',
-            'USDJPY': 'USD/JPY', 'EURUSD': 'EUR/USD', 'GBPUSD': 'GBP/USD', 'AUDUSD': 'AUD/USD',
-        }
-        return mappings.get(symbol.upper(), symbol.upper())
+        """Maps internal symbols to primary Twelve Data tickers."""
+        return self.PRIMARY_MAPPINGS.get(symbol.upper(), symbol.upper())
+    
+    def get_fallback_mapping(self, symbol: str) -> Optional[str]:
+        """Maps internal symbols to fallback tickers (ETFs)."""
+        return self.FALLBACK_MAPPINGS.get(symbol.upper())
 
     def fetch_batch_data(self, symbols: List[str], interval: str, days: int = 90) -> Dict[str, pd.DataFrame]:
         """
@@ -69,13 +86,24 @@ class TwelveDataFetcher:
         if not symbols: return {}
         
         results = {}
-        # Map symbols for TwelveData
-        td_symbols = [self.get_symbol_mapping(s) for s in symbols]
-        symbol_map_back = {self.get_symbol_mapping(s): s for s in symbols}
+        # Map symbols for TwelveData - include BOTH primary and fallback in the batch
+        requested_td_symbols = []
+        map_back = {} # Maps TD ticker (e.g. GLD) back to internal symbol (e.g. XAU)
+        
+        for s in symbols:
+            primary = self.get_symbol_mapping(s)
+            fallback = self.get_fallback_mapping(s)
+            
+            requested_td_symbols.append(primary)
+            map_back[primary] = s
+            
+            if fallback and fallback not in requested_td_symbols:
+                requested_td_symbols.append(fallback)
+                map_back[fallback] = s
         
         try:
             self._rate_limit_wait()
-            logger.info(f"Batch fetching {len(symbols)} symbols for interval {interval}...")
+            logger.info(f"Batch fetching {len(requested_td_symbols)} tickers for {len(symbols)} instruments...")
             
             outputsize = days
             if "h" in interval: outputsize = days * 24
@@ -83,31 +111,35 @@ class TwelveDataFetcher:
 
             # TwelveData SDK supports batch by passing comma-separated string
             ts = self.client.time_series(
-                symbol=",".join(td_symbols),
+                symbol=",".join(requested_td_symbols),
                 interval=interval,
                 outputsize=outputsize,
                 timezone="UTC"
             )
             
-            # The SDK returns a dict of DataFrames when multiple symbols provided
             batch_data = ts.as_pandas()
             
             if batch_data is None:
                 logger.error(f"TwelveData Batch returned None for {symbols}")
                 return self._fallback_serial(symbols, interval, days)
 
-            # If only one symbol was requested, SDK might return a single DataFrame
             if isinstance(batch_data, pd.DataFrame):
-                # Check for empty DF
-                if batch_data.empty:
-                    logger.warning(f"Batch data empty for {symbols}")
-                    return {}
-                sym = symbols[0]
-                results[sym] = self._normalize_df(batch_data)
+                if not batch_data.empty:
+                    td_sym = requested_td_symbols[0]
+                    orig_sym = map_back.get(td_sym, symbols[0])
+                    results[orig_sym] = self._normalize_df(batch_data)
             else:
                 for td_sym, df in batch_data.items():
                     if isinstance(df, pd.DataFrame) and not df.empty:
-                        orig_sym = symbol_map_back.get(td_sym, td_sym).replace("/USD", "")
+                        orig_sym = map_back.get(td_sym)
+                        if not orig_sym: continue
+                        
+                        # Prioritize: If we already have a DF (likely the spot rate), only replace if this ticker is explicitly "/"
+                        # (This ensures XAU/USD is used over GLD if both are available)
+                        if orig_sym in results:
+                            is_spot = "/" in td_sym
+                            if not is_spot: continue # Keep existing spot/primary
+                        
                         results[orig_sym] = self._normalize_df(df)
             
             return results
@@ -127,18 +159,33 @@ class TwelveDataFetcher:
         return results
 
     def fetch_historical_data(self, symbol: str, days: int = 90, interval: str = "1day") -> pd.DataFrame:
-        """Fetch single symbol historical data."""
+        """Fetch single symbol historical data with ETF fallback."""
         try:
-            self._rate_limit_wait()
-            td_symbol = self.get_symbol_mapping(symbol)
-            ts = self.client.time_series(symbol=td_symbol, interval=interval, outputsize=min(days*24 if "h" in interval else days, 5000), timezone="UTC")
-            df = ts.as_pandas()
-            if df is None or df.empty:
-                raise ValueError(f"No data for {symbol}")
-            return self._normalize_df(df)
+            return self._fetch_single(self.get_symbol_mapping(symbol), interval, days)
         except Exception as e:
-            logger.error(f"Fetch failed for {symbol}: {e}")
+            fallback = self.get_fallback_mapping(symbol)
+            if fallback:
+                logger.info(f"Primary fetch failed for {symbol}, trying fallback {fallback}...")
+                try:
+                    return self._fetch_single(fallback, interval, days)
+                except:
+                    pass
+            logger.error(f"Total fetch failure for {symbol}: {e}")
             raise e
+
+    def _fetch_single(self, td_symbol: str, interval: str, days: int) -> pd.DataFrame:
+        """Low-level single fetch call."""
+        self._rate_limit_wait()
+        ts = self.client.time_series(
+            symbol=td_symbol, 
+            interval=interval, 
+            outputsize=min(days*24 if "h" in interval else days, 5000), 
+            timezone="UTC"
+        )
+        df = ts.as_pandas()
+        if df is None or df.empty:
+            raise ValueError(f"No data for {td_symbol}")
+        return self._normalize_df(df)
 
     def _normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """Normalizes TwelveData column names and index."""
@@ -153,14 +200,24 @@ class TwelveDataFetcher:
         return df.sort_index(ascending=True)
 
     def get_current_price(self, symbol: str) -> float:
-        """Get latest price."""
+        """Get latest price with ETF fallback."""
         try:
-            self._rate_limit_wait()
-            td_symbol = self.get_symbol_mapping(symbol)
-            data = self.client.price(symbol=td_symbol).as_json()
-            if data and 'price' in data:
-                return float(data['price'])
-            raise ValueError(f"Price missing for {symbol}")
+            return self._fetch_price_call(self.get_symbol_mapping(symbol))
         except Exception as e:
-            logger.error(f"Price fail for {symbol}: {e}")
+            fallback = self.get_fallback_mapping(symbol)
+            if fallback:
+                logger.info(f"Price primary fail for {symbol}, trying fallback {fallback}...")
+                try:
+                    return self._fetch_price_call(fallback)
+                except:
+                    pass
+            logger.error(f"Total price failure for {symbol}: {e}")
             raise e
+
+    def _fetch_price_call(self, td_symbol: str) -> float:
+        """Low-level price call."""
+        self._rate_limit_wait()
+        data = self.client.price(symbol=td_symbol).as_json()
+        if data and 'price' in data:
+            return float(data['price'])
+        raise ValueError(f"Price missing for {td_symbol}")
