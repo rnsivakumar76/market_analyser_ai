@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -213,8 +214,8 @@ export class LoginComponent {
   private http = inject(HttpClient);
   private authService = inject(AuthService);
 
-  // Hardcoded for direct access during development
-  private apiUrl = 'https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api/auth';
+  // Use dynamic environment URL
+  private apiUrl = `${environment.apiUrl}/auth`;
 
   loginWithGoogle() {
     window.location.href = `${this.apiUrl}/login`;

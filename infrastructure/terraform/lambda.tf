@@ -7,9 +7,9 @@ resource "aws_lambda_function" "api" {
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
   image_uri     = var.backend_image
-  
+
   # Max 15 minutes timeout to ensure long data fetching (like yfinance) isn't killed
-  timeout       = 900 
+  timeout       = 900
   memory_size   = 3008
 
   environment {
@@ -38,7 +38,7 @@ resource "aws_lambda_function" "api" {
 resource "aws_apigatewayv2_api" "http_api" {
   name          = "${var.app_name}-http-api${local.env_suffix}"
   protocol_type = "HTTP"
-  
+
   cors_configuration {
     allow_origins = ["*"]
     allow_methods = ["*"]
@@ -90,7 +90,7 @@ resource "aws_cloudwatch_event_target" "lambda_target" {
   rule      = aws_cloudwatch_event_rule.hourly_analysis.name
   target_id = "TriggerLambdaAnalysis"
   arn       = aws_lambda_function.api.arn
-  
+
   # Mangum handler expects an API Gateway v2 event payload. We mock an HTTP GET request to /api/analyze here!
   input = jsonencode({
     "version": "2.0",

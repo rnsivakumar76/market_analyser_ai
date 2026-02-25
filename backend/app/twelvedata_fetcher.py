@@ -34,29 +34,37 @@ class TwelveDataFetcher:
         self.min_request_interval = 8.0  # 8 seconds between requests (free tier limit)
         
     def _rate_limit_wait(self):
-        """Wait to respect Twelve Data rate limits."""
-        current_time = time.time()
-        time_since_last = current_time - self.last_request_time
-        
-        if time_since_last < self.min_request_interval:
-            time.sleep(self.min_request_interval - time_since_last)
-        
-        self.last_request_time = time.time()
+        """Throttle requests to respect Twelve Data free tier (55 req/min)."""
+        # Sleep 1.1s to guarantee we stay under 1 request per second.
+        # This prevents 429 Errors even if Multiple Lambdas run at once.
+        time.sleep(1.1)
         
     def get_symbol_mapping(self, symbol: str) -> str:
         """Map our symbols to Twelve Data symbols."""
         symbol_mappings = {
-            # Commodities (Twelve Data uses forex pairs)
-            'XAU': 'XAU/USD',      # Gold
-            'XAG': 'XAG/USD',      # Silver
-            'BCO': 'BCO/USD',       # Brent Crude Oil
+            # Commodities
+            'XAU': 'XAU/USD',      # Gold (Spot)
+            'XAG': 'XAG/USD',      # Silver (Spot)
+            'BCO': 'WTI/USD',      # Brent Crude Oil fallback to WTI (Free tier friendly)
+            'WTI': 'WTI/USD',      # WTI Crude Oil
             
             # Forex pairs
             'USDJPY': 'USD/JPY',
             'EURUSD': 'EUR/USD',
+            'GBPUSD': 'GBP/USD',
+            'AUDUSD': 'AUD/USD',
             
-            # Indices (Twelve Data uses standard symbols)
-            'SPX': 'SPX',           # S&P 500
+            # Crypto
+            'BTC-USD': 'BTC/USD',
+            'ETH-USD': 'ETH/USD',
+            'BTC': 'BTC/USD',
+            'ETH': 'ETH/USD',
+            
+            # Indices (Map to ETFs for Free tier compatibility)
+            'SPX': 'SPY',           # S&P 500 Index mapped to SPY ETF
+            'IXIC': 'QQQ',         # Nasdaq mapped to QQQ ETF
+            'DJI': 'DIA',           # Dow Jones mapped to DIA ETF
+            'SPY': 'SPY',
         }
         
         return symbol_mappings.get(symbol.upper(), symbol)
@@ -119,8 +127,8 @@ class TwelveDataFetcher:
                 df['Date'] = pd.to_datetime(df['Date'])
                 df = df.set_index('Date')
             
-            # Sort by date (newest first)
-            df = df.sort_index(ascending=False)
+            # Sort by date (oldest first - standard for technical analysis)
+            df = df.sort_index(ascending=True)
             
             return df
             

@@ -5,6 +5,9 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # JWT Settings
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "7b9d6e5a4c2b8a1f0e9d8c7b6a5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7")
@@ -56,7 +59,10 @@ async def get_current_user(request: Request):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         if user_id is None:
+            logger.warning("Token payload missing 'sub' claim")
             raise credentials_exception
+        logger.info(f"Authenticated user: {user_id}")
         return user_id
-    except JWTError:
+    except JWTError as e:
+        logger.warning(f"JWT validation failed: {e}")
         raise credentials_exception

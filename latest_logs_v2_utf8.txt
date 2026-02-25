@@ -1,0 +1,17 @@
+﻿START RequestId: c72ae9a6-14b6-4dcf-8137-255e1dc5dc78 Version: $LATEST
+	END RequestId: c72ae9a6-14b6-4dcf-8137-255e1dc5dc78
+	REPORT RequestId: c72ae9a6-14b6-4dcf-8137-255e1dc5dc78	Duration: 1.69 ms	Billed Duration: 3085 ms	Memory Size: 3008 MB	Max Memory Used: 103 MB	Init Duration: 3083.26 ms	
+	START RequestId: ea106f48-f6e1-475a-b268-968ebfdbf9b8 Version: $LATEST
+	[ERROR]	2026-02-25T07:36:56.922Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing XAU: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.922Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing XAG: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.923Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing BCO: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.923Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing USDJPY: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.923Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing EURUSD: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.923Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing SPX: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.923Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing AAPL: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.923Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing NVDA: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.924Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing TSLA: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	[ERROR]	2026-02-25T07:36:56.924Z	ea106f48-f6e1-475a-b268-968ebfdbf9b8	Error analyzing BTC-USD: cannot import name '_get_yf_symbols' from 'app.data_fetcher' (/var/task/app/data_fetcher.py)
+	END RequestId: ea106f48-f6e1-475a-b268-968ebfdbf9b8
+	REPORT RequestId: ea106f48-f6e1-475a-b268-968ebfdbf9b8	Duration: 6218.05 ms	Billed Duration: 6219 ms	Memory Size: 3008 MB	Max Memory Used: 238 MB	
+

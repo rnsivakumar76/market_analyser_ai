@@ -40,7 +40,7 @@ app.include_router(auth_router, prefix="/api")
 # Lazy analysis helper to keep imports deferred
 def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_direction: Any = None, strategy_settings: Any = None, mode: Any = None, benchmark_data_df: Any = None) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
-    from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price, _get_yf_symbols
+    from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price
     from .analyzers import (
         analyze_monthly_trend, analyze_weekly_pullback, analyze_daily_strength,
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
@@ -79,11 +79,17 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         pullback_label = "Day Trading"
         execution_label = "Execution (H1)"
 
+    # Try to get the real-time price first for razor-sharp accuracy
     try:
-        current_price = get_current_price(symbol)
+        from .twelvedata_fetcher import TwelveDataFetcher
+        fetcher = TwelveDataFetcher()
+        current_price = fetcher.get_current_price(symbol)
+        logger.info(f"Fetched real-time price for {symbol}: {current_price}")
     except Exception as e:
-        logger.warning(f"Could not fetch current price for {symbol}: {e}. Using last execution close.")
+        # Fallback to the most recent close from execution data if API fails (e.g. credits)
+        # Note: fetch_historical_data now sorts oldest first, so index -1 is the most recent
         current_price = float(execution_data['Close'].iloc[-1])
+        logger.warning(f"Could not fetch real-time price for {symbol}: {e}. Using last execution close: {current_price}")
     
     trend = analyze_monthly_trend(macro_data, params.get('monthly', {}))
     # Update description to reflect timeframe
@@ -107,10 +113,8 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     tech_indicators = analyze_technical_indicators(execution_data)
     news_sentiment = analyze_news_sentiment(symbol)
     
-    # Calculate volatility and fundamentals first to inform the action plan
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value)
-    primary_yf_sym = _get_yf_symbols(symbol)[0]
-    fundamentals = analyze_fundamentals(symbol, primary_yf_sym)
+    fundamentals = analyze_fundamentals(symbol)
     
     # NEW: Relative Strength Analysis (Alpha vs Beta)
     # Determine which benchmark to use
@@ -233,12 +237,40 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     if mode is None:
         mode = StrategyMode.LONG_TERM
 
+    # 1. Check Cache First
+    if nexus_db.is_dynamo_enabled():
+        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240) # 4 min cache
+        if cached:
+            # Reconstruct the response from cache
+            try:
+                # Need to return the full tuple (results, perf, corr, guardrail)
+                # But since it's JSON, we need to be careful. 
+                # Actually, it's easier to just return the AnalysisResponse later.
+                # Let's adjust get_analyze_all to handle this.
+                pass
+            except:
+                pass
+
     logger.info(f"Running parallel market scan for user: {user_id} ({mode.value})...")
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
+    logger.info(f"Loaded {len(instruments)} instruments for user {user_id}")
+    
     params = get_analysis_params(config)
     alert_config = get_alert_config(config)
-    strategy_settings = StrategySettings(**get_strategy_config(config))
+    
+    try:
+        strategy_settings = StrategySettings(**get_strategy_config(config))
+    except Exception as e:
+        logger.error(f"Failed to parse strategy settings: {e}. Using defaults.")
+        strategy_settings = StrategySettings(**{
+            "conviction_threshold": 70,
+            "adx_threshold": 25,
+            "atr_multiplier_tp": 3.0,
+            "atr_multiplier_sl": 1.5,
+            "portfolio_value": 10000.0,
+            "risk_per_trade_percent": 1.0
+        })
     
     # Parallel Fetch for BOTH Macro and Execution Benchmarks
     benchmarks_data = {}
@@ -246,7 +278,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     exec_interval = "1d" if mode == StrategyMode.LONG_TERM else "1h"
     exec_days = 500 if mode == StrategyMode.LONG_TERM else 20
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    # Optimized Benchmarks: Fetch once and share
+    with ThreadPoolExecutor(max_workers=2) as executor:
         futures = {
             executor.submit(fetch_historical_data, "SPX", days=1000, interval=bench_interval): "SPX_macro",
             executor.submit(fetch_historical_data, "BTC-USD", days=1000, interval=bench_interval): "BTC_macro",
@@ -258,7 +291,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             try:
                 benchmarks_data[sym] = future.result()
             except Exception as e:
-                logger.error(f"Failed to fetch benchmark {sym}: {e}")
+                logger.warning(f"Benchmark {sym} fetch failed (will try fallback): {e}")
                 benchmarks_data[sym] = None
 
     spy_bench = Signal.NEUTRAL
@@ -286,7 +319,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             logger.error(f"Error analyzing {sym}: {e}")
             return sym, None, None
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    # Reduced workers to 4 to stay under 55 req/min (Basic Plan limit)
+    with ThreadPoolExecutor(max_workers=4) as executor:
         future_to_inst = {executor.submit(process_instrument, inst): inst for inst in instruments}
         for future in as_completed(future_to_inst):
             sym, analysis, hist_data = future.result()
@@ -321,15 +355,32 @@ async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)
     # Cast mode if string
     if isinstance(mode, str):
         mode = StrategyMode(mode)
+    if mode is None:
+        mode = StrategyMode.LONG_TERM
+    
+    # Check Cache
+    if nexus_db.is_dynamo_enabled():
+        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240)
+        if cached:
+            return AnalysisResponse(**cached)
     
     results, perf, corr, guardrail = await run_scheduled_analysis(user_id=user_id, mode=mode)
-    return AnalysisResponse(
+    response = AnalysisResponse(
         analysis_timestamp=datetime.now(timezone.utc).isoformat(),
         instruments=results,
         weekly_performance=perf,
         correlation_data=corr,
         psychological_guardrail=guardrail
     )
+
+    # Save to Cache
+    if nexus_db.is_dynamo_enabled():
+        try:
+            nexus_db.save_analysis_results(user_id, response.dict(), mode.value)
+        except Exception as e:
+            logger.error(f"Failed to cache analysis: {e}")
+
+    return response
 
 @app.get("/api/analyze/{symbol}")
 async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(get_current_user)):
@@ -541,7 +592,6 @@ async def health_check():
 async def test_gold():
     from .models import StrategySettings, Signal
     from .config_loader import load_config, get_analysis_params, get_strategy_config
-    from .data_fetcher import YF_SYMBOL_MAP, _get_yf_symbols
     
     config = load_config()
     params = get_analysis_params(config)
@@ -551,18 +601,14 @@ async def test_gold():
         # Pass Signal.NEUTRAL to avoid validation error
         analysis, _ = analyze_instrument_lazy("XAU", "Gold USD Test", params, benchmark_direction=Signal.NEUTRAL, strategy_settings=strategy_settings)
         return {
-            "analysis": analysis,
-            "yf_symbol_map": YF_SYMBOL_MAP,
-            "xau_symbols": _get_yf_symbols("XAU")
+            "analysis": analysis
         }
     except Exception as e:
         import traceback
         logger.error(f"Test Gold Failed: {e}\n{traceback.format_exc()}")
         return {
             "error": str(e),
-            "traceback": traceback.format_exc(),
-            "yf_symbol_map": YF_SYMBOL_MAP,
-            "xau_symbols": _get_yf_symbols("XAU")
+            "traceback": traceback.format_exc()
         }
 
 # ─── Trade Journal ────────────────────────────────────────────────

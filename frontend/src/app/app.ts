@@ -43,7 +43,6 @@ export class App implements OnInit, OnDestroy {
   psychologicalGuardrail = signal<PsychologicalGuardrail | null>(null);
   selectedInstrument = signal<InstrumentAnalysis | null>(null);
   strategyMode = signal<StrategyMode>('long_term');
-  sidebarView = signal<'list' | 'heatmap'>('heatmap');
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
 
@@ -76,7 +75,7 @@ export class App implements OnInit, OnDestroy {
 
     if (this.authService.isLoggedIn) {
       this.loadPreferences();
-      this.runAnalysis();
+      this.runAnalysis(false); // Initial load: not silent, show loading screen
       this.startAutoRefresh();
     }
   }
@@ -89,7 +88,7 @@ export class App implements OnInit, OnDestroy {
   private startAutoRefresh() {
     // 1. Scheduler for Analysis
     this.refreshSubscription = interval(this.REFRESH_INTERVAL_SEC * 1000).subscribe(() => {
-      this.runAnalysis();
+      this.runAnalysis(true); // Background update: silent
       this.secondsRemaining = this.REFRESH_INTERVAL_SEC;
     });
 
@@ -109,7 +108,6 @@ export class App implements OnInit, OnDestroy {
       next: (prefs) => {
         this.userPreferences.set(prefs);
         this.strategyMode.set(prefs.strategy_mode || 'long_term');
-        this.sidebarView.set(prefs.view_mode || 'heatmap');
         this.prefsLoaded.set(true);
       },
       error: () => { this.prefsLoaded.set(true); }
@@ -128,19 +126,33 @@ export class App implements OnInit, OnDestroy {
     this.secondsRemaining = this.REFRESH_INTERVAL_SEC; // Reset countdown on manual toggle
   }
 
-  toggleSidebarView(view: 'list' | 'heatmap') {
-    this.sidebarView.set(view);
-    this.savePreference('view_mode', view);
-  }
 
-  runAnalysis() {
-    this.loading.set(true);
+  runAnalysis(silent: boolean = false) {
+    if (!silent) {
+      this.loading.set(true);
+    }
     this.error.set(null);
 
     this.analyzerService.analyzeAll(this.strategyMode()).subscribe({
       next: (response: AnalysisResponse) => {
-        // Sort instruments: Highest magnitude score at the top (Absolute value)
-        const sortedInstruments = [...response.instruments].sort((a, b) => {
+        const currentInstruments = this.instruments();
+        let newInstruments = [...response.instruments];
+
+        // Merge logic: If background update misses some instruments (e.g. API fail), 
+        // keep the old data instead of blanking out.
+        if (currentInstruments.length > 0) {
+          const newSymbols = new Set(newInstruments.map(i => i.symbol));
+          const missingFromNew = currentInstruments.filter(i => !newSymbols.has(i.symbol));
+
+          // Only keep missing instruments if the response wasn't totally empty 
+          // (which might mean a global error or zero instruments configured)
+          if (newInstruments.length > 0) {
+            newInstruments = [...newInstruments, ...missingFromNew];
+          }
+        }
+
+        // Sort instruments: Highest magnitude score at the top
+        const sortedInstruments = newInstruments.sort((a, b) => {
           return Math.abs(b.trade_signal.score) - Math.abs(a.trade_signal.score);
         });
 
@@ -150,7 +162,11 @@ export class App implements OnInit, OnDestroy {
         const currentSelection = this.selectedInstrument();
         if (currentSelection) {
           const updated = sortedInstruments.find(i => i.symbol === currentSelection.symbol);
-          this.selectedInstrument.set(updated || null);
+          if (updated) {
+            this.selectedInstrument.set(updated);
+          }
+          // If updated is null, we keep the previous selectedInstrument 
+          // so the screen doesn't go blank.
         }
 
         this.weeklyPerformance.set(response.weekly_performance);
@@ -160,7 +176,9 @@ export class App implements OnInit, OnDestroy {
         this.loading.set(false);
       },
       error: (err) => {
-        this.error.set('Failed to fetch analysis. Make sure the backend is running.');
+        if (!silent) {
+          this.error.set('Failed to fetch analysis. Make sure the backend is running.');
+        }
         this.loading.set(false);
         console.error('Analysis error:', err);
       }
