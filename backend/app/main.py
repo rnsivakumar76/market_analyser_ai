@@ -237,7 +237,10 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     if mode is None:
         mode = StrategyMode.LONG_TERM
 
-    # 1. Check Cache First
+    # Scheduler skip if no active user
+    if user_id == "global_default":
+        logger.info(f"Scheduler disabled: no active user for user_id {user_id}")
+        return [], {}, {}, None    # 1. Check Cache First
     if nexus_db.is_dynamo_enabled():
         cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240) # 4 min cache
         if cached:
