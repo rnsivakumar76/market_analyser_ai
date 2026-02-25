@@ -144,6 +144,11 @@ jobs:
             mv imports_dev.tf.disabled imports_dev.tf || echo "No imports to enable"
           fi
           
+          # Enable prod imports if in prod workspace to adopt shared global resources
+          if [ "$WORKSPACE" = "prod" ]; then
+            mv imports_prod.tf.disabled imports_prod.tf || echo "No prod imports to enable"
+          fi
+          
           terraform apply -auto-approve \
             -var="aws_account_id=${{ vars.AWS_ACCOUNT_ID }}" \
             -var="aws_region=${{ vars.AWS_REGION }}" \
