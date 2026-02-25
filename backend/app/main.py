@@ -476,7 +476,7 @@ def _load_journal(user_id: str = "global_default") -> list:
     if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
         import boto3
         s3 = boto3.client('s3')
-        bucket = os.environ.get('CONFIG_BUCKET', 'market-analyzer-config')
+        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET', 'market-analyser-config-614686365382')
         key = f"users/{user_id}/trade_journal.json"
         try:
             obj = s3.get_object(Bucket=bucket, Key=key)
@@ -498,7 +498,7 @@ def _save_journal(trades: list, user_id: str = "global_default"):
     if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
         import boto3
         s3 = boto3.client('s3')
-        bucket = os.environ.get('CONFIG_BUCKET', 'market-analyzer-config')
+        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET', 'market-analyser-config-614686365382')
         key = f"users/{user_id}/trade_journal.json"
         s3.put_object(Bucket=bucket, Key=key, Body=json.dumps(trades), ContentType='application/json')
     else:
