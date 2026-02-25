@@ -1,7 +1,7 @@
 import pandas as pd
 from twelvedata import TDClient
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Dict
 import logging
 import time
 import os
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class TwelveDataFetcher:
     """
     Twelve Data fetcher with thread-safe rate limiting and retry logic.
-    Optimized for AWS Lambda concurrency and the 55 req/min free tier limit.
+    Optimized for price accuracy and speed.
     """
     _lock = threading.Lock()
     _last_call_time = 0
@@ -25,55 +25,69 @@ class TwelveDataFetcher:
                 api_key = config.get('twelvedata', {}).get('api_key', 'YOUR_API_KEY_HERE')
             except:
                 pass
-            
             if api_key == 'YOUR_API_KEY_HERE':
                 api_key = os.getenv('TWELVEDATA_API_KEY', 'YOUR_API_KEY_HERE')
-        
-        if api_key == 'YOUR_API_KEY_HERE':
-            logger.warning("Twelve Data API key not configured.")
         
         self.api_key = api_key
         self.client = TDClient(apikey=api_key)
         
     def _rate_limit_wait(self):
-        """
-        Ensures at least 1.2 seconds between ANY Two calls to Twelve Data 
-        across ANY threads in this process.
-        """
+        """Ensures safe interval between calls (min 1.1s for 55 req/min)."""
         with self._lock:
             now = time.time()
             elapsed = now - TwelveDataFetcher._last_call_time
+            # 1.2s to be safe against slight clock drifts across Lambdas
             wait_time = 1.2 - elapsed
-            
             if wait_time > 0:
-                logger.debug(f"Rate limiting: sleeping {wait_time:.2f}s")
                 time.sleep(wait_time)
-            
             TwelveDataFetcher._last_call_time = time.time()
             
     def get_symbol_mapping(self, symbol: str) -> str:
-        symbol_mappings = {
-            # Commodities (Free tier compatible via ETFs)
-            'XAU': 'GLD',          # Gold
-            'XAG': 'SLV',          # Silver
-            'BCO': 'USO',          # Oil
-            'WTI': 'USO',
-            'GC=F': 'GLD',
-            'SI=F': 'SLV',
-            
-            # Forex (Note: these often work in free tier)
-            'USDJPY': 'USD/JPY', 'EURUSD': 'EUR/USD', 'GBPUSD': 'GBP/USD', 'AUDUSD': 'AUD/USD',
-            'BTC-USD': 'BTC/USD', 'ETH-USD': 'ETH/USD', 'BTC': 'BTC/USD', 'ETH': 'ETH/USD',
-            'SPX': 'SPY', 'IXIC': 'QQQ', 'DJI': 'DIA', 'SPY': 'SPY',
+        """
+        Maps symbols to Twelve Data format.
+        Prioritizes direct SPOT symbols where possible.
+        """
+        sym = symbol.upper()
+        
+        # Primary Mappings (Attempt spot first)
+        mappings = {
+            'XAU': 'XAU/USD',      # Gold Spot (Try first)
+            'XAG': 'XAG/USD',      # Silver Spot
+            'BCO': 'BZ/USD',       # Brent Oil
+            'WTI': 'WTI/USD',      # Crude Oil
+            'SPX': 'SPY',          # S&P 500 (Free tier usually requires SPY)
+            'IXIC': 'QQQ',         # Nasdaq
+            'DJI': 'DIA',          # Dow Jones
+            'BTC-USD': 'BTC/USD',
+            'ETH-USD': 'ETH/USD',
+            'BTC': 'BTC/USD',
+            'ETH': 'ETH/USD',
+            'USDJPY': 'USD/JPY',
+            'EURUSD': 'EUR/USD',
+            'GBPUSD': 'GBP/USD',
+            'AUDUSD': 'AUD/USD',
         }
-        return symbol_mappings.get(symbol.upper(), symbol)
+        
+        # Fallback ETF Mappings (Used if primary fails in fetch method)
+        return mappings.get(sym, sym)
+
+    def _get_fallback_symbol(self, symbol: str) -> Optional[str]:
+        fallbacks = {
+            'XAU/USD': 'GLD',
+            'XAG/USD': 'SLV',
+            'BZ/USD': 'USO',
+            'WTI/USD': 'USO',
+            'SPX': 'SPY'
+        }
+        return fallbacks.get(symbol)
     
-    def fetch_historical_data(self, symbol: str, days: int = 90, interval: str = "1day", retries: int = 3) -> pd.DataFrame:
-        """Fetch historical data with retries for transient errors."""
+    def fetch_historical_data(self, symbol: str, days: int = 90, interval: str = "1day", retries: int = 2) -> pd.DataFrame:
+        """Fetch historical data with ETF fallback for restricted symbols."""
+        target_symbol = self.get_symbol_mapping(symbol)
+        
         for attempt in range(retries):
             try:
                 self._rate_limit_wait()
-                td_symbol = self.get_symbol_mapping(symbol)
                 
                 outputsize = days
                 if interval == "1h": outputsize = days * 24
@@ -81,15 +95,24 @@ class TwelveDataFetcher:
                 outputsize = min(outputsize, 5000)
 
                 ts = self.client.time_series(
-                    symbol=td_symbol,
+                    symbol=target_symbol,
                     interval=interval,
                     outputsize=outputsize,
                     timezone="UTC"
                 )
                 
                 df = ts.as_pandas()
+                
+                # If spot fails (e.g. 401 Unauthorized for XAU/USD), try ETF fallback
+                if (df is None or df.empty) and attempt == 0:
+                    fb = self._get_fallback_symbol(target_symbol)
+                    if fb:
+                        logger.info(f"Spot restricted for {symbol}. Falling back to ETF: {fb}")
+                        target_symbol = fb
+                        continue # Re-try loop with fallback symbol
+
                 if df is None or df.empty:
-                    raise ValueError(f"No data found for {symbol}")
+                    raise ValueError(f"No data for {symbol}")
                 
                 # Normalize columns
                 column_mapping = {'datetime': 'Date', 'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}
@@ -104,38 +127,43 @@ class TwelveDataFetcher:
                 return df.sort_index(ascending=True)
 
             except Exception as e:
+                # If rate limited, wait and retry
                 if "429" in str(e) and attempt < retries - 1:
-                    wait = (attempt + 1) * 5
-                    logger.warning(f"Rate limited (429) for {symbol}. Retrying in {wait}s...")
-                    time.sleep(wait)
+                    time.sleep(5)
                     continue
-                logger.error(f"[TwelveData] Attempt {attempt+1} failed for {symbol}: {e}")
+                
+                # If it's a "symbol not found" or "unauthorized" error, try fallback immediately if not tried
+                if ("not found" in str(e).lower() or "unauthorized" in str(e).lower()) and attempt == 0:
+                    fb = self._get_fallback_symbol(target_symbol)
+                    if fb:
+                        target_symbol = fb
+                        continue
+                
                 if attempt == retries - 1:
+                    logger.error(f"[TwelveData] Error for {symbol}: {e}")
                     raise e
 
-    def get_current_price(self, symbol: str, retries: int = 3) -> float:
-        """Fetch current price with retries."""
+    def get_current_price(self, symbol: str, retries: int = 2) -> float:
+        """Fetch current price with spot prioritizing."""
+        target_symbol = self.get_symbol_mapping(symbol)
+        
         for attempt in range(retries):
             try:
                 self._rate_limit_wait()
-                td_symbol = self.get_symbol_mapping(symbol)
-                data = self.client.price(symbol=td_symbol).as_json()
+                data = self.client.price(symbol=target_symbol).as_json()
                 
-                if not data:
-                    raise ValueError(f"No price data for {symbol}")
-                
-                if 'price' in data:
+                if (not data or 'price' not in data) and attempt == 0:
+                    fb = self._get_fallback_symbol(target_symbol)
+                    if fb:
+                        target_symbol = fb
+                        continue
+
+                if data and 'price' in data:
                     return float(data['price'])
                 
-                error_msg = data.get('message', str(data))
-                if "429" in error_msg and attempt < retries - 1:
-                    wait = (attempt + 1) * 5
-                    time.sleep(wait)
-                    continue
-                raise ValueError(f"Twelve Data error: {error_msg}")
+                raise ValueError(f"Price missing for {symbol}")
 
             except Exception as e:
                 if attempt == retries - 1:
-                    logger.error(f"[TwelveData] Final price attempt failed for {symbol}: {e}")
                     raise e
                 time.sleep(1)
