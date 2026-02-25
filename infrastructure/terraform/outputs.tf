@@ -8,18 +8,6 @@ output "frontend_url" {
   value       = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
 }
 
-/*
-output "cloudfront_url" {
-  description = "CloudFront URL — this is your public app URL"
-  value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
-}
-
-output "cloudfront_distribution_id" {
-  description = "CloudFront distribution ID — used by CI/CD to invalidate cache"
-  value       = aws_cloudfront_distribution.frontend.id
-}
-*/
-
 output "frontend_s3_bucket" {
   description = "S3 bucket name for the frontend — CI/CD syncs build artifacts here"
   value       = aws_s3_bucket.frontend.bucket
@@ -27,12 +15,12 @@ output "frontend_s3_bucket" {
 
 output "ecr_backend_url" {
   description = "ECR repository URL for the backend image"
-  value       = aws_ecr_repository.backend.repository_url
+  value       = local.ecr_backend_url
 }
 
 output "ecr_frontend_url" {
   description = "ECR repository URL for the frontend image"
-  value       = aws_ecr_repository.frontend.repository_url
+  value       = local.ecr_frontend_url
 }
 
 output "lambda_function_arn" {
@@ -52,14 +40,19 @@ output "dynamodb_table_name" {
 
 output "gitlab_deployer_access_key_id" {
   description = "AWS Access Key ID for GitLab CI/CD — add to GitLab CI/CD Variables"
-  value       = aws_iam_access_key.gitlab_deployer.id
+  value       = local.is_primary ? aws_iam_access_key.gitlab_deployer[0].id : "n/a (dev environment)"
   sensitive   = true
 }
 
 output "gitlab_deployer_secret_access_key" {
   description = "AWS Secret Key for GitLab CI/CD — add to GitLab CI/CD Variables (masked)"
-  value       = aws_iam_access_key.gitlab_deployer.secret
+  value       = local.is_primary ? aws_iam_access_key.gitlab_deployer[0].secret : "n/a (dev environment)"
   sensitive   = true
+}
+
+output "environment" {
+  description = "Current deployment environment"
+  value       = var.environment
 }
 
 output "cost_estimate" {
@@ -67,7 +60,7 @@ output "cost_estimate" {
   value = {
     lambda       = "~$0/mo (Free tier includes 1M requests/mo & 3.2M seconds of compute)"
     api_gateway  = "~$0/mo (Free tier includes 1M API calls/mo)"
-    cloudfront   = "~$0 (free tier 1TB/mo)"
+    dynamodb     = "~$0/mo (Free tier 25GB + 25 RCU/WCU always free)"
     s3           = "~$0 (free tier 5GB)"
     ecr          = "~$0 (free tier 500MB)"
     total        = "~$0/mo (100% Free Tier Serverless Architecture!)"

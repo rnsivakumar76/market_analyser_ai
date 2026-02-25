@@ -3,7 +3,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 resource "aws_lambda_function" "api" {
-  function_name = "${var.app_name}-api"
+  function_name = "${var.app_name}-api${local.env_suffix}"
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
   image_uri     = var.backend_image
@@ -34,7 +34,7 @@ resource "aws_lambda_function" "api" {
 # HTTP API Gateway (v2) — Maps endpoints to Lambda
 # ──────────────────────────────────────────────────────────────────────────────
 resource "aws_apigatewayv2_api" "http_api" {
-  name          = "${var.app_name}-http-api"
+  name          = "${var.app_name}-http-api${local.env_suffix}"
   protocol_type = "HTTP"
   
   cors_configuration {
@@ -79,7 +79,7 @@ resource "aws_lambda_permission" "apigw" {
 # Scheduled EventBridge to replace apscheduler
 # ──────────────────────────────────────────────────────────────────────────────
 resource "aws_cloudwatch_event_rule" "hourly_analysis" {
-  name                = "${var.app_name}-15min-analysis"
+  name                = "${var.app_name}-15min-analysis${local.env_suffix}"
   description         = "Trigger market analysis every 15 minutes"
   schedule_expression = "rate(15 minutes)"
 }

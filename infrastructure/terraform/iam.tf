@@ -1,10 +1,13 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# IAM — Lambda & GitLab Deployment Roles
+# IAM — Lambda & Deployment Roles
+# Lambda exec role is PER-ENVIRONMENT (different permissions per env)
+# GitLab deployer is SHARED (only in production workspace)
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Lambda Execution Role (used by AWS Lambda to run the function and write logs to CloudWatch)
+# ─── Per-Environment: Lambda Execution Role ───────────────────────
+
 resource "aws_iam_role" "lambda_exec" {
-  name = "${var.app_name}-lambda-exec-role"
+  name = "${var.app_name}-lambda-exec-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -15,7 +18,7 @@ resource "aws_iam_role" "lambda_exec" {
     }]
   })
 
-  tags = { Name = "${var.app_name}-lambda-exec" }
+  tags = { Name = "${var.app_name}-lambda-exec-${var.environment}" }
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_exec_policy" {
@@ -24,7 +27,7 @@ resource "aws_iam_role_policy_attachment" "lambda_exec_policy" {
 }
 
 resource "aws_iam_role_policy" "lambda_s3_config" {
-  name = "${var.app_name}-lambda-s3-config-policy"
+  name = "${var.app_name}-lambda-s3-config-${var.environment}"
   role = aws_iam_role.lambda_exec.id
 
   policy = jsonencode({
@@ -47,7 +50,7 @@ resource "aws_iam_role_policy" "lambda_s3_config" {
 }
 
 resource "aws_iam_role_policy" "lambda_dynamodb" {
-  name = "${var.app_name}-lambda-dynamodb-policy"
+  name = "${var.app_name}-lambda-dynamodb-${var.environment}"
   role = aws_iam_role.lambda_exec.id
 
   policy = jsonencode({
@@ -74,22 +77,25 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
   })
 }
 
-# GitLab CI/CD deployer user
+# ─── Shared: GitLab CI/CD deployer (production only) ─────────────
+
 resource "aws_iam_user" "gitlab_deployer" {
-  name = "${var.app_name}-gitlab-deployer"
-  tags = { Purpose = "GitLab CI/CD Deployment" }
+  count = local.is_primary ? 1 : 0
+  name  = "${var.app_name}-gitlab-deployer"
+  tags  = { Purpose = "GitLab CI/CD Deployment" }
 }
 
 resource "aws_iam_user_policy" "gitlab_deployer" {
-  name = "${var.app_name}-gitlab-deployer-policy"
-  user = aws_iam_user.gitlab_deployer.name
+  count = local.is_primary ? 1 : 0
+  name  = "${var.app_name}-gitlab-deployer-policy"
+  user  = aws_iam_user.gitlab_deployer[0].name
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = ["ecr:*", "lambda:*", "apigateway:*", "s3:*", "cloudfront:*", "iam:PassRole", "events:*"]
+        Effect   = "Allow"
+        Action   = ["ecr:*", "lambda:*", "apigateway:*", "s3:*", "cloudfront:*", "iam:PassRole", "events:*"]
         Resource = "*"
       }
     ]
@@ -97,5 +103,6 @@ resource "aws_iam_user_policy" "gitlab_deployer" {
 }
 
 resource "aws_iam_access_key" "gitlab_deployer" {
-  user = aws_iam_user.gitlab_deployer.name
+  count = local.is_primary ? 1 : 0
+  user  = aws_iam_user.gitlab_deployer[0].name
 }
