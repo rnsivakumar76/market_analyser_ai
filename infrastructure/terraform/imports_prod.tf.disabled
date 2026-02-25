@@ -58,3 +58,14 @@ import {
   to = aws_cloudwatch_event_rule.hourly_analysis
   id = "market-analyser-5min-analysis"
 }
+
+# 7. Lambda Permissions (Fixes the "Infinite Creating" hang)
+import {
+  to = aws_lambda_permission.apigw
+  id = "market-analyser-api/AllowExecutionFromAPIGateway"
+}
+
+import {
+  to = aws_lambda_permission.eventbridge
+  id = "market-analyser-api/AllowExecutionFromEventBridge"
+}
