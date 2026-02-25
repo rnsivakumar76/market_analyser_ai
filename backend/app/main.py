@@ -119,8 +119,8 @@ def analyze_instrument_lazy(
     # In Long Term mode, execution_data is 1d. In Short Term mode, macro_data is 1d.
     daily_source = execution_data if mode == StrategyMode.LONG_TERM else macro_data
     if not daily_source.empty and len(daily_source) >= 2:
-        daily_change = ((daily_source['Close'].iloc[-1] - daily_source['Close'].iloc[-2]) / daily_source['Close'].iloc[-2]) * 100
-        strength.price_change_percent = round(daily_change, 2)
+        daily_change = float(((daily_source['Close'].iloc[-1] - daily_source['Close'].iloc[-2]) / daily_source['Close'].iloc[-2]) * 100)
+        strength.price_change_percent = float(round(daily_change, 2))
     strength.description = f"[{execution_label}] " + strength.description
     
     phase = analyze_market_phase(execution_data, params.get('daily', {}))

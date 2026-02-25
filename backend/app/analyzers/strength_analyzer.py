@@ -105,7 +105,7 @@ def analyze_daily_strength(
     
     # Calculate daily price change
     if len(close_prices) >= 2:
-        price_change = (close_prices.iloc[-1] - close_prices.iloc[-2]) / close_prices.iloc[-2] * 100
+        price_change = float((close_prices.iloc[-1] - close_prices.iloc[-2]) / close_prices.iloc[-2] * 100)
     else:
         price_change = 0.0
     
@@ -156,9 +156,9 @@ def analyze_daily_strength(
     
     return StrengthAnalysis(
         signal=signal,
-        rsi=round(rsi, 2),
-        volume_ratio=round(volume_ratio, 2),
-        adx=round(adx, 2),
-        price_change_percent=round(price_change, 2),
+        rsi=float(round(rsi, 2)),
+        volume_ratio=float(round(volume_ratio, 2)),
+        adx=float(round(adx, 2)),
+        price_change_percent=float(round(price_change, 2)),
         description=description
     )

@@ -26,7 +26,7 @@ def analyze_relative_strength(
         combined = pd.DataFrame({
             'symbol': symbol_closes,
             'bench': bench_closes
-        }).fillna(method='ffill').dropna()
+        }).ffill().dropna()
 
         if len(combined) < lookback_periods:
             return RelativeStrengthAnalysis(
@@ -43,16 +43,16 @@ def analyze_relative_strength(
         current_idx = -1
         start_idx = -lookback_periods
 
-        symbol_start = combined['symbol'].iloc[start_idx]
-        symbol_end = combined['symbol'].iloc[current_idx]
-        symbol_return = ((symbol_end / symbol_start) - 1) * 100
+        symbol_start = float(combined['symbol'].iloc[start_idx])
+        symbol_end = float(combined['symbol'].iloc[current_idx])
+        symbol_return = float(((symbol_end / symbol_start) - 1) * 100)
 
-        bench_start = combined['bench'].iloc[start_idx]
-        bench_end = combined['bench'].iloc[current_idx]
-        bench_return = ((bench_end / bench_start) - 1) * 100
+        bench_start = float(combined['bench'].iloc[start_idx])
+        bench_end = float(combined['bench'].iloc[current_idx])
+        bench_return = float(((bench_end / bench_start) - 1) * 100)
 
-        alpha = symbol_return - bench_return
-        is_outperforming = alpha > 0
+        alpha = float(symbol_return - bench_return)
+        is_outperforming = bool(alpha > 0)
 
         if alpha > 5.0:
             label = "Leader"

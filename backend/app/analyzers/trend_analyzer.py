@@ -50,9 +50,9 @@ def analyze_monthly_trend(
     
     return TrendAnalysis(
         direction=direction,
-        fast_ma=round(current_fast_ma, 2),
-        slow_ma=round(current_slow_ma, 2),
-        price_above_fast_ma=price_above_fast,
-        price_above_slow_ma=price_above_slow,
+        fast_ma=float(round(current_fast_ma, 2)),
+        slow_ma=float(round(current_slow_ma, 2)),
+        price_above_fast_ma=bool(price_above_fast),
+        price_above_slow_ma=bool(price_above_slow),
         description=description
     )

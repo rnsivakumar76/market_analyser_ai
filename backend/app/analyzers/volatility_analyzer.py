@@ -81,11 +81,11 @@ def analyze_volatility_and_risk(
     rr_ratio = atr_multiplier_tp / atr_multiplier_sl if atr_multiplier_sl > 0 else 0
 
     return VolatilityAnalysis(
-        atr=round(atr, 4),
-        stop_loss=round(sl, 4),
-        take_profit=round(tp3, 4),
-        take_profit_level1=round(tp1, 4),
-        take_profit_level2=round(tp2, 4),
-        risk_reward_ratio=round(rr_ratio, 2),
+        atr=float(round(atr, 4)),
+        stop_loss=float(round(sl, 4)),
+        take_profit=float(round(tp3, 4)),
+        take_profit_level1=float(round(tp1, 4)),
+        take_profit_level2=float(round(tp2, 4)),
+        risk_reward_ratio=float(round(rr_ratio, 2)),
         description=desc
     )

@@ -1,0 +1,227 @@
+﻿2026-02-25T16:26:42 START RequestId: d2db7da0-6cbf-4917-9308-b43bb7ba5920 Version: $LATEST
+2026-02-25T16:26:42 END RequestId: d2db7da0-6cbf-4917-9308-b43bb7ba5920
+2026-02-25T16:26:42 REPORT RequestId: d2db7da0-6cbf-4917-9308-b43bb7ba5920	Duration: 38.14 ms	Billed Duration: 39 ms	Memory Size: 3008 MB	Max Memory Used: 241 MB
+2026-02-25T16:28:30 START RequestId: 9c522ae9-172d-4b33-acea-f3923a778d08 Version: $LATEST
+2026-02-25T16:28:30 END RequestId: 9c522ae9-172d-4b33-acea-f3923a778d08
+2026-02-25T16:28:30 REPORT RequestId: 9c522ae9-172d-4b33-acea-f3923a778d08	Duration: 2.06 ms	Billed Duration: 4775 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB	Init Duration: 4771.96 ms
+2026-02-25T16:28:30 START RequestId: ce313b4b-dc79-47ab-94b7-38111490e14d Version: $LATEST
+2026-02-25T16:28:50 [ERROR]	2026-02-25T16:28:50.506Z	ce313b4b-dc79-47ab-94b7-38111490e14d	Error analyzing XAU: '<=' not supported between instances of 'str' and 'float'
+2026-02-25T16:28:50 [ERROR]	2026-02-25T16:28:50.509Z	ce313b4b-dc79-47ab-94b7-38111490e14d	Error analyzing XAG: '<=' not supported between instances of 'str' and 'float'
+2026-02-25T16:28:50 [WARNING]	2026-02-25T16:28:50.509Z	ce313b4b-dc79-47ab-94b7-38111490e14d	Analysis produced no result for XAG
+2026-02-25T16:28:50 [WARNING]	2026-02-25T16:28:50.509Z	ce313b4b-dc79-47ab-94b7-38111490e14d	Analysis produced no result for XAU
+2026-02-25T16:28:52 START RequestId: 221bf904-e1c2-4986-84a8-eb9bf4df588e Version: $LATEST
+2026-02-25T16:28:52 END RequestId: 221bf904-e1c2-4986-84a8-eb9bf4df588e
+2026-02-25T16:28:52 REPORT RequestId: 221bf904-e1c2-4986-84a8-eb9bf4df588e	Duration: 2.25 ms	Billed Duration: 1190 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB	Init Duration: 1187.65 ms
+2026-02-25T16:28:52 START RequestId: a9b9640e-27de-4a80-9286-b2a13ec0a624 Version: $LATEST
+2026-02-25T16:28:52 END RequestId: a9b9640e-27de-4a80-9286-b2a13ec0a624
+2026-02-25T16:28:52 REPORT RequestId: a9b9640e-27de-4a80-9286-b2a13ec0a624	Duration: 2.27 ms	Billed Duration: 1219 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB	Init Duration: 1216.27 ms
+2026-02-25T16:28:54 START RequestId: 0b66b1d6-1597-4cf1-b433-978d319437a6 Version: $LATEST
+2026-02-25T16:28:54 END RequestId: 0b66b1d6-1597-4cf1-b433-978d319437a6
+2026-02-25T16:28:54 REPORT RequestId: 0b66b1d6-1597-4cf1-b433-978d319437a6	Duration: 1.94 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:54 START RequestId: ad30d2cd-be23-4528-bf6f-83d3e97a3e3b Version: $LATEST
+2026-02-25T16:28:54 END RequestId: ad30d2cd-be23-4528-bf6f-83d3e97a3e3b
+2026-02-25T16:28:54 REPORT RequestId: ad30d2cd-be23-4528-bf6f-83d3e97a3e3b	Duration: 1.87 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:54 START RequestId: 3f941a16-0cdf-4484-8c02-0945daee1b6f Version: $LATEST
+2026-02-25T16:28:54 [WARNING]	2026-02-25T16:28:54.380Z	3f941a16-0cdf-4484-8c02-0945daee1b6f	JWT validation failed: Not enough segments
+2026-02-25T16:28:54 END RequestId: 3f941a16-0cdf-4484-8c02-0945daee1b6f
+2026-02-25T16:28:54 REPORT RequestId: 3f941a16-0cdf-4484-8c02-0945daee1b6f	Duration: 2.65 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:54 START RequestId: 494a147f-cabe-4eb5-8a2f-70901873feb6 Version: $LATEST
+2026-02-25T16:28:54 [WARNING]	2026-02-25T16:28:54.394Z	494a147f-cabe-4eb5-8a2f-70901873feb6	JWT validation failed: Not enough segments
+2026-02-25T16:28:54 END RequestId: 494a147f-cabe-4eb5-8a2f-70901873feb6
+2026-02-25T16:28:54 REPORT RequestId: 494a147f-cabe-4eb5-8a2f-70901873feb6	Duration: 2.35 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:55 START RequestId: 23123336-8538-403c-a58f-e7d663dc1533 Version: $LATEST
+2026-02-25T16:28:55 END RequestId: 23123336-8538-403c-a58f-e7d663dc1533
+2026-02-25T16:28:55 REPORT RequestId: 23123336-8538-403c-a58f-e7d663dc1533	Duration: 1.65 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:55 START RequestId: bba02c93-9876-49ef-ad49-00e1633e4370 Version: $LATEST
+2026-02-25T16:28:55 [WARNING]	2026-02-25T16:28:55.201Z	bba02c93-9876-49ef-ad49-00e1633e4370	JWT validation failed: Not enough segments
+2026-02-25T16:28:55 END RequestId: bba02c93-9876-49ef-ad49-00e1633e4370
+2026-02-25T16:28:55 REPORT RequestId: bba02c93-9876-49ef-ad49-00e1633e4370	Duration: 2.67 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:57 START RequestId: cfbd3808-ad33-4fc5-9b41-67273d7bf113 Version: $LATEST
+2026-02-25T16:28:57 END RequestId: cfbd3808-ad33-4fc5-9b41-67273d7bf113
+2026-02-25T16:28:57 REPORT RequestId: cfbd3808-ad33-4fc5-9b41-67273d7bf113	Duration: 1.84 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:57 START RequestId: 268353d9-31dc-4070-91b4-900e31735dbf Version: $LATEST
+2026-02-25T16:28:57 END RequestId: 268353d9-31dc-4070-91b4-900e31735dbf
+2026-02-25T16:28:57 REPORT RequestId: 268353d9-31dc-4070-91b4-900e31735dbf	Duration: 1.98 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:58 START RequestId: c717729e-b471-4b02-872a-5d351ed9f3b9 Version: $LATEST
+2026-02-25T16:28:58 [WARNING]	2026-02-25T16:28:58.058Z	c717729e-b471-4b02-872a-5d351ed9f3b9	JWT validation failed: Not enough segments
+2026-02-25T16:28:58 END RequestId: c717729e-b471-4b02-872a-5d351ed9f3b9
+2026-02-25T16:28:58 REPORT RequestId: c717729e-b471-4b02-872a-5d351ed9f3b9	Duration: 2.32 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:58 START RequestId: bf5d6009-8076-4279-8b56-f0f473a5e24f Version: $LATEST
+2026-02-25T16:28:58 [WARNING]	2026-02-25T16:28:58.063Z	bf5d6009-8076-4279-8b56-f0f473a5e24f	JWT validation failed: Not enough segments
+2026-02-25T16:28:58 END RequestId: bf5d6009-8076-4279-8b56-f0f473a5e24f
+2026-02-25T16:28:58 REPORT RequestId: bf5d6009-8076-4279-8b56-f0f473a5e24f	Duration: 2.95 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:58 START RequestId: 56dfd5c9-d07b-497e-b181-870dcc52b697 Version: $LATEST
+2026-02-25T16:28:58 END RequestId: 56dfd5c9-d07b-497e-b181-870dcc52b697
+2026-02-25T16:28:58 REPORT RequestId: 56dfd5c9-d07b-497e-b181-870dcc52b697	Duration: 1.94 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:28:58 START RequestId: 301a5939-0c6f-4bd1-a2c7-5cba07e3b992 Version: $LATEST
+2026-02-25T16:28:58 [WARNING]	2026-02-25T16:28:58.850Z	301a5939-0c6f-4bd1-a2c7-5cba07e3b992	JWT validation failed: Not enough segments
+2026-02-25T16:28:58 END RequestId: 301a5939-0c6f-4bd1-a2c7-5cba07e3b992
+2026-02-25T16:28:58 REPORT RequestId: 301a5939-0c6f-4bd1-a2c7-5cba07e3b992	Duration: 2.41 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:01 START RequestId: a57ba0ac-6921-4a49-a001-be11bf902481 Version: $LATEST
+2026-02-25T16:29:01 START RequestId: 254881e5-a990-402d-b286-a6df42474afb Version: $LATEST
+2026-02-25T16:29:01 END RequestId: a57ba0ac-6921-4a49-a001-be11bf902481
+2026-02-25T16:29:01 REPORT RequestId: a57ba0ac-6921-4a49-a001-be11bf902481	Duration: 1.63 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:01 END RequestId: 254881e5-a990-402d-b286-a6df42474afb
+2026-02-25T16:29:01 REPORT RequestId: 254881e5-a990-402d-b286-a6df42474afb	Duration: 1.89 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:01 START RequestId: 37b6efb6-52f9-477d-854e-e101a7a1cf28 Version: $LATEST
+2026-02-25T16:29:01 [WARNING]	2026-02-25T16:29:01.870Z	37b6efb6-52f9-477d-854e-e101a7a1cf28	JWT validation failed: Not enough segments
+2026-02-25T16:29:01 END RequestId: 37b6efb6-52f9-477d-854e-e101a7a1cf28
+2026-02-25T16:29:01 REPORT RequestId: 37b6efb6-52f9-477d-854e-e101a7a1cf28	Duration: 2.53 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:01 START RequestId: f68d33d9-d654-40c9-a483-d4dde7460cf4 Version: $LATEST
+2026-02-25T16:29:01 [WARNING]	2026-02-25T16:29:01.874Z	f68d33d9-d654-40c9-a483-d4dde7460cf4	JWT validation failed: Not enough segments
+2026-02-25T16:29:01 END RequestId: f68d33d9-d654-40c9-a483-d4dde7460cf4
+2026-02-25T16:29:01 REPORT RequestId: f68d33d9-d654-40c9-a483-d4dde7460cf4	Duration: 3.31 ms	Billed Duration: 4 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:02 START RequestId: 0086f0df-f1eb-4440-9d6a-6a0206bfc4e2 Version: $LATEST
+2026-02-25T16:29:02 END RequestId: 0086f0df-f1eb-4440-9d6a-6a0206bfc4e2
+2026-02-25T16:29:02 REPORT RequestId: 0086f0df-f1eb-4440-9d6a-6a0206bfc4e2	Duration: 1.84 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:02 START RequestId: 2836e82a-51a2-4f8b-9568-321539340648 Version: $LATEST
+2026-02-25T16:29:02 END RequestId: 2836e82a-51a2-4f8b-9568-321539340648
+2026-02-25T16:29:02 REPORT RequestId: 2836e82a-51a2-4f8b-9568-321539340648	Duration: 1.70 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:02 START RequestId: 7ec36581-19b7-49b7-a858-e04325894706 Version: $LATEST
+2026-02-25T16:29:02 [WARNING]	2026-02-25T16:29:02.671Z	7ec36581-19b7-49b7-a858-e04325894706	JWT validation failed: Not enough segments
+2026-02-25T16:29:02 END RequestId: 7ec36581-19b7-49b7-a858-e04325894706
+2026-02-25T16:29:02 REPORT RequestId: 7ec36581-19b7-49b7-a858-e04325894706	Duration: 2.19 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:02 START RequestId: f896014f-7273-4139-8070-269bad853ecb Version: $LATEST
+2026-02-25T16:29:02 [WARNING]	2026-02-25T16:29:02.680Z	f896014f-7273-4139-8070-269bad853ecb	JWT validation failed: Not enough segments
+2026-02-25T16:29:02 END RequestId: f896014f-7273-4139-8070-269bad853ecb
+2026-02-25T16:29:02 REPORT RequestId: f896014f-7273-4139-8070-269bad853ecb	Duration: 2.24 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:03 START RequestId: ddf06232-6193-4dd3-892d-38b4bae6a296 Version: $LATEST
+2026-02-25T16:29:03 START RequestId: 73f1b004-7ba8-44ec-b451-fc647927bd23 Version: $LATEST
+2026-02-25T16:29:03 END RequestId: ddf06232-6193-4dd3-892d-38b4bae6a296
+2026-02-25T16:29:03 REPORT RequestId: ddf06232-6193-4dd3-892d-38b4bae6a296	Duration: 1.68 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:03 END RequestId: 73f1b004-7ba8-44ec-b451-fc647927bd23
+2026-02-25T16:29:03 REPORT RequestId: 73f1b004-7ba8-44ec-b451-fc647927bd23	Duration: 1.82 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:03 START RequestId: 7c7d0839-e6c6-4e69-8f20-087201dfa8ca Version: $LATEST
+2026-02-25T16:29:03 [WARNING]	2026-02-25T16:29:03.565Z	7c7d0839-e6c6-4e69-8f20-087201dfa8ca	JWT validation failed: Not enough segments
+2026-02-25T16:29:03 START RequestId: 7cc09c20-9281-4f7f-98d0-34dd6a4344ad Version: $LATEST
+2026-02-25T16:29:03 [WARNING]	2026-02-25T16:29:03.566Z	7cc09c20-9281-4f7f-98d0-34dd6a4344ad	JWT validation failed: Not enough segments
+2026-02-25T16:29:03 END RequestId: 7c7d0839-e6c6-4e69-8f20-087201dfa8ca
+2026-02-25T16:29:03 REPORT RequestId: 7c7d0839-e6c6-4e69-8f20-087201dfa8ca	Duration: 2.75 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:03 END RequestId: 7cc09c20-9281-4f7f-98d0-34dd6a4344ad
+2026-02-25T16:29:03 REPORT RequestId: 7cc09c20-9281-4f7f-98d0-34dd6a4344ad	Duration: 2.50 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:05 /var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+2026-02-25T16:29:05 }).fillna(method='ffill').dropna()
+2026-02-25T16:29:11 END RequestId: ce313b4b-dc79-47ab-94b7-38111490e14d
+2026-02-25T16:29:11 REPORT RequestId: ce313b4b-dc79-47ab-94b7-38111490e14d	Duration: 40155.47 ms	Billed Duration: 40156 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:12 START RequestId: c99c96ce-99a5-4c5a-94b2-b331fba98021 Version: $LATEST
+2026-02-25T16:29:12 START RequestId: 027fd0f5-de7f-4bc3-8c3e-a11de085f34d Version: $LATEST
+2026-02-25T16:29:12 END RequestId: c99c96ce-99a5-4c5a-94b2-b331fba98021
+2026-02-25T16:29:12 END RequestId: 027fd0f5-de7f-4bc3-8c3e-a11de085f34d
+2026-02-25T16:29:12 REPORT RequestId: 027fd0f5-de7f-4bc3-8c3e-a11de085f34d	Duration: 1.96 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:12 REPORT RequestId: c99c96ce-99a5-4c5a-94b2-b331fba98021	Duration: 1.85 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:12 START RequestId: 597d9460-e411-42e6-81bd-988b7d21ecec Version: $LATEST
+2026-02-25T16:29:12 START RequestId: c28d15a8-0469-4639-aaae-3f9882a6dcf7 Version: $LATEST
+2026-02-25T16:29:12 [WARNING]	2026-02-25T16:29:12.650Z	597d9460-e411-42e6-81bd-988b7d21ecec	JWT validation failed: Not enough segments
+2026-02-25T16:29:12 [WARNING]	2026-02-25T16:29:12.651Z	c28d15a8-0469-4639-aaae-3f9882a6dcf7	JWT validation failed: Not enough segments
+2026-02-25T16:29:12 END RequestId: 597d9460-e411-42e6-81bd-988b7d21ecec
+2026-02-25T16:29:12 REPORT RequestId: 597d9460-e411-42e6-81bd-988b7d21ecec	Duration: 2.26 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:12 END RequestId: c28d15a8-0469-4639-aaae-3f9882a6dcf7
+2026-02-25T16:29:12 REPORT RequestId: c28d15a8-0469-4639-aaae-3f9882a6dcf7	Duration: 2.54 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:13 START RequestId: f978dede-01f7-44ec-9a4a-29f89081c3c7 Version: $LATEST
+2026-02-25T16:29:13 END RequestId: f978dede-01f7-44ec-9a4a-29f89081c3c7
+2026-02-25T16:29:13 REPORT RequestId: f978dede-01f7-44ec-9a4a-29f89081c3c7	Duration: 1.77 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:13 START RequestId: dcc50f43-ade4-495f-9f03-37cbcf0bca2a Version: $LATEST
+2026-02-25T16:29:13 END RequestId: dcc50f43-ade4-495f-9f03-37cbcf0bca2a
+2026-02-25T16:29:13 REPORT RequestId: dcc50f43-ade4-495f-9f03-37cbcf0bca2a	Duration: 1.58 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:13 START RequestId: c32db85f-2152-401c-b66c-f5b052f4b1f5 Version: $LATEST
+2026-02-25T16:29:13 [WARNING]	2026-02-25T16:29:13.518Z	c32db85f-2152-401c-b66c-f5b052f4b1f5	JWT validation failed: Not enough segments
+2026-02-25T16:29:13 END RequestId: c32db85f-2152-401c-b66c-f5b052f4b1f5
+2026-02-25T16:29:13 REPORT RequestId: c32db85f-2152-401c-b66c-f5b052f4b1f5	Duration: 2.25 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:13 START RequestId: e7afe818-0fdc-4c32-bae0-7d2ffeaa1e89 Version: $LATEST
+2026-02-25T16:29:13 [WARNING]	2026-02-25T16:29:13.521Z	e7afe818-0fdc-4c32-bae0-7d2ffeaa1e89	JWT validation failed: Not enough segments
+2026-02-25T16:29:13 END RequestId: e7afe818-0fdc-4c32-bae0-7d2ffeaa1e89
+2026-02-25T16:29:13 REPORT RequestId: e7afe818-0fdc-4c32-bae0-7d2ffeaa1e89	Duration: 2.21 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:14 START RequestId: a78a54a3-7931-432f-8a37-02f7d319d005 Version: $LATEST
+2026-02-25T16:29:14 END RequestId: a78a54a3-7931-432f-8a37-02f7d319d005
+2026-02-25T16:29:14 REPORT RequestId: a78a54a3-7931-432f-8a37-02f7d319d005	Duration: 1.64 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:14 START RequestId: 4b0c4ae1-372e-4ab6-9481-6d1d7d80e1db Version: $LATEST
+2026-02-25T16:29:14 END RequestId: 4b0c4ae1-372e-4ab6-9481-6d1d7d80e1db
+2026-02-25T16:29:14 REPORT RequestId: 4b0c4ae1-372e-4ab6-9481-6d1d7d80e1db	Duration: 1.56 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:14 START RequestId: ba54aa15-b343-4d37-ab75-a66a2c1974ee Version: $LATEST
+2026-02-25T16:29:14 [WARNING]	2026-02-25T16:29:14.428Z	ba54aa15-b343-4d37-ab75-a66a2c1974ee	JWT validation failed: Not enough segments
+2026-02-25T16:29:14 END RequestId: ba54aa15-b343-4d37-ab75-a66a2c1974ee
+2026-02-25T16:29:14 REPORT RequestId: ba54aa15-b343-4d37-ab75-a66a2c1974ee	Duration: 2.26 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:14 START RequestId: 66c7dd76-7740-4111-bc70-76c2e2965486 Version: $LATEST
+2026-02-25T16:29:14 [WARNING]	2026-02-25T16:29:14.437Z	66c7dd76-7740-4111-bc70-76c2e2965486	JWT validation failed: Not enough segments
+2026-02-25T16:29:14 END RequestId: 66c7dd76-7740-4111-bc70-76c2e2965486
+2026-02-25T16:29:14 REPORT RequestId: 66c7dd76-7740-4111-bc70-76c2e2965486	Duration: 1.94 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:23 START RequestId: 0d017682-677c-4a68-b4e1-80a93a7b56d8 Version: $LATEST
+2026-02-25T16:29:23 END RequestId: 0d017682-677c-4a68-b4e1-80a93a7b56d8
+2026-02-25T16:29:23 REPORT RequestId: 0d017682-677c-4a68-b4e1-80a93a7b56d8	Duration: 1.63 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:23 START RequestId: abfef113-82fb-4717-9d2e-12225ad53d93 Version: $LATEST
+2026-02-25T16:29:23 END RequestId: abfef113-82fb-4717-9d2e-12225ad53d93
+2026-02-25T16:29:23 REPORT RequestId: abfef113-82fb-4717-9d2e-12225ad53d93	Duration: 1.75 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:23 START RequestId: 17e0d694-fd76-4f7c-ae1e-0de416f68a5c Version: $LATEST
+2026-02-25T16:29:23 [WARNING]	2026-02-25T16:29:23.521Z	17e0d694-fd76-4f7c-ae1e-0de416f68a5c	JWT validation failed: Not enough segments
+2026-02-25T16:29:23 START RequestId: 68763bc9-26e4-44f0-bcee-6ffa0eb671d1 Version: $LATEST
+2026-02-25T16:29:23 END RequestId: 17e0d694-fd76-4f7c-ae1e-0de416f68a5c
+2026-02-25T16:29:23 REPORT RequestId: 17e0d694-fd76-4f7c-ae1e-0de416f68a5c	Duration: 1.97 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:23 [WARNING]	2026-02-25T16:29:23.522Z	68763bc9-26e4-44f0-bcee-6ffa0eb671d1	JWT validation failed: Not enough segments
+2026-02-25T16:29:23 END RequestId: 68763bc9-26e4-44f0-bcee-6ffa0eb671d1
+2026-02-25T16:29:23 REPORT RequestId: 68763bc9-26e4-44f0-bcee-6ffa0eb671d1	Duration: 3.57 ms	Billed Duration: 4 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:24 START RequestId: f8f710ca-1aba-4238-bb1b-1f16b86a5dc2 Version: $LATEST
+2026-02-25T16:29:24 END RequestId: f8f710ca-1aba-4238-bb1b-1f16b86a5dc2
+2026-02-25T16:29:24 REPORT RequestId: f8f710ca-1aba-4238-bb1b-1f16b86a5dc2	Duration: 1.78 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:24 START RequestId: 98eeaf22-dd4b-444d-b06c-f1161c593c68 Version: $LATEST
+2026-02-25T16:29:24 END RequestId: 98eeaf22-dd4b-444d-b06c-f1161c593c68
+2026-02-25T16:29:24 REPORT RequestId: 98eeaf22-dd4b-444d-b06c-f1161c593c68	Duration: 1.75 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:24 START RequestId: 9e0e9d90-4ebc-4c8f-b147-baf64ec59c8a Version: $LATEST
+2026-02-25T16:29:24 [WARNING]	2026-02-25T16:29:24.297Z	9e0e9d90-4ebc-4c8f-b147-baf64ec59c8a	JWT validation failed: Not enough segments
+2026-02-25T16:29:24 END RequestId: 9e0e9d90-4ebc-4c8f-b147-baf64ec59c8a
+2026-02-25T16:29:24 REPORT RequestId: 9e0e9d90-4ebc-4c8f-b147-baf64ec59c8a	Duration: 2.20 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:24 START RequestId: 5de8c1d3-8f8b-46f3-902c-e9f98ba5fa1b Version: $LATEST
+2026-02-25T16:29:24 [WARNING]	2026-02-25T16:29:24.309Z	5de8c1d3-8f8b-46f3-902c-e9f98ba5fa1b	JWT validation failed: Not enough segments
+2026-02-25T16:29:24 END RequestId: 5de8c1d3-8f8b-46f3-902c-e9f98ba5fa1b
+2026-02-25T16:29:24 REPORT RequestId: 5de8c1d3-8f8b-46f3-902c-e9f98ba5fa1b	Duration: 1.97 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:25 START RequestId: 202d6774-1e2b-4477-bb7f-c2e03f436fc9 Version: $LATEST
+2026-02-25T16:29:25 END RequestId: 202d6774-1e2b-4477-bb7f-c2e03f436fc9
+2026-02-25T16:29:25 REPORT RequestId: 202d6774-1e2b-4477-bb7f-c2e03f436fc9	Duration: 1.68 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:25 START RequestId: 9d215322-b6e9-479f-8420-48a5ec63e885 Version: $LATEST
+2026-02-25T16:29:25 END RequestId: 9d215322-b6e9-479f-8420-48a5ec63e885
+2026-02-25T16:29:25 REPORT RequestId: 9d215322-b6e9-479f-8420-48a5ec63e885	Duration: 1.73 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:25 START RequestId: 3acec7a5-4a8a-4e63-9b30-658cece70743 Version: $LATEST
+2026-02-25T16:29:25 [WARNING]	2026-02-25T16:29:25.214Z	3acec7a5-4a8a-4e63-9b30-658cece70743	JWT validation failed: Not enough segments
+2026-02-25T16:29:25 END RequestId: 3acec7a5-4a8a-4e63-9b30-658cece70743
+2026-02-25T16:29:25 REPORT RequestId: 3acec7a5-4a8a-4e63-9b30-658cece70743	Duration: 2.19 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:25 START RequestId: 6fce8d21-4179-4adc-9e3b-4cc90f56795e Version: $LATEST
+2026-02-25T16:29:25 [WARNING]	2026-02-25T16:29:25.217Z	6fce8d21-4179-4adc-9e3b-4cc90f56795e	JWT validation failed: Not enough segments
+2026-02-25T16:29:25 END RequestId: 6fce8d21-4179-4adc-9e3b-4cc90f56795e
+2026-02-25T16:29:25 REPORT RequestId: 6fce8d21-4179-4adc-9e3b-4cc90f56795e	Duration: 2.19 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:45 START RequestId: 6ba3727b-f41f-49b1-9d6a-62855a4d1db7 Version: $LATEST
+2026-02-25T16:29:45 START RequestId: d3c84b92-6376-48a9-81ab-3edac786a7f4 Version: $LATEST
+2026-02-25T16:29:45 END RequestId: 6ba3727b-f41f-49b1-9d6a-62855a4d1db7
+2026-02-25T16:29:45 REPORT RequestId: 6ba3727b-f41f-49b1-9d6a-62855a4d1db7	Duration: 1.76 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 102 MB
+2026-02-25T16:29:45 END RequestId: d3c84b92-6376-48a9-81ab-3edac786a7f4
+2026-02-25T16:29:45 REPORT RequestId: d3c84b92-6376-48a9-81ab-3edac786a7f4	Duration: 2.83 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:45 START RequestId: 19bf9d40-c2f1-413f-b5cf-42fd664d9b36 Version: $LATEST
+2026-02-25T16:29:45 START RequestId: f2a72db7-b00d-4851-84d6-df7ce102d7c0 Version: $LATEST
+2026-02-25T16:29:45 END RequestId: 19bf9d40-c2f1-413f-b5cf-42fd664d9b36
+2026-02-25T16:29:45 REPORT RequestId: 19bf9d40-c2f1-413f-b5cf-42fd664d9b36	Duration: 11.26 ms	Billed Duration: 12 ms	Memory Size: 3008 MB	Max Memory Used: 245 MB
+2026-02-25T16:29:46 END RequestId: f2a72db7-b00d-4851-84d6-df7ce102d7c0
+2026-02-25T16:29:46 REPORT RequestId: f2a72db7-b00d-4851-84d6-df7ce102d7c0	Duration: 373.92 ms	Billed Duration: 374 ms	Memory Size: 3008 MB	Max Memory Used: 135 MB
+2026-02-25T16:31:41 START RequestId: 8aac55e5-da1d-42f4-b28d-f97ec43ea51c Version: $LATEST
+2026-02-25T16:32:00 [ERROR]	2026-02-25T16:32:00.942Z	8aac55e5-da1d-42f4-b28d-f97ec43ea51c	Error analyzing XAU: '<=' not supported between instances of 'str' and 'float'
+2026-02-25T16:32:00 [ERROR]	2026-02-25T16:32:00.944Z	8aac55e5-da1d-42f4-b28d-f97ec43ea51c	Error analyzing XAG: '<=' not supported between instances of 'str' and 'float'
+2026-02-25T16:32:00 [WARNING]	2026-02-25T16:32:00.944Z	8aac55e5-da1d-42f4-b28d-f97ec43ea51c	Analysis produced no result for XAG
+2026-02-25T16:32:00 [WARNING]	2026-02-25T16:32:00.944Z	8aac55e5-da1d-42f4-b28d-f97ec43ea51c	Analysis produced no result for XAU
+2026-02-25T16:32:04 /var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+2026-02-25T16:32:04 }).fillna(method='ffill').dropna()
+2026-02-25T16:32:06 END RequestId: 8aac55e5-da1d-42f4-b28d-f97ec43ea51c
+2026-02-25T16:32:06 REPORT RequestId: 8aac55e5-da1d-42f4-b28d-f97ec43ea51c	Duration: 25103.71 ms	Billed Duration: 25104 ms	Memory Size: 3008 MB	Max Memory Used: 237 MB
+2026-02-25T16:34:46 START RequestId: fe1e328c-82e2-492b-ad05-48ed04f1b0be Version: $LATEST
+2026-02-25T16:34:46 END RequestId: fe1e328c-82e2-492b-ad05-48ed04f1b0be
+2026-02-25T16:34:46 REPORT RequestId: fe1e328c-82e2-492b-ad05-48ed04f1b0be	Duration: 3.18 ms	Billed Duration: 4 ms	Memory Size: 3008 MB	Max Memory Used: 237 MB
+2026-02-25T16:34:46 START RequestId: b380a5ab-a154-4022-a5d0-82687c92273a Version: $LATEST
+2026-02-25T16:35:00 [ERROR]	2026-02-25T16:35:00.405Z	b380a5ab-a154-4022-a5d0-82687c92273a	Error analyzing XAG: '<=' not supported between instances of 'str' and 'float'
+2026-02-25T16:35:00 [ERROR]	2026-02-25T16:35:00.406Z	b380a5ab-a154-4022-a5d0-82687c92273a	Error analyzing XAU: '<=' not supported between instances of 'str' and 'float'
+2026-02-25T16:35:00 [WARNING]	2026-02-25T16:35:00.407Z	b380a5ab-a154-4022-a5d0-82687c92273a	Analysis produced no result for XAG
+2026-02-25T16:35:00 [WARNING]	2026-02-25T16:35:00.407Z	b380a5ab-a154-4022-a5d0-82687c92273a	Analysis produced no result for XAU
+2026-02-25T16:35:08 /var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+2026-02-25T16:35:08 }).fillna(method='ffill').dropna()
+2026-02-25T16:35:11 /var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+2026-02-25T16:35:11 }).fillna(method='ffill').dropna()
+2026-02-25T16:35:15 END RequestId: b380a5ab-a154-4022-a5d0-82687c92273a
+2026-02-25T16:35:15 REPORT RequestId: b380a5ab-a154-4022-a5d0-82687c92273a	Duration: 28674.66 ms	Billed Duration: 28675 ms	Memory Size: 3008 MB	Max Memory Used: 243 MB
+2026-02-25T16:36:41 START RequestId: 9a3b4cb2-3d29-4003-b464-5e7ef7fc2e34 Version: $LATEST
+2026-02-25T16:36:41 END RequestId: 9a3b4cb2-3d29-4003-b464-5e7ef7fc2e34
+2026-02-25T16:36:41 REPORT RequestId: 9a3b4cb2-3d29-4003-b464-5e7ef7fc2e34	Duration: 31.50 ms	Billed Duration: 32 ms	Memory Size: 3008 MB	Max Memory Used: 243 MB

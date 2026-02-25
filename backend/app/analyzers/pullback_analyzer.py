@@ -73,8 +73,8 @@ def analyze_weekly_pullback(
     
     return PullbackAnalysis(
         detected=pullback_detected,
-        pullback_percent=round(pullback_percent * 100, 2),
-        near_support=near_support,
-        support_level=round(nearest_support, 2) if nearest_support else None,
+        pullback_percent=float(round(pullback_percent * 100, 2)),
+        near_support=bool(near_support),
+        support_level=float(round(nearest_support, 2)) if nearest_support else None,
         description=description
     )
