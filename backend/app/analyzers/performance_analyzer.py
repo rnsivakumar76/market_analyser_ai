@@ -26,7 +26,7 @@ def calculate_weekly_performance(instruments: List[Dict[str, Any]], data_map: Di
         if len(df) < 50: # Need enough history for indicators
             continue
             
-        # Get appropriate benchmark (Whitelisted for BTC-USD)
+        # Get appropriate benchmark (Whitelisted for BTC)
         is_crypto = "-USD" in symbol or "BTC" in symbol
         bench_dir = benchmarks.get("BTC" if is_crypto else "SPX", Signal.NEUTRAL)
         

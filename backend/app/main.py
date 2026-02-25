@@ -141,7 +141,7 @@ def analyze_instrument_lazy(
     # NEW: Relative Strength Analysis (Alpha vs Beta)
     # Determine which benchmark to use
     is_crypto = any(sub in symbol.upper() for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(symbol) > 6 and "USD" in symbol.upper())
-    bench_sym = "BTC-USD" if is_crypto else "SPX"
+    bench_sym = "BTC" if is_crypto else "SPX"
     
     # Use pre-fetched data if available, otherwise fetch on the fly
     if benchmark_data_df is not None:
@@ -320,9 +320,9 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = {
             executor.submit(fetch_historical_data, "SPX", days=1000, interval=bench_interval): "SPX_macro",
-            executor.submit(fetch_historical_data, "BTC-USD", days=1000, interval=bench_interval): "BTC_macro",
+            executor.submit(fetch_historical_data, "BTC", days=1000, interval=bench_interval): "BTC_macro",
             executor.submit(fetch_historical_data, "SPX", days=exec_days, interval=exec_interval): "SPX_exec",
-            executor.submit(fetch_historical_data, "BTC-USD", days=exec_days, interval=exec_interval): "BTC_exec"
+            executor.submit(fetch_historical_data, "BTC", days=exec_days, interval=exec_interval): "BTC_exec"
         }
         for future in as_completed(futures):
             sym = futures[future]
@@ -355,7 +355,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     def process_instrument(inst):
         sym = inst['symbol'].upper()
         try:
-            # Improved Crypto Detection (Whitelisted for BTC-USD)
+            # Improved Crypto Detection (Whitelisted for BTC)
             is_crypto = any(sub in sym for sub in ["BTC", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
             bench = btc_bench if is_crypto else spy_bench
             bench_exec_df = benchmarks_data.get("BTC_exec") if is_crypto else benchmarks_data.get("SPX_exec")
