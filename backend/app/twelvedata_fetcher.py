@@ -43,9 +43,9 @@ class TwelveDataFetcher:
         """Map our symbols to Twelve Data symbols."""
         symbol_mappings = {
             # Commodities
-            'XAU': 'XAU/USD',      # Gold
-            'XAG': 'XAG/USD',      # Silver
-            'BCO': 'UKOIL/USD',    # Brent Crude Oil
+            'XAU': 'XAU/USD',      # Gold (Spot)
+            'XAG': 'XAG/USD',      # Silver (Spot)
+            'BCO': 'WTI/USD',      # Brent Crude Oil fallback to WTI (Free tier friendly)
             'WTI': 'WTI/USD',      # WTI Crude Oil
             
             # Forex pairs
@@ -60,11 +60,11 @@ class TwelveDataFetcher:
             'BTC': 'BTC/USD',
             'ETH': 'ETH/USD',
             
-            # Indices
-            'SPX': 'SPX',           # S&P 500 Index
-            'IXIC': 'IXIC',         # Nasdaq Composite
-            'DJI': 'DJI',           # Dow Jones Industrial Average
-            'SPY': 'SPY',           # S&P 500 ETF (Alternative for indices)
+            # Indices (Map to ETFs for Free tier compatibility)
+            'SPX': 'SPY',           # S&P 500 Index mapped to SPY ETF
+            'IXIC': 'QQQ',         # Nasdaq mapped to QQQ ETF
+            'DJI': 'DIA',           # Dow Jones mapped to DIA ETF
+            'SPY': 'SPY',
         }
         
         return symbol_mappings.get(symbol.upper(), symbol)
@@ -127,8 +127,8 @@ class TwelveDataFetcher:
                 df['Date'] = pd.to_datetime(df['Date'])
                 df = df.set_index('Date')
             
-            # Sort by date (newest first)
-            df = df.sort_index(ascending=False)
+            # Sort by date (oldest first - standard for technical analysis)
+            df = df.sort_index(ascending=True)
             
             return df
             

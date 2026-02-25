@@ -79,9 +79,17 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         pullback_label = "Day Trading"
         execution_label = "Execution (H1)"
 
-    # Use the most recent close from execution data as the current price to save API credits
-    current_price = float(execution_data['Close'].iloc[-1])
-    logger.info(f"Using execution price for {symbol}: {current_price}")
+    # Try to get the real-time price first for razor-sharp accuracy
+    try:
+        from .twelvedata_fetcher import TwelveDataFetcher
+        fetcher = TwelveDataFetcher()
+        current_price = fetcher.get_current_price(symbol)
+        logger.info(f"Fetched real-time price for {symbol}: {current_price}")
+    except Exception as e:
+        # Fallback to the most recent close from execution data if API fails (e.g. credits)
+        # Note: fetch_historical_data now sorts oldest first, so index -1 is the most recent
+        current_price = float(execution_data['Close'].iloc[-1])
+        logger.warning(f"Could not fetch real-time price for {symbol}: {e}. Using last execution close: {current_price}")
     
     trend = analyze_monthly_trend(macro_data, params.get('monthly', {}))
     # Update description to reflect timeframe

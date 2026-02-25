@@ -146,31 +146,9 @@
 
   <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
     <div class="sidebar-panel">
-      <div class="sidebar-header">
-        <div class="view-toggle">
-          <button class="vt-btn" [class.active]="sidebarView() === 'heatmap'" (click)="sidebarView.set('heatmap')">
-            🗺️ Heatmap
-          </button>
-          <button class="vt-btn" [class.active]="sidebarView() === 'list'" (click)="sidebarView.set('list')">
-            📋 List
-          </button>
-        </div>
-      </div>
-
-      @if (sidebarView() === 'heatmap') {
       <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
         (select)="selectedInstrument.set($event)">
       </app-watchlist-heatmap>
-      } @else {
-      <div class="instruments-list">
-        @for (instrument of instruments(); track instrument.symbol) {
-        <div class="summary-wrapper" [class.selected]="selectedInstrument()?.symbol === instrument.symbol">
-          <app-instrument-summary [analysis]="instrument"
-            (select)="selectedInstrument.set(instrument)"></app-instrument-summary>
-        </div>
-        }
-      </div>
-      }
     </div>
 
     <div class="detail-panel">
