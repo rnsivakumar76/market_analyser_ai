@@ -151,7 +151,9 @@ jobs:
             -var="backend_image=${{ env.ECR_BACKEND }}:$TAG" \
             -var="google_client_id=${{ secrets.GOOGLE_CLIENT_ID }}" \
             -var="google_client_secret=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-            -var="jwt_secret_key=${{ secrets.JWT_SECRET_KEY }}"
+            -var="jwt_secret_key=${{ secrets.JWT_SECRET_KEY }}" \
+            -var="twelvedata_api_key=${{ secrets.TWELVEDATA_API_KEY }}" \
+            -var="fmp_api_key=${{ secrets.FMP_API_KEY }}"
       - name: Save outputs
         run: |
           cd ${{ env.TF_ROOT }}

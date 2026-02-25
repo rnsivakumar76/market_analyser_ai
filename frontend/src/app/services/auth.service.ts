@@ -1,6 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface User {
     id: string;
@@ -14,8 +15,8 @@ export interface User {
 })
 export class AuthService {
     private http = inject(HttpClient);
-    // Replace with your actual backend URL if different
-    private apiUrl = 'https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api/auth';
+    // Use dynamic environment URL
+    private apiUrl = `${environment.apiUrl}/auth`;
 
     user = signal<User | null>(null);
     token = signal<string | null>(localStorage.getItem('auth_token'));

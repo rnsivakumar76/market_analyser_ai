@@ -587,7 +587,10 @@ def _load_journal(user_id: str = "global_default") -> list:
     if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
         import boto3
         s3 = boto3.client('s3')
-        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET', 'market-analyser-config-614686365382')
+        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET')
+        if not bucket:
+            logger.error("Neither CONFIG_S3_BUCKET nor CONFIG_BUCKET environment variable is set")
+            return []
         key = f"users/{user_id}/trade_journal.json"
         try:
             obj = s3.get_object(Bucket=bucket, Key=key)
@@ -610,7 +613,10 @@ def _save_journal_legacy(trades: list, user_id: str = "global_default"):
     if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
         import boto3
         s3 = boto3.client('s3')
-        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET', 'market-analyser-config-614686365382')
+        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET')
+        if not bucket:
+            logger.error("Bucket configuration missing for journal save")
+            return
         key = f"users/{user_id}/trade_journal.json"
         s3.put_object(Bucket=bucket, Key=key, Body=json.dumps(trades), ContentType='application/json')
     else:
@@ -685,7 +691,9 @@ async def migrate_journal_to_dynamodb(user_id: str = Depends(get_current_user)):
     if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
         import boto3
         s3 = boto3.client('s3')
-        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET', 'market-analyser-config-614686365382')
+        bucket = os.environ.get('CONFIG_S3_BUCKET') or os.environ.get('CONFIG_BUCKET')
+        if not bucket:
+            return {"message": "Bucket configuration missing", "migrated": 0}
         key = f"users/{user_id}/trade_journal.json"
         try:
             obj = s3.get_object(Bucket=bucket, Key=key)
