@@ -5,7 +5,6 @@ from typing import Optional
 import logging
 import time
 import os
-import threading
 from .config_loader import load_config
 
 logger = logging.getLogger(__name__)
@@ -13,9 +12,6 @@ logger = logging.getLogger(__name__)
 class TwelveDataFetcher:
     """Twelve Data fetcher for Singapore-friendly access."""
     
-    _global_lock = threading.Lock()
-    _last_request_time = 0.0
-
     def __init__(self, api_key: str = None):
         if api_key is None:
             # Try to get from config first
@@ -34,16 +30,14 @@ class TwelveDataFetcher:
         
         self.api_key = api_key
         self.client = TDClient(apikey=api_key)
-        self.min_request_interval = 1.15  # 1.15 seconds between requests (free tier limit)
+        self.last_request_time = 0
+        self.min_request_interval = 8.0  # 8 seconds between requests (free tier limit)
         
     def _rate_limit_wait(self):
-        """Throttle requests to respect Twelve Data free tier (55 req/min) across all threads."""
-        with TwelveDataFetcher._global_lock:
-            current_time = time.time()
-            elapsed = current_time - TwelveDataFetcher._last_request_time
-            if elapsed < self.min_request_interval:
-                time.sleep(self.min_request_interval - elapsed)
-            TwelveDataFetcher._last_request_time = time.time()
+        """Throttle requests to respect Twelve Data free tier (55 req/min)."""
+        # Sleep 1.1s to guarantee we stay under 1 request per second.
+        # This prevents 429 Errors even if Multiple Lambdas run at once.
+        time.sleep(1.1)
         
     def get_symbol_mapping(self, symbol: str) -> str:
         """Map our symbols to Twelve Data symbols."""
