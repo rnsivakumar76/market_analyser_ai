@@ -132,10 +132,33 @@ def fetch_historical_data(
 ) -> pd.DataFrame:
     """
     Fetch historical OHLCV data for a given symbol.
-    
     Intervals: 1h, 4h, 1d, 1wk, 1mo
-    Priority: Mock (if enabled) -> yfinance -> Alpha Vantage -> Twelve Data -> FMP -> Error
     """
+    # MANDATORY: Twelve Data as Primary Professional Source
+    td = get_td_fetcher()
+    if td.api_key and td.api_key != 'YOUR_API_KEY_HERE':
+        try:
+            logger.info(f"PRO MODE: Strictly using Twelve Data for {symbol} ({interval})...")
+            # Map Twelve Data intervals
+            td_interval = "1day"
+            if interval == "1h": td_interval = "1h"
+            elif interval == "4h": td_interval = "4h"
+            elif interval == "1wk": td_interval = "1week"
+            elif interval == "1mo": td_interval = "1month"
+
+            df = td.fetch_historical_data(symbol, days=days, interval=td_interval)
+            if not df.empty:
+                logger.info(f"✅ Twelve Data Success for {symbol}")
+                return df
+        except Exception as e:
+            logger.error(f"❌ Twelve Data professional fetch failed: {e}")
+            # If Twelve Data is the PRIMARY and it fails, we should NOT silently fallback to low-quality data
+            # unless Twelve Data is completely down or doesn't support the symbol.
+            if "not found" in str(e).lower() or "delisted" in str(e).lower():
+                logger.warning("Symbol not found in Twelve Data, trying fallback...")
+            else:
+                raise ValueError(f"Twelve Data primary fetch failed for {symbol}: {e}")
+
     # Check for mock mode
     if os.getenv('USE_MOCK_DATA', 'false').lower() == 'true':
         print(f"🛠️ Using MOCK DATA for {symbol} ({interval})")
@@ -237,40 +260,44 @@ def fetch_historical_data(
 def get_current_price(symbol: str) -> float:
     """Get the current/latest price for a symbol.
     
-    For commodities/forex (XAU, XAG, BCO, USDJPY, EURUSD), we prioritize
-    Twelve Data and FMP over yfinance, because yfinance frequently fails
-    for these symbols with "possibly delisted" errors.
+    If Twelve Data is configured, it is the MANDATORY primary source.
+    Other sources (FMP, Alpha Vantage, yfinance) are only used if Twelve Data
+    is not configured OR specifically fails to find the symbol.
     """
     mock_env = os.getenv('USE_MOCK_DATA', 'false').lower()
-    
     if mock_env == 'true':
         mock_data = generate_mock_data(symbol, days=5)
-        if not mock_data.empty:
-            return float(mock_data['Close'].iloc[-1])
-        return 100.0
+        return float(mock_data['Close'].iloc[-1]) if not mock_data.empty else 100.0
 
-    # Symbols where yfinance is unreliable (commodities, forex, indices)
+    # MANDATORY: Twelve Data First for EVERYTHING
+    td = get_td_fetcher()
+    if td.api_key and td.api_key != 'YOUR_API_KEY_HERE':
+        try:
+            logger.info(f"PRO MODE: Strictly fetching current price for {symbol} from Twelve Data...")
+            price = td.get_current_price(symbol)
+            if price and price > 0:
+                logger.info(f"✅ Twelve Data price for {symbol}: {price}")
+                return price
+        except Exception as e:
+            logger.error(f"❌ Twelve Data current price failed: {e}")
+            # Only fallback if valid reason (not a rate limit or API error)
+            if "not found" not in str(e).lower() and "delisted" not in str(e).lower():
+                raise ValueError(f"Twelve Data primary price fetch failed for {symbol}: {e}")
+
+    # Fallback Priority for non-pro or if Twelve Data failed specifically on symbol existence
+    # Try FMP/Paid APIs first for commodities, then yfinance
     PREFER_PAID_API = {'XAU', 'XAG', 'BCO', 'USDJPY', 'EURUSD', 'SPX', 'SPX500'}
-    use_paid_first = symbol.upper() in PREFER_PAID_API
-
-    if use_paid_first:
-        # Try paid APIs first for commodities/forex
+    if symbol.upper() in PREFER_PAID_API:
         price = _try_paid_apis(symbol)
-        if price:
-            return price
-        # If all paid APIs fail, try yfinance as last resort
+        if price: return price
         price = _try_yfinance_price(symbol)
-        if price:
-            return price
+        if price: return price
     else:
-        # Try yfinance first for stocks
+        # Standard yf -> paid flow for stocks
         price = _try_yfinance_price(symbol)
-        if price:
-            return price
-        # Fallback to paid APIs
+        if price: return price
         price = _try_paid_apis(symbol)
-        if price:
-            return price
+        if price: return price
 
     raise ValueError(f"Failed to get current price for {symbol} from all sources")
 
