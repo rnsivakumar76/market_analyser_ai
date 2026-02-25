@@ -409,6 +409,19 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     logger.info(f"Analysis complete. Status: {guardrail.status}. Returning results for: {[a.symbol for a in results]}")
     return results, perf_summary, correlation_results, guardrail
 
+import math
+
+def _scrub_nans(obj):
+    """Recursively replaces NaN and Infinity with 0.0 to prevent Starlette JSON crashes."""
+    if isinstance(obj, dict):
+        return {k: _scrub_nans(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_scrub_nans(v) for v in obj]
+    elif isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return 0.0
+    return obj
+
 @app.get("/api/analyze")
 async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = Depends(get_current_user)):
     from .models import AnalysisResponse, StrategyMode
@@ -428,7 +441,7 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
         cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=300)
         if cached:
             logger.info(f"Fast-path: Serving cached {mode.value} for {user_id}")
-            return AnalysisResponse(**cached)
+            return _scrub_nans(AnalysisResponse(**cached).dict())
     
     # 2. Perform Fresh Analysis
     try:
@@ -440,7 +453,7 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
             stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=7200) # 2 hours
             if stale:
                 logger.warning(f"Fresh scan empty, falling back to STALE cache for {user_id}")
-                return AnalysisResponse(**stale)
+                return _scrub_nans(AnalysisResponse(**stale).dict())
 
         response = AnalysisResponse(
             analysis_timestamp=datetime.now(timezone.utc).isoformat(),
@@ -453,11 +466,11 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
         # Save to Cache
         if nexus_db.is_dynamo_enabled() and results:
             try:
-                nexus_db.save_analysis_results(user_id, response.dict(), mode.value)
+                nexus_db.save_analysis_results(user_id, _scrub_nans(response.dict()), mode.value)
             except Exception as e:
                 logger.error(f"Failed to cache analysis: {e}")
 
-        return response
+        return _scrub_nans(response.dict())
 
     except Exception as e:
         logger.error(f"Analysis Failed for {user_id}: {e}")
@@ -466,13 +479,13 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
             emergency_stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=14400)
             if emergency_stale:
                 logger.info(f"Returning EMERGENCY STALE data for {user_id} due to error: {e}")
-                return AnalysisResponse(**emergency_stale)
+                return _scrub_nans(AnalysisResponse(**emergency_stale).dict())
             
             # 4. Final Fallback: Serve the GLOBAL DEFAULT cache so the UI isn't blank for new users
             global_stale = nexus_db.get_latest_analysis_results("global_default", mode.value, max_age_seconds=14400)
             if global_stale:
                 logger.info(f"Returning GLOBAL DEFAULT cache for {user_id} (fallback)")
-                return AnalysisResponse(**global_stale)
+                return _scrub_nans(AnalysisResponse(**global_stale).dict())
         
         # If absolutely nothing works, raise the error
         raise HTTPException(status_code=503, detail="Market analysis currently unavailable. System is performing a fresh scan, please retry in 30 seconds.")

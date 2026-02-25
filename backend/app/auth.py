@@ -61,8 +61,8 @@ async def get_current_user(request: Request):
         if user_id is None:
             logger.warning("Token payload missing 'sub' claim")
             raise credentials_exception
-        logger.info(f"Authenticated user: {user_id}")
+        logger.debug(f"Authenticated user: {user_id}")
         return user_id
     except JWTError as e:
-        logger.warning(f"JWT validation failed: {e}")
+        logger.debug(f"JWT validation failed: {e}")
         raise credentials_exception
