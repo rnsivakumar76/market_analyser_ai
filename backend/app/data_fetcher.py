@@ -147,23 +147,58 @@ def fetch_historical_data(
             return df.resample('ME').agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'})
         return df
 
-    # Map interval for yfinance (yfinance doesn't support 4h directly in history)
+    # Priority 1: Professional Paid APIs (If keys are configured)
+    # Check for Twelve Data
+    td = get_td_fetcher()
+    if td.api_key and td.api_key != 'YOUR_API_KEY_HERE':
+        try:
+            logger.info(f"Professional Priority: Trying Twelve Data for {symbol} ({interval})...")
+            # Map Twelve Data intervals
+            td_interval = "1day"
+            if interval == "1h": td_interval = "1h"
+            elif interval == "4h": td_interval = "4h"
+            elif interval == "1wk": td_interval = "1week"
+            elif interval == "1mo": td_interval = "1month"
+
+            df = td.fetch_historical_data(symbol, days=days, interval=td_interval)
+            if not df.empty:
+                logger.info(f"✅ Twelve Data Success for {symbol}")
+                return df
+        except Exception as e:
+            logger.warning(f"⚠️ Twelve Data failed for {symbol}: {e}")
+
+    # Check for FMP
+    fmp = get_fmp_fetcher()
+    if fmp.api_key and fmp.api_key != 'YOUR_API_KEY_HERE':
+        try:
+            logger.info(f"Professional Priority: Trying FMP for {symbol}...")
+            # FMP primary usage is daily in this implementation
+            if interval == "1d":
+                df = fmp.fetch_historical_data(symbol, days=days)
+                if not df.empty:
+                    logger.info(f"✅ FMP Success for {symbol}")
+                    return df
+        except Exception as e:
+            logger.warning(f"⚠️ FMP failed for {symbol}: {e}")
+
+    # Map interval for yfinance (fallback)
     yf_interval = interval
     resample_to_4h = False
     if interval == "4h":
         yf_interval = "1h"
         resample_to_4h = True
 
-    # Try yfinance first (no restrictive API limits)
+    # Priority 2: yfinance (Free/Community source)
     yf_symbols = _get_yf_symbols(symbol)
     for yf_sym in yf_symbols:
         try:
-            logger.info(f"Trying yfinance for {symbol} (as {yf_sym}, {interval})...")
+            logger.info(f"Fallback: Trying yfinance for {symbol} (as {yf_sym}, {interval})...")
             if end_date is None:
                 end_date = datetime.now()
             
             start_date = end_date - timedelta(days=days)
             
+            # Use a fresh ticker object and avoid session caching if possible
             ticker = yf.Ticker(yf_sym)
             df = ticker.history(start=start_date, end=end_date, interval=yf_interval)
             
@@ -176,20 +211,17 @@ def fetch_historical_data(
             logger.error(f"❌ yfinance failed for {symbol} as {yf_sym}: {e}")
             continue
 
-    # Other fetchers currently only support daily in this implementation
+    # Priority 3: Alpha Vantage (often has strict rate limits)
     if interval == "1d":
-        # Try Alpha Vantage second
         try:
-            logger.info(f"Trying Alpha Vantage for {symbol}...")
+            logger.info(f"Final Fallback: Trying Alpha Vantage for {symbol}...")
             data = get_av_fetcher().fetch_historical_data(symbol, days)
             if not data.empty:
                 logger.info(f"✅ Alpha Vantage success for {symbol}")
                 return data
         except Exception as e:
             logger.error(f"❌ Alpha Vantage failed for {symbol}: {e}")
-        
-        # ... others ...
-    
+
     # If we need weekly/monthly but only have daily from other fetchers
     if interval in ["1wk", "1mo"]:
         try:
