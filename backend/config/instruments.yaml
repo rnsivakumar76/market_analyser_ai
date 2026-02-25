@@ -11,18 +11,8 @@ instruments:
   name: Silver USD
 - symbol: BCO
   name: Brent Crude Oil
-- symbol: USDJPY
-  name: USD/JPY
-- symbol: EURUSD
-  name: EUR/USD
 - symbol: SPX
   name: S&P 500 Index
-- symbol: AAPL
-  name: Apple Inc.
-- symbol: NVDA
-  name: NVIDIA Corporation
-- symbol: TSLA
-  name: Tesla Inc
 - symbol: BTC-USD
   name: Bitcoin USD
 analysis:

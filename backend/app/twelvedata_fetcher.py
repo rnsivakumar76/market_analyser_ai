@@ -54,9 +54,8 @@ class TwelveDataFetcher:
     # Primary tickers (Spot Rates / Indices)
     PRIMARY_MAPPINGS = {
         'XAU': 'XAU/USD', 'XAG': 'XAG/USD', 'BCO': 'BZ/USD', 'WTI': 'WTI/USD',
-        'SPX': 'SPY', 'IXIC': 'QQQ', 'DJI': 'DIA',
-        'BTC-USD': 'BTC/USD', 'ETH-USD': 'ETH/USD', 'BTC': 'BTC/USD', 'ETH': 'ETH/USD',
-        'USDJPY': 'USD/JPY', 'EURUSD': 'EUR/USD', 'GBPUSD': 'GBP/USD', 'AUDUSD': 'AUD/USD',
+        'SPX': 'SPY', 
+        'BTC-USD': 'BTC/USD', 'BTC': 'BTC/USD',
     }
 
     # Fallback tickers (ETFs) for restricted API keys
