@@ -239,20 +239,33 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
 
     # Scheduler skip if no active user
     if user_id == "global_default":
-        logger.info(f"Scheduler disabled: no active user for user_id {user_id}")
-        return [], {}, {}, None    # 1. Check Cache First
+        # Check if we have a shared cache first to avoid re-calculating for every scheduler trigger
+        if nexus_db.is_dynamo_enabled():
+            cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240)
+            if cached:
+                logger.info(f"System scheduler: Serving cached results for {user_id}")
+                return cached.get('instruments', []), cached.get('weekly_performance', {}), cached.get('correlation_data', {}), cached.get('psychological_guardrail', {})
+        
+        logger.info(f"System scheduler: Running fresh analysis for {user_id}...")
+    
+    # 1. Check Cache First
     if nexus_db.is_dynamo_enabled():
         cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240) # 4 min cache
         if cached:
-            # Reconstruct the response from cache
+            logger.info(f"Serving cached results for {user_id} ({mode.value})")
+            from .models import InstrumentAnalysis, WeeklyPerformance, CorrelationData, PsychologicalGuardrail
+            # Reconstruct models from dict
             try:
-                # Need to return the full tuple (results, perf, corr, guardrail)
-                # But since it's JSON, we need to be careful. 
-                # Actually, it's easier to just return the AnalysisResponse later.
-                # Let's adjust get_analyze_all to handle this.
-                pass
-            except:
-                pass
+                results = [InstrumentAnalysis(**i) for i in cached.get('instruments', [])]
+                perf = WeeklyPerformance(**cached.get('weekly_performance', {}))
+                corr = CorrelationData(**cached.get('correlation_data', {}))
+                # guardrail might be missing in old cache
+                guard_dict = cached.get('psychological_guardrail')
+                guard = PsychologicalGuardrail(**guard_dict) if guard_dict else None
+                return results, perf, corr, guard
+            except Exception as e:
+                logger.warning(f"Failed to reconstruct models from cache: {e}")
+                # Fall back to fresh analysis
 
     logger.info(f"Running parallel market scan for user: {user_id} ({mode.value})...")
     config = load_config(user_id=user_id)
@@ -361,10 +374,11 @@ async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)
     if mode is None:
         mode = StrategyMode.LONG_TERM
     
-    # Check Cache
+    # Check Cache (Reduced to 120s to ensure 5-min polls get fresh data eventually)
     if nexus_db.is_dynamo_enabled():
-        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240)
+        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=120)
         if cached:
+            # Update the analysis_timestamp to reflect when it WAS analyzed
             return AnalysisResponse(**cached)
     
     results, perf, corr, guardrail = await run_scheduled_analysis(user_id=user_id, mode=mode)
