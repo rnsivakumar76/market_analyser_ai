@@ -98,7 +98,8 @@ resource "aws_cloudwatch_event_target" "lambda_target" {
     "rawPath": "/api/analyze",
     "rawQueryString": "",
     "headers": {
-      "host": "localhost"
+      "host": "localhost",
+      "x-internal-trigger": "scheduler"
     },
     "requestContext": {
       "http": {
