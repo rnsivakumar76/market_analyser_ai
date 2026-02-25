@@ -148,20 +148,20 @@ def fetch_historical_data(
 
             df = td.fetch_historical_data(symbol, days=days, interval=td_interval)
             if not df.empty:
-                logger.info(f"✅ Twelve Data Success for {symbol}")
+                logger.info(f"[OK] Twelve Data Success for {symbol}")
                 return df
         except Exception as e:
-            logger.error(f"❌ Twelve Data professional fetch failed: {e}")
+            logger.error(f"[FAIL] Twelve Data professional fetch failed: {e}")
             # If Twelve Data is the PRIMARY and it fails, we should NOT silently fallback to low-quality data
             # unless Twelve Data is completely down or doesn't support the symbol.
             if "not found" in str(e).lower() or "delisted" in str(e).lower():
-                logger.warning("Symbol not found in Twelve Data, trying fallback...")
+                logger.warning(f"[WARN] Symbol {symbol} not found in Twelve Data, trying fallback...")
             else:
                 raise ValueError(f"Twelve Data primary fetch failed for {symbol}: {e}")
 
     # Check for mock mode
     if os.getenv('USE_MOCK_DATA', 'false').lower() == 'true':
-        print(f"🛠️ Using MOCK DATA for {symbol} ({interval})")
+        logger.info(f"[MOCK] Using MOCK DATA for {symbol} ({interval})")
         df = generate_mock_data(symbol, days)
         # Mock data is daily, resample if needed
         if interval == "1wk":
@@ -188,7 +188,7 @@ def fetch_historical_data(
                 logger.info(f"✅ Twelve Data Success for {symbol}")
                 return df
         except Exception as e:
-            logger.warning(f"⚠️ Twelve Data failed for {symbol}: {e}")
+            logger.warning(f"[WARN] Twelve Data failed for {symbol}: {e}")
 
     # Check for FMP
     fmp = get_fmp_fetcher()
@@ -228,10 +228,10 @@ def fetch_historical_data(
             if not df.empty:
                 if resample_to_4h:
                     df = df.resample('4H').agg({'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'}).dropna()
-                logger.info(f"✅ yfinance success for {symbol} as {yf_sym}")
+                logger.info(f"[OK] yfinance success for {symbol} as {yf_sym}")
                 return df
         except Exception as e:
-            logger.error(f"❌ yfinance failed for {symbol} as {yf_sym}: {e}")
+            logger.error(f"[FAIL] yfinance failed for {symbol} as {yf_sym}: {e}")
             continue
 
     # Priority 3: Alpha Vantage (often has strict rate limits)
@@ -276,10 +276,10 @@ def get_current_price(symbol: str) -> float:
             logger.info(f"PRO MODE: Strictly fetching current price for {symbol} from Twelve Data...")
             price = td.get_current_price(symbol)
             if price and price > 0:
-                logger.info(f"✅ Twelve Data price for {symbol}: {price}")
+                logger.info(f"[OK] Twelve Data price for {symbol}: {price}")
                 return price
         except Exception as e:
-            logger.error(f"❌ Twelve Data current price failed: {e}")
+            logger.error(f"[FAIL] Twelve Data current price failed: {e}")
             # Only fallback if valid reason (not a rate limit or API error)
             if "not found" not in str(e).lower() and "delisted" not in str(e).lower():
                 raise ValueError(f"Twelve Data primary price fetch failed for {symbol}: {e}")

@@ -125,7 +125,7 @@ class TwelveDataFetcher:
             return df
             
         except Exception as e:
-            logger.error(f"Twelve Data error for {symbol}: {e}")
+            logger.error(f"[TwelveData] Error for {symbol}: {e}")
             raise ValueError(f"Failed to fetch Twelve Data for {symbol}: {e}")
     
     def get_current_price(self, symbol: str) -> float:
@@ -146,10 +146,12 @@ class TwelveDataFetcher:
             if 'price' in data:
                 current_price = float(data['price'])
             else:
-                raise ValueError(f"Unexpected price data format for {symbol}: {data}")
+                # Twelve Data error responses are sometimes JSON with 'code' and 'message'
+                error_msg = data.get('message', str(data))
+                raise ValueError(f"Twelve Data price error for {symbol}: {error_msg}")
             
             return current_price
             
         except Exception as e:
-            logger.error(f"Twelve Data price error for {symbol}: {e}")
+            logger.error(f"[TwelveData] Price error for {symbol}: {e}")
             raise ValueError(f"Failed to get current price for {symbol}: {e}")

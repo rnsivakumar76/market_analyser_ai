@@ -85,3 +85,17 @@ variable "jwt_secret_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "twelvedata_api_key" {
+  description = "Twelve Data API Key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "fmp_api_key" {
+  description = "Financial Modeling Prep API Key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
