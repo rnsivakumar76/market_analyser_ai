@@ -5,6 +5,9 @@ from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 # JWT Settings
 SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "7b9d6e5a4c2b8a1f0e9d8c7b6a5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7")
