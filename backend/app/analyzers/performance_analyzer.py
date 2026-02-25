@@ -26,9 +26,9 @@ def calculate_weekly_performance(instruments: List[Dict[str, Any]], data_map: Di
         if len(df) < 50: # Need enough history for indicators
             continue
             
-        # Get appropriate benchmark
-        is_crypto = "-USD" in symbol or "BTC" in symbol or "ETH" in symbol
-        bench_dir = benchmarks.get("BTC-USD" if is_crypto else "SPX", Signal.NEUTRAL)
+        # Get appropriate benchmark (Whitelisted for BTC-USD)
+        is_crypto = "-USD" in symbol or "BTC" in symbol
+        bench_dir = benchmarks.get("BTC" if is_crypto else "SPX", Signal.NEUTRAL)
         
         # Look back up to 7 trading days
         # We start from 10 days ago to see if signals fired and reached TP/SL

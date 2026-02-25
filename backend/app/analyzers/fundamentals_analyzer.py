@@ -42,7 +42,7 @@ def _detect_relevant_currencies(symbol: str) -> List[str]:
         currencies.extend([symbol[:3], symbol[3:]])
     
     # Commodities / Indices heavily pegged to USD
-    usd_pegged = ['XAU', 'XAG', 'GC=F', 'SI=F', 'BCO', 'BZ=F', 'CRUDE', 'SPX', '^GSPC', 'SPX500', 'US30', 'NAS100']
+    usd_pegged = ['XAU', 'XAG', 'GC=F', 'SI=F', 'WTI', 'BZ=F', 'CRUDE', 'SPX', '^GSPC', 'SPX500', 'US30', 'NAS100']
     for pegged in usd_pegged:
         if pegged in symbol:
             currencies.append("USD")

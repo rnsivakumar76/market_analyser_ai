@@ -145,21 +145,7 @@ export class App implements OnInit, OnDestroy {
 
     this.analysisSub = this.analyzerService.analyzeAll(this.strategyMode(), refresh).subscribe({
       next: (response: AnalysisResponse) => {
-        const currentInstruments = this.instruments();
         let newInstruments = [...response.instruments];
-
-        // Merge logic: If background update misses some instruments (e.g. API fail), 
-        // keep the old data instead of blanking out.
-        if (currentInstruments.length > 0) {
-          const newSymbols = new Set(newInstruments.map(i => i.symbol));
-          const missingFromNew = currentInstruments.filter(i => !newSymbols.has(i.symbol));
-
-          // Only keep missing instruments if the response wasn't totally empty 
-          // (which might mean a global error or zero instruments configured)
-          if (newInstruments.length > 0) {
-            newInstruments = [...newInstruments, ...missingFromNew];
-          }
-        }
 
         // Sort instruments: Highest magnitude score at the top
         const sortedInstruments = newInstruments.sort((a, b) => {

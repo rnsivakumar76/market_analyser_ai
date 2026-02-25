@@ -53,20 +53,20 @@ class TwelveDataFetcher:
             
     # Primary tickers (Spot Rates / Indices)
     PRIMARY_MAPPINGS = {
-        'XAU': 'XAU/USD', 'XAG': 'XAG/USD', 'BCO': 'BZ/USD', 'WTI': 'WTI/USD',
-        'SPX': 'SPY', 
-        'BTC-USD': 'BTC/USD', 'BTC': 'BTC/USD',
+        'XAU': 'XAU/USD', 
+        'XAG': 'XAG/USD', 
+        'WTI': 'WTI/USD',
+        'SPX': 'SPX', 
+        'BTC': 'BTC/USD',
     }
 
     # Fallback tickers (ETFs) for restricted API keys
     FALLBACK_MAPPINGS = {
         'XAU': 'GLD',
         'XAG': 'SLV',
-        'BCO': 'USO',
         'WTI': 'USO',
-        'BTC-USD': 'BITO',
         'BTC': 'BITO',
-        'SPX': 'VOO'
+        'SPX': 'SPY'
     }
 
     def get_symbol_mapping(self, symbol: str) -> str:

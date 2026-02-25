@@ -355,8 +355,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     def process_instrument(inst):
         sym = inst['symbol'].upper()
         try:
-            # Improved Crypto Detection
-            is_crypto = any(sub in sym for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
+            # Improved Crypto Detection (Whitelisted for BTC-USD)
+            is_crypto = any(sub in sym for sub in ["BTC", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
             bench = btc_bench if is_crypto else spy_bench
             bench_exec_df = benchmarks_data.get("BTC_exec") if is_crypto else benchmarks_data.get("SPX_exec")
             
@@ -394,7 +394,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         logger.error(f"Parallel analysis loop failed: {e}")
         # Continue with whatever results we have (possibly empty)
 
-    perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC-USD": btc_bench}, strategy_settings)
+    perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC": btc_bench}, strategy_settings)
     correlation_results = calculate_correlations(data_map)
     results = apply_position_sizing(results, correlation_results, strategy_settings)
     
