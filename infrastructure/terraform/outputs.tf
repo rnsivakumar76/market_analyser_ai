@@ -40,6 +40,16 @@ output "lambda_function_arn" {
   value       = aws_lambda_function.api.arn
 }
 
+output "lambda_function_name" {
+  description = "Backend Lambda function name"
+  value       = aws_lambda_function.api.function_name
+}
+
+output "dynamodb_table_name" {
+  description = "DynamoDB table name for this environment"
+  value       = aws_dynamodb_table.nexus.name
+}
+
 output "gitlab_deployer_access_key_id" {
   description = "AWS Access Key ID for GitLab CI/CD — add to GitLab CI/CD Variables"
   value       = aws_iam_access_key.gitlab_deployer.id

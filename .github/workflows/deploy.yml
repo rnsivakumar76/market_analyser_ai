@@ -1,12 +1,24 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# Deploy Workflow — Runs on push to main
+# Deploy Workflow — Dual Environment (Dev + Prod)
+#
+# develop branch → deploys to DEV environment
+# main branch    → deploys to PROD environment (requires approval)
 # ──────────────────────────────────────────────────────────────────────────────
 name: Deploy to AWS
 
 on:
   push:
-    branches: [main, "feature/*"]
+    branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - production
 
 permissions:
   id-token: write
@@ -19,10 +31,40 @@ env:
   TF_ROOT: infrastructure/terraform
 
 jobs:
-  # 1. Build & Push Backend
-  build-push-backend:
-    name: Build & Push Backend
+  # ─── Determine Environment ──────────────────────────────────────────────────
+  setup:
+    name: Setup Environment
     runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      image_tag: ${{ steps.env.outputs.image_tag }}
+      tf_workspace: ${{ steps.env.outputs.tf_workspace }}
+    steps:
+      - id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENV="production"
+          else
+            ENV="dev"
+          fi
+          
+          if [ "$ENV" = "production" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "image_tag=latest" >> $GITHUB_OUTPUT
+            echo "tf_workspace=prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+            echo "image_tag=dev" >> $GITHUB_OUTPUT
+            echo "tf_workspace=dev" >> $GITHUB_OUTPUT
+          fi
+
+  # ─── Build & Push Backend ───────────────────────────────────────────────────
+  build-push-backend:
+    name: Build & Push Backend (${{ needs.setup.outputs.environment }})
+    runs-on: ubuntu-latest
+    needs: setup
     steps:
       - uses: actions/checkout@v4
       - name: Configure AWS Credentials
@@ -34,19 +76,21 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
       - name: Build and push
         run: |
-          docker build -t $ECR_BACKEND:latest ./backend
-          docker push $ECR_BACKEND:latest
+          TAG=${{ needs.setup.outputs.image_tag }}
+          docker build -t $ECR_BACKEND:$TAG ./backend
+          docker push $ECR_BACKEND:$TAG
 
-  # 2. Build Frontend
+  # ─── Build Frontend ────────────────────────────────────────────────────────
   build-frontend:
-    name: Build Frontend
+    name: Build Frontend (${{ needs.setup.outputs.environment }})
     runs-on: ubuntu-latest
+    needs: setup
     steps:
       - uses: actions/checkout@v4
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22" # Using Node 22 for Angular 20
+          node-version: "22"
       - name: Install & Build
         run: |
           cd frontend
@@ -59,12 +103,12 @@ jobs:
           path: frontend/dist/frontend/browser/
           retention-days: 1
 
-  # 3. Terraform Apply
+  # ─── Terraform Apply ────────────────────────────────────────────────────────
   terraform-apply:
-    name: Terraform Apply
+    name: Terraform (${{ needs.setup.outputs.environment }})
     runs-on: ubuntu-latest
-    needs: [build-push-backend, build-frontend]
-    environment: production
+    needs: [setup, build-push-backend, build-frontend]
+    environment: ${{ needs.setup.outputs.environment }}
     steps:
       - uses: actions/checkout@v4
       - name: Configure AWS Credentials
@@ -77,15 +121,25 @@ jobs:
       - name: Terraform Init & Apply
         run: |
           cd ${{ env.TF_ROOT }}
+          ENV=${{ needs.setup.outputs.environment }}
+          TAG=${{ needs.setup.outputs.image_tag }}
+          WORKSPACE=${{ needs.setup.outputs.tf_workspace }}
+          
+          # Use environment-specific state key
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=market-analyser/terraform.tfstate" \
+            -backend-config="key=market-analyser/${WORKSPACE}/terraform.tfstate" \
             -backend-config="region=${{ vars.AWS_REGION }}" \
             -backend-config="dynamodb_table=${{ vars.TF_LOCK_TABLE }}"
+          
+          # Select or create workspace
+          terraform workspace select $WORKSPACE || terraform workspace new $WORKSPACE
+          
           terraform apply -auto-approve \
             -var="aws_account_id=${{ vars.AWS_ACCOUNT_ID }}" \
             -var="aws_region=${{ vars.AWS_REGION }}" \
-            -var="backend_image=${{ env.ECR_BACKEND }}:latest" \
+            -var="environment=$ENV" \
+            -var="backend_image=${{ env.ECR_BACKEND }}:$TAG" \
             -var="google_client_id=${{ secrets.GOOGLE_CLIENT_ID }}" \
             -var="google_client_secret=${{ secrets.GOOGLE_CLIENT_SECRET }}" \
             -var="jwt_secret_key=${{ secrets.JWT_SECRET_KEY }}"
@@ -99,28 +153,35 @@ jobs:
           name: tf-outputs
           path: ${{ env.TF_ROOT }}/tf_outputs.json
 
-  # 4. Deploy Backend (Update Lambda)
+  # ─── Deploy Backend (Update Lambda) ─────────────────────────────────────────
   deploy-backend:
-    name: Update Lambda
+    name: Update Lambda (${{ needs.setup.outputs.environment }})
     runs-on: ubuntu-latest
-    needs: terraform-apply
+    needs: [setup, terraform-apply]
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-market-analyser
           aws-region: ${{ vars.AWS_REGION }}
+      - name: Download outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: tf-outputs
+          path: .
       - name: Update Lambda
         run: |
+          TAG=${{ needs.setup.outputs.image_tag }}
+          FUNCTION_NAME=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['lambda_function_name']['value'])")
           aws lambda update-function-code \
-            --function-name market-analyser-api \
-            --image-uri ${{ env.ECR_BACKEND }}:latest
+            --function-name $FUNCTION_NAME \
+            --image-uri ${{ env.ECR_BACKEND }}:$TAG
 
-  # 5. Deploy Frontend (Sync S3)
+  # ─── Deploy Frontend (Sync S3) ─────────────────────────────────────────────
   deploy-frontend:
-    name: Sync S3
+    name: Sync S3 (${{ needs.setup.outputs.environment }})
     runs-on: ubuntu-latest
-    needs: terraform-apply
+    needs: [setup, terraform-apply]
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -140,12 +201,10 @@ jobs:
       - name: Sync S3
         run: |
           BUCKET=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_s3_bucket']['value'])")
-          
-          # Sync to S3
           aws s3 sync ./dist/ s3://$BUCKET/ --delete
-          
       - name: Summary
         run: |
+          ENV=${{ needs.setup.outputs.environment }}
           S3_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_url']['value'])")
-          echo "### 🚀 App is live!" >> $GITHUB_STEP_SUMMARY
-          echo "- **Direct S3 (HTTP):** $S3_URL" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Deployed to **${ENV}**!" >> $GITHUB_STEP_SUMMARY
+          echo "- **App URL:** $S3_URL" >> $GITHUB_STEP_SUMMARY

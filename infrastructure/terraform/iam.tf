@@ -46,6 +46,34 @@ resource "aws_iam_role_policy" "lambda_s3_config" {
   })
 }
 
+resource "aws_iam_role_policy" "lambda_dynamodb" {
+  name = "${var.app_name}-lambda-dynamodb-policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan",
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem"
+        ]
+        Resource = [
+          aws_dynamodb_table.nexus.arn,
+          "${aws_dynamodb_table.nexus.arn}/index/*"
+        ]
+      }
+    ]
+  })
+}
+
 # GitLab CI/CD deployer user
 resource "aws_iam_user" "gitlab_deployer" {
   name = "${var.app_name}-gitlab-deployer"

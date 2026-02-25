@@ -16,6 +16,7 @@ resource "aws_lambda_function" "api" {
     variables = {
       ENVIRONMENT          = var.environment
       CONFIG_S3_BUCKET     = aws_s3_bucket.config.bucket
+      DYNAMODB_TABLE       = aws_dynamodb_table.nexus.name
       GOOGLE_CLIENT_ID     = var.google_client_id
       GOOGLE_CLIENT_SECRET = var.google_client_secret
       JWT_SECRET_KEY       = var.jwt_secret_key
