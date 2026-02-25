@@ -3,7 +3,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 resource "aws_lambda_function" "api" {
-  function_name = "${var.app_name}-api"
+  function_name = "${var.app_name}-api${local.env_suffix}"
   role          = aws_iam_role.lambda_exec.arn
   package_type  = "Image"
   image_uri     = var.backend_image
@@ -16,9 +16,12 @@ resource "aws_lambda_function" "api" {
     variables = {
       ENVIRONMENT          = var.environment
       CONFIG_S3_BUCKET     = aws_s3_bucket.config.bucket
+      DYNAMODB_TABLE       = aws_dynamodb_table.nexus.name
       GOOGLE_CLIENT_ID     = var.google_client_id
       GOOGLE_CLIENT_SECRET = var.google_client_secret
       JWT_SECRET_KEY       = var.jwt_secret_key
+      TWELVEDATA_API_KEY   = var.twelvedata_api_key
+      FMP_API_KEY          = var.fmp_api_key
       FRONTEND_URL         = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
     }
   }
@@ -33,7 +36,7 @@ resource "aws_lambda_function" "api" {
 # HTTP API Gateway (v2) — Maps endpoints to Lambda
 # ──────────────────────────────────────────────────────────────────────────────
 resource "aws_apigatewayv2_api" "http_api" {
-  name          = "${var.app_name}-http-api"
+  name          = "${var.app_name}-http-api${local.env_suffix}"
   protocol_type = "HTTP"
   
   cors_configuration {
@@ -59,7 +62,7 @@ resource "aws_apigatewayv2_integration" "lambda" {
 }
 
 # Ensure all routes proxy directly to the FastAPI Mangum handler
-resource "aws_apigatewayv2_route" "default" {
+resource "aws_apigatewayv2_route" "proxy" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "ANY /{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
@@ -78,9 +81,9 @@ resource "aws_lambda_permission" "apigw" {
 # Scheduled EventBridge to replace apscheduler
 # ──────────────────────────────────────────────────────────────────────────────
 resource "aws_cloudwatch_event_rule" "hourly_analysis" {
-  name                = "${var.app_name}-hourly-analysis"
-  description         = "Trigger market analysis every hour"
-  schedule_expression = "cron(0 * * * ? *)" # Every hour at minute 0
+  name                = "${var.app_name}-5min-analysis${local.env_suffix}"
+  description         = "Trigger market analysis every 5 minutes"
+  schedule_expression = "rate(5 minutes)"
 }
 
 resource "aws_cloudwatch_event_target" "lambda_target" {
@@ -95,12 +98,14 @@ resource "aws_cloudwatch_event_target" "lambda_target" {
     "rawPath": "/api/analyze",
     "rawQueryString": "",
     "headers": {
-      "host": "localhost"
+      "host": "localhost",
+      "x-internal-trigger": "scheduler"
     },
     "requestContext": {
       "http": {
         "method": "GET",
-        "path": "/api/analyze"
+        "path": "/api/analyze",
+        "sourceIp": "127.0.0.1"
       }
     },
     "isBase64Encoded": false

@@ -52,20 +52,30 @@ def analyze_volatility_and_risk(
             description="Insufficient data for Volatility/ATR calculation."
         )
 
-    # Calculate stop loss and take profit
+    # Calculate stop loss and take profit levels (Institutional Scaling Model)
+    # TP1: 1.0x ATR (Initial de-risk)
+    # TP2: 2.0x ATR (Core target)
+    # TP3: 3.0x ATR (Runner)
+    
     if signal_direction == "bullish":
         sl = current_price - (atr * atr_multiplier_sl)
-        tp = current_price + (atr * atr_multiplier_tp)
-        desc = f"Bullish setup: Stop Loss below support at {sl:.2f} (1.5x ATR). Target Take Profit at {tp:.2f} (3.0x ATR)."
+        tp1 = current_price + (atr * 1.0)
+        tp2 = current_price + (atr * 2.0)
+        tp3 = current_price + (atr * atr_multiplier_tp)
+        desc = f"Bullish setup: Stop Loss at {sl:.2f}. Scaling Targets: TP1 (De-risk) at {tp1:.2f}, TP2 at {tp2:.2f}, Final TP at {tp3:.2f}."
     elif signal_direction == "bearish":
         sl = current_price + (atr * atr_multiplier_sl)
-        tp = current_price - (atr * atr_multiplier_tp)
-        desc = f"Bearish setup: Stop Loss above resistance at {sl:.2f} (1.5x ATR). Target Take Profit at {tp:.2f} (3.0x ATR)."
+        tp1 = current_price - (atr * 1.0)
+        tp2 = current_price - (atr * 2.0)
+        tp3 = current_price - (atr * atr_multiplier_tp)
+        desc = f"Bearish setup: Stop Loss at {sl:.2f}. Scaling Targets: TP1 (De-risk) at {tp1:.2f}, TP2 at {tp2:.2f}, Final TP at {tp3:.2f}."
     else:
         # Neutral - hypothetical symmetric bounds
         sl = current_price - (atr * atr_multiplier_sl)
-        tp = current_price + (atr * atr_multiplier_sl)
-        desc = f"Neutral market. ATR is {atr:.2f}. Expect daily swings between {sl:.2f} and {tp:.2f}."
+        tp1 = current_price + (atr * 1.0)
+        tp2 = current_price + (atr * 2.0)
+        tp3 = current_price + (atr * atr_multiplier_tp)
+        desc = f"Neutral market. ATR is {atr:.2f}. Expect daily swings between {sl:.2f} and {tp3:.2f}."
 
     # Standard risk-reward is usually TP_dist / SL_dist
     rr_ratio = atr_multiplier_tp / atr_multiplier_sl if atr_multiplier_sl > 0 else 0
@@ -73,7 +83,9 @@ def analyze_volatility_and_risk(
     return VolatilityAnalysis(
         atr=round(atr, 4),
         stop_loss=round(sl, 4),
-        take_profit=round(tp, 4),
+        take_profit=round(tp3, 4),
+        take_profit_level1=round(tp1, 4),
+        take_profit_level2=round(tp2, 4),
         risk_reward_ratio=round(rr_ratio, 2),
         description=desc
     )

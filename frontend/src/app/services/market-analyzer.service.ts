@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface TrendAnalysis {
   direction: 'bullish' | 'bearish' | 'neutral';
@@ -44,8 +45,20 @@ export interface PivotPoints {
   s3: number;
 }
 
+export interface FibonacciLevels {
+  trend: 'up' | 'down' | 'flat';
+  swing_high: number;
+  swing_low: number;
+  ret_382: number;
+  ret_500: number;
+  ret_618: number;
+  ext_1272: number;
+  ext_1618: number;
+}
+
 export interface TechnicalAnalysis {
   pivot_points: PivotPoints;
+  fibonacci: FibonacciLevels;
   least_resistance_line: 'up' | 'down' | 'flat';
   trend_breakout: 'bullish_breakout' | 'bearish_breakout' | 'none';
   breakout_confidence: number;
@@ -59,12 +72,17 @@ export interface TradeSignal {
   trade_worthy: boolean;
   action_plan: string;
   action_plan_details: string;
+  psychological_guard: string;
+  pyramiding_plan: string;
+  scaling_plan: string;
 }
 
 export interface VolatilityAnalysis {
   atr: number;
   stop_loss: number;
   take_profit: number;
+  take_profit_level1?: number;
+  take_profit_level2?: number;
   risk_reward_ratio: number;
   description: string;
 }
@@ -134,6 +152,24 @@ export interface ChartData {
   volume: number;
 }
 
+export interface PullbackWarningAnalysis {
+  warning_score: number;
+  is_warning: boolean;
+  reasons: string[];
+  description: string;
+}
+
+export interface RelativeStrengthAnalysis {
+  is_outperforming: boolean;
+  symbol_return: number;
+  benchmark_return: number;
+  alpha: number;
+  label: string;
+  description: string;
+}
+
+export type StrategyMode = 'long_term' | 'short_term';
+
 export interface InstrumentAnalysis {
   symbol: string;
   name: string;
@@ -153,6 +189,9 @@ export interface InstrumentAnalysis {
   technical_indicators?: TechnicalAnalysis;
   position_sizing?: PositionSizing;
   news_sentiment?: NewsSentiment;
+  pullback_warning?: PullbackWarningAnalysis;
+  relative_strength?: RelativeStrengthAnalysis;
+  strategy_mode: StrategyMode;
 }
 
 export interface WeeklyPerformance {
@@ -171,11 +210,41 @@ export interface CorrelationData {
   matrix: number[][];
 }
 
+export interface PsychologicalGuardrail {
+  status: 'active' | 'restricted';
+  daily_pnl: number;
+  daily_loss_limit: number;
+  consecutive_losses: number;
+  max_consecutive_losses: number;
+  lockdown_reason: string;
+  message: string;
+}
+
 export interface AnalysisResponse {
   analysis_timestamp: string;
   instruments: InstrumentAnalysis[];
   weekly_performance: WeeklyPerformance;
   correlation_data: CorrelationData;
+  psychological_guardrail: PsychologicalGuardrail;
+}
+
+export interface NotificationPrefs {
+  enabled: boolean;
+  trade_worthy_alerts: boolean;
+  pullback_warnings: boolean;
+  score_threshold: number;
+}
+
+export interface UserPreferences {
+  theme: 'dark' | 'light';
+  view_mode: 'heatmap' | 'list';
+  strategy_mode: StrategyMode;
+  auto_refresh: boolean;
+  refresh_interval: number;
+  show_news: boolean;
+  show_copilot: boolean;
+  notifications: NotificationPrefs;
+  strategy: StrategySettings;
 }
 
 @Injectable({
@@ -183,14 +252,14 @@ export interface AnalysisResponse {
 })
 export class MarketAnalyzerService {
   private http = inject(HttpClient);
-  private apiUrl = 'https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api';
+  private apiUrl = environment.apiUrl;
 
-  analyzeAll(): Observable<AnalysisResponse> {
-    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze`);
+  analyzeAll(mode: StrategyMode = 'long_term'): Observable<AnalysisResponse> {
+    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}`);
   }
 
-  analyzeSingle(symbol: string): Observable<InstrumentAnalysis> {
-    return this.http.get<InstrumentAnalysis>(`${this.apiUrl}/analyze/${symbol}`);
+  analyzeSingle(symbol: string, mode: StrategyMode = 'long_term'): Observable<InstrumentAnalysis> {
+    return this.http.get<InstrumentAnalysis>(`${this.apiUrl}/analyze/${symbol}?mode=${mode}`);
   }
 
   getInstruments(): Observable<{ instruments: { symbol: string; name: string }[] }> {
@@ -215,5 +284,29 @@ export class MarketAnalyzerService {
 
   updateSettings(settings: StrategySettings): Observable<any> {
     return this.http.post(`${this.apiUrl}/settings`, settings);
+  }
+
+  // ─── Preferences API ───────────────────────────────────
+
+  getPreferences(): Observable<UserPreferences> {
+    return this.http.get<UserPreferences>(`${this.apiUrl}/preferences`);
+  }
+
+  updatePreferences(prefs: Partial<UserPreferences>): Observable<any> {
+    return this.http.put(`${this.apiUrl}/preferences`, prefs);
+  }
+
+  // ─── Trade Journal ─────────────────────────────────────
+
+  getJournal(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/journal`);
+  }
+
+  addTrade(trade: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/journal`, trade);
+  }
+
+  deleteTrade(tradeId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/journal/${tradeId}`);
   }
 }

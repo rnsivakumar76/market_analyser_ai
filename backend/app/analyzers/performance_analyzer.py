@@ -54,7 +54,14 @@ def calculate_weekly_performance(instruments: List[Dict[str, Any]], data_map: Di
                 is_bullish=candle.get('is_bullish')
             )
             
-            signal = generate_trade_signal(trend, pullback, strength, candle_model, bench_dir, settings=settings)
+            signal = generate_trade_signal(
+                trend=trend, 
+                pullback=pullback, 
+                strength=strength, 
+                candle=candle_model, 
+                benchmark_direction=bench_dir, 
+                settings=settings
+            )
             
             if signal.trade_worthy:
                 # ENTRY detected at 'idx'

@@ -61,17 +61,29 @@ class TwelveDataFetcher:
         
         return symbol_mappings.get(symbol.upper(), symbol)
     
-    def fetch_historical_data(self, symbol: str, days: int = 90) -> pd.DataFrame:
+    def fetch_historical_data(self, symbol: str, days: int = 90, interval: str = "1day") -> pd.DataFrame:
         """Fetch historical OHLCV data using Twelve Data."""
         try:
             self._rate_limit_wait()
             td_symbol = self.get_symbol_mapping(symbol)
             
+            # Map intervals to TwelveData format if needed
+            # Twelve Data intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 1day, 1week, 1month
+            
+            # Estimate outputsize to ensure we get enough data
+            # For daily, days is fine. For hourly, we need more points.
+            outputsize = days
+            if interval == "1h": outputsize = days * 24
+            elif interval == "4h": outputsize = days * 6
+            
+            # Cap at 5000 (Twelve Data max for some plans)
+            outputsize = min(outputsize, 5000)
+
             # Get time series data
             ts = self.client.time_series(
                 symbol=td_symbol,
-                interval="1day",
-                outputsize=days,
+                interval=interval,
+                outputsize=outputsize,
                 timezone="UTC"
             )
             
@@ -113,7 +125,7 @@ class TwelveDataFetcher:
             return df
             
         except Exception as e:
-            logger.error(f"Twelve Data error for {symbol}: {e}")
+            logger.error(f"[TwelveData] Error for {symbol}: {e}")
             raise ValueError(f"Failed to fetch Twelve Data for {symbol}: {e}")
     
     def get_current_price(self, symbol: str) -> float:
@@ -134,10 +146,12 @@ class TwelveDataFetcher:
             if 'price' in data:
                 current_price = float(data['price'])
             else:
-                raise ValueError(f"Unexpected price data format for {symbol}: {data}")
+                # Twelve Data error responses are sometimes JSON with 'code' and 'message'
+                error_msg = data.get('message', str(data))
+                raise ValueError(f"Twelve Data price error for {symbol}: {error_msg}")
             
             return current_price
             
         except Exception as e:
-            logger.error(f"Twelve Data price error for {symbol}: {e}")
+            logger.error(f"[TwelveData] Price error for {symbol}: {e}")
             raise ValueError(f"Failed to get current price for {symbol}: {e}")

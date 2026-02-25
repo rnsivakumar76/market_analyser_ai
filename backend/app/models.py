@@ -19,6 +19,16 @@ class MarketPhase(str, Enum):
     CONSOLIDATION = "consolidation" # General sideways
 
 
+class StrategyMode(str, Enum):
+    LONG_TERM = "long_term"   # Monthly -> Weekly -> Daily
+    SHORT_TERM = "short_term" # Daily -> 4Hour -> 1Hour
+
+
+class SystemStatus(str, Enum):
+    ACTIVE = "active"
+    RESTRICTED = "restricted"
+
+
 class PhaseAnalysis(BaseModel):
     phase: MarketPhase
     score: float
@@ -40,7 +50,9 @@ class FundamentalsAnalysis(BaseModel):
 class VolatilityAnalysis(BaseModel):
     atr: float
     stop_loss: float
-    take_profit: float
+    take_profit: float  # Final target
+    take_profit_level1: Optional[float] = None  # Scale out 1
+    take_profit_level2: Optional[float] = None  # Scale out 2
     risk_reward_ratio: float
     description: str
 
@@ -71,12 +83,28 @@ class PullbackAnalysis(BaseModel):
     description: str
 
 
+class PullbackWarningAnalysis(BaseModel):
+    warning_score: int  # 0 to 6
+    is_warning: bool
+    reasons: List[str]
+    description: str
+
+
 class StrengthAnalysis(BaseModel):
     signal: Signal
     rsi: float
     volume_ratio: float
     adx: float
     price_change_percent: float
+    description: str
+
+
+class RelativeStrengthAnalysis(BaseModel):
+    is_outperforming: bool
+    symbol_return: float
+    benchmark_return: float
+    alpha: float
+    label: str
     description: str
 
 
@@ -90,8 +118,20 @@ class PivotPoints(BaseModel):
     s3: float
 
 
+class FibonacciLevels(BaseModel):
+    trend: str
+    swing_high: float
+    swing_low: float
+    ret_382: float
+    ret_500: float
+    ret_618: float
+    ext_1272: float
+    ext_1618: float
+
+
 class TechnicalAnalysis(BaseModel):
     pivot_points: PivotPoints
+    fibonacci: FibonacciLevels
     least_resistance_line: str  # 'up', 'down', 'flat'
     trend_breakout: str  # 'bullish_breakout', 'bearish_breakout', 'none'
     breakout_confidence: float  # 0 to 1
@@ -105,6 +145,9 @@ class TradeSignal(BaseModel):
     trade_worthy: bool
     action_plan: str = ""
     action_plan_details: str = ""
+    psychological_guard: str = ""
+    pyramiding_plan: str = ""
+    scaling_plan: str = ""
 
 
 class PositionSizing(BaseModel):
@@ -152,6 +195,9 @@ class InstrumentAnalysis(BaseModel):
     technical_indicators: Optional[TechnicalAnalysis] = None
     position_sizing: Optional[PositionSizing] = None
     news_sentiment: Optional[NewsSentiment] = None
+    pullback_warning: Optional[PullbackWarningAnalysis] = None
+    relative_strength: Optional[RelativeStrengthAnalysis] = None
+    strategy_mode: StrategyMode = StrategyMode.LONG_TERM
 
 
 class PerformanceSummary(BaseModel):
@@ -170,11 +216,22 @@ class CorrelationData(BaseModel):
     matrix: List[List[float]]
 
 
+class PsychologicalGuardrail(BaseModel):
+    status: SystemStatus
+    daily_pnl: float
+    daily_loss_limit: float
+    consecutive_losses: int
+    max_consecutive_losses: int
+    lockdown_reason: str
+    message: str
+
+
 class AnalysisResponse(BaseModel):
     analysis_timestamp: str
     instruments: List[InstrumentAnalysis]
     weekly_performance: Optional[PerformanceSummary] = None
     correlation_data: Optional[CorrelationData] = None
+    psychological_guardrail: Optional[PsychologicalGuardrail] = None
 
 
 class InstrumentConfig(BaseModel):

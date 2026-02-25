@@ -2,57 +2,147 @@ import { Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-    selector: 'app-user-manual',
-    standalone: true,
-    imports: [CommonModule],
-    templateUrl: './user-manual.component.html',
-    styleUrl: './user-manual.component.scss'
+  selector: 'app-user-manual',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './user-manual.component.html',
+  styleUrl: './user-manual.component.scss'
 })
 export class UserManualComponent {
-    @Output() close = new EventEmitter<void>();
+  @Output() close = new EventEmitter<void>();
 
-    sections = [
-        {
-            id: 'strategy',
-            title: 'The Core Strategy',
-            icon: '🏛️',
-            content: `
+  sections = [
+    {
+      id: 'dashboard',
+      title: 'Navigation & Dashboard',
+      icon: '📊',
+      content: `
+        The system now uses an <strong>Instrument Intelligence Grid</strong> for rapid decision making.
+        <ul>
+          <li><strong>Summary Cards:</strong> A high-density view for scanning dozens of instruments. Each card highlights the Recommendation, Conviction Score, and Market Structure Phase.</li>
+          <li><strong>Exhaustion Badges:</strong> Look for the ⚠️ <em>Pullback Risk</em> badge. This appears automatically when the market is overextended near resistance or support.</li>
+          <li><strong>Deep-Dive View:</strong> Clicking a summary card expands the full <em>Market Intelligence Briefing</em>, revealing the chart, news sentiment, and strategic action plans.</li>
+        </ul>
+      `
+    },
+    {
+      id: 'strategy-modes',
+      title: 'Strategy & Timeframes',
+      icon: '⏱️',
+      content: `
+        You can now toggle between <strong>Long Term</strong> and <strong>Short Term</strong> operational modes using the toggle next to the Refresh button.
+        <ul>
+          <li><strong>Long Term (Swing/Position):</strong> Analyzes the Monthly trend, Weekly pullbacks, and Daily execution. Best for building portfolios over months.</li>
+          <li><strong>Short Term (Day/Swing):</strong> Analyzes the Daily trend, 4-Hour pullbacks, and 1-Hour execution. Best for capturing moves over days.</li>
+          <li><em>Switching modes will trigger a complete re-analysis of your watchlist across the new timeframes.</em></li>
+        </ul>
+      `
+    },
+    {
+      id: 'philosophy',
+      title: 'Core Design Philosophy',
+      icon: '🏛️',
+      content: `
         This analyzer uses a <strong>Multi-Timeframe Trend Following</strong> strategy. 
-        It prioritizes safety and institutional-level risk management.
+        It prioritizes capital preservation and institutional-level risk management by preventing trades against the primary trend.
         <ul>
-          <li><strong>Monthly Trend:</strong> We only look for long trades when the monthly trend is bullish (Price > 20MA).</li>
-          <li><strong>Weekly Pullback:</strong> We seek entry points when a price pulls back to its weekly support, providing a better risk/reward.</li>
-          <li><strong>Daily Confirmation:</strong> We use RSI and ADX to ensure there is active momentum before suggesting a trade.</li>
+          <li><strong>Monthly Trend Foundation:</strong> We only evaluate long trades when the monthly/long-term trend is bullish (Price > 20MA > 50MA) and short trades when bearish.</li>
+          <li><strong>Market Beta Filter:</strong> The engine tracks major market indices (like SPX for equities, BTC for crypto). It actively blocks buying individual assets if the broader market is collapsing.</li>
+          <li><strong>Actionable Intelligence:</strong> AI generates direct "Actionable Plans" (e.g., "Wait for pullback to S1") instead of just raw data.</li>
         </ul>
       `
-        },
-        {
-            id: 'metrics',
-            title: 'Understanding Metrics',
-            icon: '📊',
-            content: `
+    },
+    {
+      id: 'pullback-warning',
+      title: 'Pullback Warning System',
+      icon: '⚠️',
+      content: `
+        The <strong>Exhaustion Detection Engine</strong> identifies when a trend is likely to pause or reverse <em>before</em> it happens. 
+        It uses a weighted 0-8 scoring system:
         <ul>
-          <li><strong>Conviction Score:</strong> A scale of 0-100 based on how many technical conditions match our ideal "A+ Setup".</li>
-          <li><strong>RSI (14):</strong> Measures overbought (>70) or oversold (<30) conditions. We look for "Rising Momentum".</li>
-          <li><strong>ADX:</strong> Measures the strength of the trend. Above 25 indicates a strong, tradable trend.</li>
-          <li><strong>ATR:</strong> Measures volatility. We use this to calculate where to place your Stop Loss fairly.</li>
+          <li><strong>RSI Divergence (2 pts):</strong> price makes a higher high, but RSI makes a lower high (Bearish Divergence).</li>
+          <li><strong>MACD Histogram Weakening (1 pt):</strong> momentum slope is declining even if price is rising.</li>
+          <li><strong>ATR Compression (1 pt):</strong> volatility is squeezed, often a precursor to a sharp reversal or expansion.</li>
+          <li><strong>Bollinger Re-entry (1 pt):</strong> price fails to sustain a move outside the bands and drifts back in.</li>
+          <li><strong>Structure Break (3 pts):</strong> failing to make a new high and breaking a previous minor low.</li>
+          <li style="color: #fab387;"><em>Signals with a score ≥ 3 trigger an immediate "Pullback Warning" and penalize the overall Conviction Score by -20 points.</em></li>
         </ul>
       `
-        },
-        {
-            id: 'risk',
-            title: 'Risk & Position Sizing',
-            icon: '🛡️',
-            content: `
-        Our AI calculates the exact amount to invest based on your portfolio value.
+    },
+    {
+      id: 'indicators',
+      title: 'Logic & Scenarios',
+      icon: '🧭',
+      content: `
+        The engine uses specific indicators tailored for different scenarios:
         <ul>
-          <li><strong>Risk per Trade:</strong> Usually 1-2% of your total capital.</li>
-          <li><strong>Correlation Penalty:</strong> If you are already holding similar assets (e.g., BTC and ETH), the AI reduces position size to prevent overexposure.</li>
-          <li><strong>Hard Stops:</strong> Every recommendation comes with a mathematically derived Stop Loss to protect your capital.</li>
+          <li><strong>ADX (Trend Strength):</strong> If ADX < 25, the market is "Chopping". The AI will downgrade setups and tell you to "Stand Aside" to avoid stop-outs.</li>
+          <li><strong>Candlestick triggers:</strong> The AI scans for confirmations like <em>Bullish Engulfing</em> or <em>Hammers</em> at key support levels before entering.</li>
+          <li><strong>Pivot Points & Fibonacci:</strong> Uses standard pivots (S1-R3) for normal ranges and 60-day Swing Fibonacci Extensions (1.272, 1.618) for assets in "Price Discovery" (making all-time highs).</li>
         </ul>
       `
-        }
-    ];
+    },
+    {
+      id: 'scoring',
+      title: 'Score calculation Logic',
+      icon: '🧮',
+      content: `
+        The <strong>Conviction Score</strong> runs from -100 to +100.
+        <ul>
+          <li><strong>Base Score:</strong> Derived from the Market Phase (Markup/Markdown/Accumulation).</li>
+          <li><strong>Momentum Boosters:</strong> High ADX and rising Volume add bonus points (+15 to +25).</li>
+          <li><strong>Sentiment Modifier:</strong> Real-time news intelligence impacts the final score (+/- 10 points).</li>
+          <li><strong>Exhaustion Penalty:</strong> If a <em>Pullback Warning</em> is active, the score is slashed by 20 points to prevent "chasing" the move.</li>
+        </ul>
+      `
+    },
+    {
+      id: 'risk',
+      title: 'Position Sizing & Risk',
+      icon: '🛡️',
+      content: `
+        Position sizing is calculated per trade based on:
+        <ul>
+          <li><strong>ATR-Based Volatility:</strong> Sizing is slashes on volatile assets to keep static dollar-risk.</li>
+          <li><strong>Correlation Matrix:</strong> Adding Gold when you own Silver triggers a "Correlation Penalty," reducing size by up to 50% to prevent overexposure.</li>
+          <li><strong>Hard Stops:</strong> Mathematically derived stops (usually 1.5x ATR) are provided for every recommendation.</li>
+        </ul>
+      `
+    },
+    {
+      id: 'pro-tools',
+      title: 'Institutional Alpha & Scaling',
+      icon: '🚀',
+      content: `
+        Professional setups require more than just a chart. These tools separate the "retail" behavior from "institutional" systems.
+        <ul>
+          <li><strong>The Alpha Shield (Relative Strength):</strong> Compares the asset directly against its benchmark (SPX for stocks, BTC for crypto). 
+              The system <strong>actively blocks</strong> long trades on instruments that are underperforming the market (laggards). We only buy the strongest horses.</li>
+          <li><strong>Multi-Stage Scaling (TP1, TP2, TP3):</strong> Institutional traders rarely exit all at once.
+              <ul>
+                <li><em>Stage 1 (De-risk):</em> Take 30% profit at 1.0x ATR and move SL to break-even.</li>
+                <li><em>Stage 2 (Bank Profit):</em> Take 40% at 2.0x ATR.</li>
+                <li><em>Stage 3 (Runner):</em> Leave 30% to capture massive trends, trailing with a 2.0x ATR buffer.</li>
+              </ul>
+          </li>
+          <li><strong>The Macro Event Guard:</strong> Automatically scans the global economic calendar and corporate earnings. 
+              If a high-impact event (NFP, CPI, FOMC) occurs within 48h, the <strong>Macro Shield</strong> blocks the trade to prevent "gap" risk.</li>
+        </ul>
+      `
+    },
+    {
+      id: 'backtesting',
+      title: 'Backtesting Methodology',
+      icon: '⏱️',
+      content: `
+        The system validates current conditions against historical performance.
+        <ul>
+          <li><strong>Vectorized Simulation:</strong> Simulates the current strategy (e.g., 20MA/50MA crossover) over the last 500 days specifically for this asset.</li>
+          <li><strong>Win Rate & Expectancy:</strong> Outputs the historical success rate. If an asset has a low historical win-rate for this setup, the AI will warn of "Low Confidence."</li>
+        </ul>
+      `
+    }
+  ];
 
-    activeSection = this.sections[0].id;
+  activeSection = this.sections[0].id;
 }

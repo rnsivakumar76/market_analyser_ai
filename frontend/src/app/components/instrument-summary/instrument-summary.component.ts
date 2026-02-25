@@ -3,10 +3,10 @@ import { CommonModule } from '@angular/common';
 import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
 @Component({
-    selector: 'app-instrument-summary',
-    standalone: true,
-    imports: [CommonModule],
-    template: `
+  selector: 'app-instrument-summary',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
     <div class="summary-card" [class]="getCardClass()" (click)="select.emit()">
       <div class="summary-header">
         <div class="symbol-info">
@@ -38,12 +38,31 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
         </div>
       }
       
+      @if (analysis.pullback_warning && analysis.pullback_warning.is_warning) {
+        <div class="pullback-warning-pill" [title]="analysis.pullback_warning.description">
+          ⚠️ Pullback Risk
+        </div>
+      }
+      
       @if (analysis.trade_signal.trade_worthy) {
         <div class="worthy-indicator">✓</div>
       }
     </div>
   `,
-    styles: [`
+  styles: [`
+    .pullback-warning-pill {
+      font-size: 0.65rem;
+      font-weight: 800;
+      background: rgba(250, 179, 135, 0.15);
+      color: #fab387;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid rgba(250, 179, 135, 0.3);
+    }
     .summary-card {
       background: #1e1e2e;
       border-radius: 8px;
@@ -178,29 +197,29 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
   `]
 })
 export class InstrumentSummaryComponent {
-    @Input({ required: true }) analysis!: InstrumentAnalysis;
-    @Output() select = new EventEmitter<void>();
+  @Input({ required: true }) analysis!: InstrumentAnalysis;
+  @Output() select = new EventEmitter<void>();
 
-    getCardClass() {
-        return this.analysis.trade_signal.recommendation;
-    }
+  getCardClass() {
+    return this.analysis.trade_signal.recommendation;
+  }
 
-    getSignalClass() {
-        return this.analysis.trade_signal.recommendation;
-    }
+  getSignalClass() {
+    return this.analysis.trade_signal.recommendation;
+  }
 
-    getScoreClass() {
-        const score = this.analysis.trade_signal.score;
-        if (score > 2) return 'positive';
-        if (score < -2) return 'negative';
-        return 'neutral';
-    }
+  getScoreClass() {
+    const score = this.analysis.trade_signal.score;
+    if (score > 2) return 'positive';
+    if (score < -2) return 'negative';
+    return 'neutral';
+  }
 
-    getPhaseClass() {
-        return this.analysis.market_phase.phase;
-    }
+  getPhaseClass() {
+    return this.analysis.market_phase.phase;
+  }
 
-    getPriceChangeClass() {
-        return this.analysis.daily_strength.price_change_percent >= 0 ? 'positive' : 'negative';
-    }
+  getPriceChangeClass() {
+    return this.analysis.daily_strength.price_change_percent >= 0 ? 'positive' : 'negative';
+  }
 }

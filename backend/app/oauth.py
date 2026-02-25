@@ -80,3 +80,57 @@ async def auth_callback(request: Request):
     except Exception as e:
         logger.error(f"OAuth error: {e}")
         return RedirectResponse(url=f"{FRONTEND_URL}?error=auth_failed")
+
+# In-memory user database for demo purposes
+# In production, use a real database
+USERS_DB = {}
+
+from pydantic import BaseModel, EmailStr
+from .auth import get_password_hash, verify_password
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+@router.post('/local/register')
+async def local_register(user: UserCreate):
+    if user.email in USERS_DB:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = get_password_hash(user.password)
+    USERS_DB[user.email] = {
+        "email": user.email,
+        "hashed_password": hashed_password,
+        "name": user.name,
+        "id": user.email # Using email as ID for local auth
+    }
+    
+    return {"message": "User registered successfully"}
+
+@router.post('/local/login')
+async def local_login(user: UserLogin):
+    db_user = USERS_DB.get(user.email)
+    if not db_user or not verify_password(user.password, db_user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+        
+    access_token = create_access_token(data={
+        "sub": db_user["id"],
+        "email": db_user["email"],
+        "name": db_user["name"]
+    })
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": db_user["id"],
+            "email": db_user["email"],
+            "name": db_user["name"],
+            "picture": ""
+        }
+    }

@@ -3,10 +3,13 @@
   <header class="header">
     <div class="header-content">
       <div class="logo-area">
-        <h1>Market Analyzer</h1>
-        <span class="badge">PRO</span>
+        <img src="nexus-logo.png" alt="NEXUS" class="app-logo">
+        <div class="brand-text">
+          <h1>NEXUS</h1>
+          <span class="badge">PRO</span>
+        </div>
       </div>
-      <p class="subtitle">Multi-timeframe analysis for institutional decisions</p>
+      <p class="subtitle">Market Intelligence Platform</p>
     </div>
 
     <div class="header-actions">
@@ -23,6 +26,13 @@
 
       <div class="action-divider"></div>
 
+      @if (psychologicalGuardrail(); as guard) {
+      <div class="shield-indicator" [class.restricted]="guard.status === 'restricted'" [title]="guard.message">
+        <span class="shield-icon">{{ guard.status === 'active' ? '🛡️' : '🚨' }}</span>
+        <span class="shield-label">{{ guard.status === 'active' ? 'Shield Active' : 'Restricted' }}</span>
+      </div>
+      }
+
       <button class="menu-btn correlation-btn" (click)="showCorrelationModal.set(true)" title="Market Correlation">
         📊
       </button>
@@ -35,6 +45,18 @@
       <button class="settings-btn" (click)="showSettings.set(true)" title="Manage Symbols">
         ⚙️
       </button>
+      <button class="menu-btn journal-btn" (click)="showTradeJournal.set(true)" title="Trade Journal">
+        📒
+      </button>
+      <button class="menu-btn alerts-btn" (click)="showSmartAlerts.set(true)" title="Smart Alerts">
+        🔔
+      </button>
+      <button class="mode-toggle-btn" (click)="toggleStrategyMode()"
+        [class.short-term]="strategyMode() === 'short_term'">
+        <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : 'Short Term' }}</span>
+        <span class="mode-icon">{{ strategyMode() === 'long_term' ? '📅' : '⏱️' }}</span>
+      </button>
+
       <button class="refresh-btn" (click)="runAnalysis()" [disabled]="loading()">
         @if (loading()) {
         <span class="spinner"></span> Analyzing...
@@ -45,17 +67,50 @@
     </div>
   </header>
 
-  <!-- ... rest of the status bar and grid ... -->
-  @if (lastUpdated()) {
-  <div class="status-bar">
-    <span class="last-updated">Last updated: {{ lastUpdated() }}</span>
-    <div class="summary">
+  <!-- Bottom Status Bar -->
+  <div class="bottom-bar">
+    <div class="bottom-bar-left">
+      @if (lastUpdated()) {
+      <span class="last-updated">🕐 {{ lastUpdated() }}</span>
+      <span class="next-update" [class.syncing]="loading()">(Next: {{ nextRefreshCountdown() }})</span>
+      }
+      <div class="bar-divider"></div>
       <span class="stat">{{ instruments().length }} instruments</span>
-      <span class="stat bullish">{{ bullishCount }} bullish</span>
-      <span class="stat bearish">{{ bearishCount }} bearish</span>
-      <span class="stat highlight">{{ tradeWorthyCount }} trade-worthy</span>
+      <span class="stat bullish">▲ {{ bullishCount }} bullish</span>
+      <span class="stat bearish">▼ {{ bearishCount }} bearish</span>
+      <span class="stat highlight">⚡ {{ tradeWorthyCount }} trade-worthy</span>
     </div>
+
+    @if (weeklyPerformance(); as perf) {
+    <div class="bottom-perf" [class.positive]="perf.total_pnl_percent > 0">
+      <div class="perf-divider">WEEKLY PNL</div>
+      <span class="perf-value">{{ perf.total_pnl_percent > 0 ? '+' : '' }}{{ perf.total_pnl_percent }}%</span>
+      <div class="bar-divider"></div>
+      <div class="perf-mini">
+        <span class="pm-label">SETUPS</span>
+        <span class="pm-value">{{ perf.total_trades }}</span>
+      </div>
+      <div class="perf-mini">
+        <span class="pm-label">WIN RATE</span>
+        <span class="pm-value">{{ perf.win_rate }}%</span>
+      </div>
+      <div class="bar-divider"></div>
+      <div class="perf-mini">
+        <span class="pm-label">BEST ({{ perf.best_trade_symbol }})</span>
+        <span class="pm-value good">+{{ perf.best_trade_pnl }}%</span>
+      </div>
+      <div class="perf-mini">
+        <span class="pm-label">WORST ({{ perf.worst_trade_symbol }})</span>
+        <span class="pm-value bad">{{ perf.worst_trade_pnl }}%</span>
+      </div>
+    </div>
+    }
   </div>
+
+  @if (instruments().length > 0) {
+  <app-ai-copilot [instruments]="instruments()" [performance]="weeklyPerformance()"
+    [correlationData]="correlationData()">
+  </app-ai-copilot>
   }
 
   @if (error()) {
@@ -66,21 +121,47 @@
   }
 
   @if (loading() && instruments().length === 0) {
-  <div class="loading-container">
-    <div class="loading-spinner"></div>
-    <p>Fetching market data and running analysis...</p>
-    <p class="loading-note">This may take a moment for the first load</p>
+  <div class="loading-screen">
+    <div class="loading-content">
+      <div class="pulse-container">
+        <div class="pulse-ring"></div>
+        <div class="pulse-core"><img src="nexus-logo.png" alt="NEXUS" class="loading-logo"></div>
+        <div class="scanning-line"></div>
+      </div>
+
+      <div class="loading-text">
+        <h2 class="glitch-text">NEXUS — INITIALIZING</h2>
+        <div class="status-steps">
+          <span class="status-item active">Deciphering Market Sentiment...</span>
+          <span class="status-item">Synchronizing Exchange Data...</span>
+          <span class="status-item">Calculating Theoretical PnL...</span>
+          <span class="status-item">Deploying Psychological Guardrails...</span>
+        </div>
+        <p class="loading-note">Primary sequence active. High-precision analysis in progress.</p>
+      </div>
+    </div>
   </div>
   }
 
-  @if (weeklyPerformance()) {
-  <div style="padding: 0 32px;">
-    <app-performance-banner [performance]="weeklyPerformance()"></app-performance-banner>
-  </div>
-  }
 
-  <main class="split-view-container">
+  <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
     <div class="sidebar-panel">
+      <div class="sidebar-header">
+        <div class="view-toggle">
+          <button class="vt-btn" [class.active]="sidebarView() === 'heatmap'" (click)="sidebarView.set('heatmap')">
+            🗺️ Heatmap
+          </button>
+          <button class="vt-btn" [class.active]="sidebarView() === 'list'" (click)="sidebarView.set('list')">
+            📋 List
+          </button>
+        </div>
+      </div>
+
+      @if (sidebarView() === 'heatmap') {
+      <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
+        (select)="selectedInstrument.set($event)">
+      </app-watchlist-heatmap>
+      } @else {
       <div class="instruments-list">
         @for (instrument of instruments(); track instrument.symbol) {
         <div class="summary-wrapper" [class.selected]="selectedInstrument()?.symbol === instrument.symbol">
@@ -89,11 +170,13 @@
         </div>
         }
       </div>
+      }
     </div>
 
     <div class="detail-panel">
       @if (selectedInstrument()) {
       <div class="detail-view-inner">
+        <app-multi-timeframe-overlay [analysis]="selectedInstrument()!"></app-multi-timeframe-overlay>
         <app-instrument-card [analysis]="selectedInstrument()!"
           (refresh)="refreshInstrument($event)"></app-instrument-card>
       </div>
@@ -105,6 +188,31 @@
       </div>
       }
     </div>
+
+    <!-- Lockdown Overlay -->
+    @if (psychologicalGuardrail(); as guard) {
+    @if (guard.status === 'restricted') {
+    <div class="lockdown-overlay">
+      <div class="lockdown-content">
+        <div class="lockdown-icon">🛑</div>
+        <h2>PSYCHOLOGICAL LOCKDOWN</h2>
+        <p class="lockdown-message">{{ guard.message }}</p>
+        <div class="lockdown-stats">
+          <div class="stat">
+            <span class="label">Current PnL:</span>
+            <span class="value bad">{{ guard.daily_pnl.toFixed(2) }}%</span>
+          </div>
+          <div class="stat">
+            <span class="label">Loss Limit:</span>
+            <span class="value">{{ guard.daily_loss_limit.toFixed(2) }}%</span>
+          </div>
+        </div>
+        <p class="lockdown-hint">Trading is disabled until the next market cycle or until a new strategy mode is
+          selected to reset your focus.</p>
+      </div>
+    </div>
+    }
+    }
   </main>
 
   @if (showSettings()) {
@@ -121,6 +229,14 @@
 
   @if (showUserManual()) {
   <app-user-manual (close)="showUserManual.set(false)"></app-user-manual>
+  }
+
+  @if (showTradeJournal()) {
+  <app-trade-journal (close)="showTradeJournal.set(false)"></app-trade-journal>
+  }
+
+  @if (showSmartAlerts()) {
+  <app-smart-alerts [instruments]="instruments()" (close)="showSmartAlerts.set(false)"></app-smart-alerts>
   }
 </div>
 } @else {

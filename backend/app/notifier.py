@@ -1,5 +1,7 @@
 import requests
 import logging
+import smtplib
+from email.message import EmailMessage
 from typing import Dict, Any, List
 from .models import InstrumentAnalysis, Signal
 
@@ -63,3 +65,31 @@ def send_alerts(analysis: InstrumentAnalysis, config: Dict[str, Any]):
             logger.info(f"Discord alert sent for {symbol}")
         except Exception as e:
             logger.error(f"Failed to send Discord alert: {e}")
+
+    # Email (SMTP)
+    email_config = config.get('email', {})
+    if email_config.get('enabled'):
+        try:
+            # Requires these keys in the config: smtp_server, smtp_port, username, password, to_email
+            smtp_server = email_config.get('smtp_server', 'smtp.gmail.com')
+            smtp_port = email_config.get('smtp_port', 587)
+            username = email_config.get('username')
+            password = email_config.get('password')
+            to_email = email_config.get('to_email')
+            from_email = email_config.get('from_email', username)
+
+            msg = EmailMessage()
+            msg.set_content(message)
+            msg['Subject'] = f"MARKET ANALYZER ALERT: {rec} on {symbol}"
+            msg['From'] = from_email
+            msg['To'] = to_email
+
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()
+                if username and password:
+                    server.login(username, password)
+                server.send_message(msg)
+            
+            logger.info(f"Email alert sent for {symbol} to {to_email}")
+        except Exception as e:
+            logger.error(f"Failed to send Email alert: {e}")

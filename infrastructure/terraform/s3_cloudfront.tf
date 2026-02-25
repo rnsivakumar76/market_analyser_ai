@@ -1,23 +1,28 @@
 ﻿# ──────────────────────────────────────────────────────────────────────────────
-# S3 Bucket — Angular Frontend Static Hosting
+# S3 Bucket — Angular Frontend Static Hosting (PER-ENVIRONMENT)
 # ──────────────────────────────────────────────────────────────────────────────
+
+locals {
+  env_suffix = var.environment == "production" ? "" : "-${var.environment}"
+}
+
 resource "aws_s3_bucket" "frontend" {
-  bucket = "${var.app_name}-frontend-${var.aws_account_id}"
+  bucket = "${var.app_name}-frontend${local.env_suffix}-${var.aws_account_id}"
 
   tags = {
-    Name        = "${var.app_name}-frontend"
+    Name        = "${var.app_name}-frontend-${var.environment}"
     Environment = var.environment
   }
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# S3 Bucket — Application Configuration persistence
+# S3 Bucket — Application Configuration persistence (PER-ENVIRONMENT)
 # ──────────────────────────────────────────────────────────────────────────────
 resource "aws_s3_bucket" "config" {
-  bucket = "${var.app_name}-config-${var.aws_account_id}"
+  bucket = "${var.app_name}-config${local.env_suffix}-${var.aws_account_id}"
 
   tags = {
-    Name        = "${var.app_name}-config"
+    Name        = "${var.app_name}-config-${var.environment}"
     Environment = var.environment
   }
 }
