@@ -2,10 +2,15 @@ import requests
 from bs4 import BeautifulSoup
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import logging
+import time
 from typing import List, Dict, Any
 from ..models import NewsSentiment, NewsItem
 
 logger = logging.getLogger(__name__)
+
+# Global cache for news sentiment (15 minute TTL)
+_news_cache = {}
+_CACHE_TTL = 900 # 15 minutes
 
 def fetch_rss_news(symbol: str) -> List[Dict[str, str]]:
     """Fetch news from various RSS sources."""
@@ -23,7 +28,7 @@ def fetch_rss_news(symbol: str) -> List[Dict[str, str]]:
     
     for url in urls:
         try:
-            response = requests.get(url, headers=headers, timeout=5)
+            response = requests.get(url, headers=headers, timeout=2) # Shorter timeout
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
@@ -57,16 +62,29 @@ def fetch_rss_news(symbol: str) -> List[Dict[str, str]]:
     return news_items[:10]
 
 def analyze_news_sentiment(symbol: str) -> NewsSentiment:
-    """Analyze sentiment of recent news for a symbol."""
+    """Analyze sentiment of recent news for a symbol with basic caching."""
+    global _news_cache
+    
+    symbol = symbol.upper()
+    now = time.time()
+    
+    # Check cache
+    if symbol in _news_cache:
+        cached_time, cached_sentiment = _news_cache[symbol]
+        if now - cached_time < _CACHE_TTL:
+            return cached_sentiment
+
     news_data = fetch_rss_news(symbol)
     
     if not news_data:
-        return NewsSentiment(
+        sentiment = NewsSentiment(
             score=0.0,
             label="Neutral",
             sentiment_summary="No recent news found.",
             news_items=[]
         )
+        _news_cache[symbol] = (now, sentiment)
+        return sentiment
     
     analyzer = SentimentIntensityAnalyzer()
     total_compound = 0
@@ -109,9 +127,13 @@ def analyze_news_sentiment(symbol: str) -> NewsSentiment:
     elif avg_score < -0.3:
         summary += " Significant negative news pressure."
         
-    return NewsSentiment(
+    sentiment = NewsSentiment(
         score=round(avg_score, 2),
         label=label,
         sentiment_summary=summary,
         news_items=analyzed_items
     )
+    
+    # Update cache
+    _news_cache[symbol] = (now, sentiment)
+    return sentiment

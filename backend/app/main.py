@@ -416,15 +416,21 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
 
     except Exception as e:
         logger.error(f"Analysis Failed for {user_id}: {e}")
-        # 3. Emergency Fallback: Serve ANY cache available (up to 4 hours)
+        # 3. Emergency Fallback: Serve ANY cache available for this user (up to 4 hours)
         if nexus_db.is_dynamo_enabled():
             emergency_stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=14400)
             if emergency_stale:
                 logger.info(f"Returning EMERGENCY STALE data for {user_id} due to error: {e}")
                 return AnalysisResponse(**emergency_stale)
+            
+            # 4. Final Fallback: Serve the GLOBAL DEFAULT cache so the UI isn't blank for new users
+            global_stale = nexus_db.get_latest_analysis_results("global_default", mode.value, max_age_seconds=14400)
+            if global_stale:
+                logger.info(f"Returning GLOBAL DEFAULT cache for {user_id} (fallback)")
+                return AnalysisResponse(**global_stale)
         
         # If absolutely nothing works, raise the error
-        raise HTTPException(status_code=503, detail="Market analysis currently unavailable. Please try again later.")
+        raise HTTPException(status_code=503, detail="Market analysis currently unavailable. System is performing a fresh scan, please retry in 30 seconds.")
 
 @app.get("/api/analyze/{symbol}")
 async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(get_current_user)):
