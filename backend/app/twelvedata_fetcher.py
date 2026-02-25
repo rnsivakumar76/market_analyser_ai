@@ -197,6 +197,11 @@ class TwelveDataFetcher:
         if 'Volume' not in df.columns:
             df['Volume'] = 0.0
             
+        # Ensure numeric types
+        for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
         return df.sort_index(ascending=True)
 
     def get_current_price(self, symbol: str) -> float:
