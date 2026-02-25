@@ -20,12 +20,21 @@ class TwelveDataFetcher:
     
     def __init__(self, api_key: str = None):
         if api_key is None:
-            try:
-                config = load_config()
-                api_key = config.get('twelvedata', {}).get('api_key', 'YOUR_API_KEY_HERE')
-            except: pass
-            if api_key == 'YOUR_API_KEY_HERE':
-                api_key = os.getenv('TWELVEDATA_API_KEY', 'YOUR_API_KEY_HERE')
+            # PRIORITIZE Environmental Variables (from Secrets)
+            api_key = os.getenv('TWELVEDATA_API_KEY')
+            
+            # If not in ENV, fallback to config file
+            if not api_key:
+                try:
+                    config = load_config()
+                    api_key = config.get('twelvedata', {}).get('api_key')
+                except:
+                    pass
+            
+            # Final fallback/check
+            if not api_key or api_key == 'YOUR_API_KEY_HERE':
+                logger.warning("TwelveData API Key is missing or default. Fetching will likely fail.")
+                api_key = 'demo' # Minimal fallback to prevent crash, though restricted
         
         self.api_key = api_key
         # Use direct TDClient for batch support
@@ -84,27 +93,38 @@ class TwelveDataFetcher:
             batch_data = ts.as_pandas()
             
             if batch_data is None:
-                raise ValueError("TwelveData Batch returned None")
+                logger.error(f"TwelveData Batch returned None for {symbols}")
+                return self._fallback_serial(symbols, interval, days)
 
             # If only one symbol was requested, SDK might return a single DataFrame
             if isinstance(batch_data, pd.DataFrame):
+                # Check for empty DF
+                if batch_data.empty:
+                    logger.warning(f"Batch data empty for {symbols}")
+                    return {}
                 sym = symbols[0]
                 results[sym] = self._normalize_df(batch_data)
             else:
                 for td_sym, df in batch_data.items():
-                    orig_sym = symbol_map_back.get(td_sym, td_sym)
-                    results[orig_sym] = self._normalize_df(df)
+                    if isinstance(df, pd.DataFrame) and not df.empty:
+                        orig_sym = symbol_map_back.get(td_sym, td_sym).replace("/USD", "")
+                        results[orig_sym] = self._normalize_df(df)
             
             return results
 
         except Exception as e:
             logger.error(f"Batch fetch failed: {e}. Falling back to serial fetch.")
-            # Fallback to serial fetch if batch fails
-            for s in symbols:
-                try:
-                    results[s] = self.fetch_historical_data(s, days=days, interval=interval)
-                except: continue
-            return results
+            return self._fallback_serial(symbols, interval, days)
+
+    def _fallback_serial(self, symbols: List[str], interval: str, days: int) -> Dict[str, pd.DataFrame]:
+        results = {}
+        for s in symbols:
+            try:
+                df = self.fetch_historical_data(s, days=days, interval=interval)
+                if not df.empty:
+                    results[s] = df
+            except: continue
+        return results
 
     def fetch_historical_data(self, symbol: str, days: int = 90, interval: str = "1day") -> pd.DataFrame:
         """Fetch single symbol historical data."""

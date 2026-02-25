@@ -374,18 +374,25 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             return sym, None, None
 
     # Parallelize analysis only (data is already fetched)
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        future_to_inst = {executor.submit(process_instrument, inst): inst for inst in instruments}
-        for future in as_completed(future_to_inst):
-            sym, analysis, hist_data = future.result()
-            if analysis:
-                results.append(analysis)
-                data_map[sym] = hist_data
-                if analysis.trade_signal.trade_worthy:
-                    alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}_{mode.value}"
-                    if alert_key not in SENT_ALERTS:
-                        send_alerts(analysis, alert_config)
-                        SENT_ALERTS.add(alert_key)
+    try:
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            future_to_inst = {executor.submit(process_instrument, inst): inst for inst in instruments}
+            for future in as_completed(future_to_inst):
+                sym, analysis, hist_data = future.result()
+                if analysis:
+                    results.append(analysis)
+                    data_map[sym] = hist_data
+                    # Alerts
+                    if analysis.trade_signal.trade_worthy:
+                        alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}_{mode.value}"
+                        if alert_key not in SENT_ALERTS:
+                            send_alerts(analysis, alert_config)
+                            SENT_ALERTS.add(alert_key)
+                else:
+                    logger.warning(f"Analysis produced no result for {sym}")
+    except Exception as e:
+        logger.error(f"Parallel analysis loop failed: {e}")
+        # Continue with whatever results we have (possibly empty)
 
     perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC-USD": btc_bench}, strategy_settings)
     correlation_results = calculate_correlations(data_map)
