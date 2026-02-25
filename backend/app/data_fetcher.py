@@ -151,13 +151,8 @@ def fetch_historical_data(
                 logger.info(f"[OK] Twelve Data Success for {symbol}")
                 return df
         except Exception as e:
-            logger.error(f"[FAIL] Twelve Data professional fetch failed: {e}")
-            # If Twelve Data is the PRIMARY and it fails, we should NOT silently fallback to low-quality data
-            # unless Twelve Data is completely down or doesn't support the symbol.
-            if "not found" in str(e).lower() or "delisted" in str(e).lower():
-                logger.warning(f"[WARN] Symbol {symbol} not found in Twelve Data, trying fallback...")
-            else:
-                raise ValueError(f"Twelve Data primary fetch failed for {symbol}: {e}")
+            logger.warning(f"[WARN] Twelve Data professional fetch failed for {symbol}: {e}. Trying fallback sources...")
+            # We don't raise here anymore to allow yfinance fallback if pro API fails (e.g. rate limits)
 
     # Check for mock mode
     if os.getenv('USE_MOCK_DATA', 'false').lower() == 'true':
@@ -279,10 +274,7 @@ def get_current_price(symbol: str) -> float:
                 logger.info(f"[OK] Twelve Data price for {symbol}: {price}")
                 return price
         except Exception as e:
-            logger.error(f"[FAIL] Twelve Data current price failed: {e}")
-            # Only fallback if valid reason (not a rate limit or API error)
-            if "not found" not in str(e).lower() and "delisted" not in str(e).lower():
-                raise ValueError(f"Twelve Data primary price fetch failed for {symbol}: {e}")
+            logger.warning(f"[WARN] Twelve Data current price failed for {symbol}: {e}. Trying fallback sources...")
 
     # Fallback Priority for non-pro or if Twelve Data failed specifically on symbol existence
     # Try FMP/Paid APIs first for commodities, then yfinance

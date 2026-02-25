@@ -34,14 +34,10 @@ class TwelveDataFetcher:
         self.min_request_interval = 8.0  # 8 seconds between requests (free tier limit)
         
     def _rate_limit_wait(self):
-        """Wait to respect Twelve Data rate limits."""
-        current_time = time.time()
-        time_since_last = current_time - self.last_request_time
-        
-        if time_since_last < self.min_request_interval:
-            time.sleep(self.min_request_interval - time_since_last)
-        
-        self.last_request_time = time.time()
+        """No-op throttle. Handling rate limits via fallback in data_fetcher instead of sleeping in Lambda."""
+        # Removed sleep to allow Lambda to finish within API Gateway's 30s timeout.
+        # Fallback to yfinance will handle any 429 errors from Twelve Data.
+        pass
         
     def get_symbol_mapping(self, symbol: str) -> str:
         """Map our symbols to Twelve Data symbols."""
@@ -49,7 +45,7 @@ class TwelveDataFetcher:
             # Commodities
             'XAU': 'XAU/USD',      # Gold
             'XAG': 'XAG/USD',      # Silver
-            'BCO': 'BRENT/USD',    # Brent Crude Oil (TwelveData uses BRENT/USD)
+            'BCO': 'UKOIL',        # Brent Crude Oil (TwelveData symbol)
             
             # Forex pairs
             'USDJPY': 'USD/JPY',
