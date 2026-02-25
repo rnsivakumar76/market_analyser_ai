@@ -1,6 +1,6 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Import existing production resources to resolve "Resource already exists" errors
-# This file should only be active during the migration/fix phase.
+# ENABLE THIS ONLY DURING PRODUCTION MIGRATION
 # ──────────────────────────────────────────────────────────────────────────────
 
 # 1. DynamoDB Table
@@ -26,7 +26,7 @@ import {
   id = "market-analyser-config-614686365382"
 }
 
-# 4. ECR Repositories (Shared/Prod)
+# 4. ECR Repositories (Primary ones only)
 import {
   to = aws_ecr_repository.frontend[0]
   id = "market-analyser-frontend"
@@ -37,7 +37,7 @@ import {
   id = "market-analyser-backend"
 }
 
-# 5. GitHub OIDC (Shared/Prod)
+# 5. GitHub OIDC
 import {
   to = aws_iam_openid_connect_provider.github[0]
   id = "arn:aws:iam::614686365382:oidc-provider/token.actions.githubusercontent.com"
@@ -48,7 +48,19 @@ import {
   id = "github-actions-market-analyser"
 }
 
+# 6. Lambda & Core API (Resolves CreateFunction 409)
 import {
-  to = aws_iam_role_policy_attachment.github_actions_admin[0]
-  id = "github-actions-market-analyser/arn:aws:iam::aws:policy/AdministratorAccess"
+  to = aws_lambda_function.api
+  id = "market-analyser-api"
+}
+
+import {
+  to = aws_cloudwatch_event_rule.hourly_analysis
+  id = "market-analyser-5min-analysis"
+}
+
+# 7. API Gateway
+import {
+  to = aws_apigatewayv2_api.http_api
+  id = "market-analyser-http-api"
 }

@@ -38,7 +38,18 @@ app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET"
 app.include_router(auth_router, prefix="/api")
 
 # Lazy analysis helper to keep imports deferred
-def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_direction: Any = None, strategy_settings: Any = None, mode: Any = None, benchmark_data_df: Any = None) -> Any:
+def analyze_instrument_lazy(
+    symbol: str, 
+    name: str, 
+    params: dict, 
+    benchmark_direction: Any = None, 
+    strategy_settings: Any = None, 
+    mode: Any = None, 
+    benchmark_data_df: Any = None,
+    pre_macro_df: Any = None,
+    pre_pullback_df: Any = None,
+    pre_execution_df: Any = None
+) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
     from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price
     from .analyzers import (
@@ -59,22 +70,21 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     if benchmark_direction is None:
         benchmark_direction = Signal.NEUTRAL
     
-    # Timeframe selection based on mode
+    # Timeframe selection based on mode - Use pre-fetched data if available
+    if pre_macro_df is not None: macro_data = pre_macro_df
+    else: macro_data = fetch_historical_data(symbol, days=(1000 if mode == StrategyMode.LONG_TERM else 500), interval=("1mo" if mode == StrategyMode.LONG_TERM else "1d"))
+
+    if pre_pullback_df is not None: pullback_data = pre_pullback_df
+    else: pullback_data = fetch_historical_data(symbol, days=(250 if mode == StrategyMode.LONG_TERM else 120), interval=("1wk" if mode == StrategyMode.LONG_TERM else "4h"))
+
+    if pre_execution_df is not None: execution_data = pre_execution_df
+    else: execution_data = fetch_historical_data(symbol, days=(500 if mode == StrategyMode.LONG_TERM else 300), interval=("1d" if mode == StrategyMode.LONG_TERM else "1h"))
+
     if mode == StrategyMode.LONG_TERM:
-        # Long Term: Monthly (Trend) -> Weekly (Pullback) -> Daily (Execution)
-        macro_data = fetch_historical_data(symbol, days=1000, interval="1mo")
-        pullback_data = fetch_historical_data(symbol, days=250, interval="1wk")
-        execution_data = fetch_historical_data(symbol, days=500, interval="1d")
-        
         macro_label = "Institutional (Long-Term)"
         pullback_label = "Swing Portfolio"
         execution_label = "Tactical Entry"
     else:
-        # Short Term: Daily (Trend) -> 4-Hour (Pullback) -> 1-Hour (Execution)
-        macro_data = fetch_historical_data(symbol, days=500, interval="1d")
-        pullback_data = fetch_historical_data(symbol, days=120, interval="4h")
-        execution_data = fetch_historical_data(symbol, days=300, interval="1h")
-        
         macro_label = "Institutional (Short-Term)"
         pullback_label = "Day Trading"
         execution_label = "Execution (H1)"
@@ -130,7 +140,7 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     
     # NEW: Relative Strength Analysis (Alpha vs Beta)
     # Determine which benchmark to use
-    is_crypto = any(word in symbol.upper() for word in ["BTC", "ETH", "USD", "CRYPTO", "BITCOIN"]) 
+    is_crypto = any(sub in symbol.upper() for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(symbol) > 6 and "USD" in symbol.upper())
     bench_sym = "BTC-USD" if is_crypto else "SPX"
     
     # Use pre-fetched data if available, otherwise fetch on the fly
@@ -329,27 +339,42 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     if benchmarks_data.get("BTC_macro") is not None and not benchmarks_data["BTC_macro"].empty:
         btc_bench = analyze_monthly_trend(benchmarks_data["BTC_macro"], params.get('monthly', {})).direction
             
+    # BATCH FETCH for all instruments to solve 30s Gateway Timeout
+    from .twelvedata_fetcher import TwelveDataFetcher
+    fetcher = TwelveDataFetcher()
+    sym_list = [inst['symbol'] for inst in instruments]
+    
+    logger.info(f"Triggering Batch Fetches for {len(sym_list)} instruments...")
+    macro_batch = fetcher.fetch_batch_data(sym_list, interval=("1month" if mode == StrategyMode.LONG_TERM else "1day"), days=1000 if mode == StrategyMode.LONG_TERM else 500)
+    pullback_batch = fetcher.fetch_batch_data(sym_list, interval=("1week" if mode == StrategyMode.LONG_TERM else "4h"), days=250 if mode == StrategyMode.LONG_TERM else 120)
+    exec_batch = fetcher.fetch_batch_data(sym_list, interval=("1day" if mode == StrategyMode.LONG_TERM else "1h"), days=500 if mode == StrategyMode.LONG_TERM else 300)
+
     results = []
     data_map = {}
 
     def process_instrument(inst):
         sym = inst['symbol'].upper()
         try:
-            # Improved Crypto Detection: BTC, ETH, etc., but NOT EURUSD/USDJPY
+            # Improved Crypto Detection
             is_crypto = any(sub in sym for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
             bench = btc_bench if is_crypto else spy_bench
             bench_exec_df = benchmarks_data.get("BTC_exec") if is_crypto else benchmarks_data.get("SPX_exec")
             
+            # Pass pre-fetched data
             analysis, hist_data = analyze_instrument_lazy(
-                sym, inst['name'], params, bench, strategy_settings, mode=mode, benchmark_data_df=bench_exec_df
+                sym, inst['name'], params, bench, strategy_settings, mode=mode, 
+                benchmark_data_df=bench_exec_df,
+                pre_macro_df=macro_batch.get(sym),
+                pre_pullback_df=pullback_batch.get(sym),
+                pre_execution_df=exec_batch.get(sym)
             )
             return sym, analysis, hist_data
         except Exception as e:
             logger.error(f"Error analyzing {sym}: {e}")
             return sym, None, None
 
-    # Reduced workers to 4 to stay under 55 req/min (Basic Plan limit)
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    # Parallelize analysis only (data is already fetched)
+    with ThreadPoolExecutor(max_workers=10) as executor:
         future_to_inst = {executor.submit(process_instrument, inst): inst for inst in instruments}
         for future in as_completed(future_to_inst):
             sym, analysis, hist_data = future.result()
