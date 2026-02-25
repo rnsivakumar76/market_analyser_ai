@@ -53,7 +53,15 @@ class TwelveDataFetcher:
             
     def get_symbol_mapping(self, symbol: str) -> str:
         symbol_mappings = {
-            'XAU': 'XAU/USD', 'XAG': 'XAG/USD', 'BCO': 'WTI/USD', 'WTI': 'WTI/USD',
+            # Commodities (Free tier compatible via ETFs)
+            'XAU': 'GLD',          # Gold
+            'XAG': 'SLV',          # Silver
+            'BCO': 'USO',          # Oil
+            'WTI': 'USO',
+            'GC=F': 'GLD',
+            'SI=F': 'SLV',
+            
+            # Forex (Note: these often work in free tier)
             'USDJPY': 'USD/JPY', 'EURUSD': 'EUR/USD', 'GBPUSD': 'GBP/USD', 'AUDUSD': 'AUD/USD',
             'BTC-USD': 'BTC/USD', 'ETH-USD': 'ETH/USD', 'BTC': 'BTC/USD', 'ETH': 'ETH/USD',
             'SPX': 'SPY', 'IXIC': 'QQQ', 'DJI': 'DIA', 'SPY': 'SPY',

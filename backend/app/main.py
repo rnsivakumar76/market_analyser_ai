@@ -99,6 +99,12 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     pullback.description = f"[{pullback_label}] " + pullback.description
     
     strength = analyze_daily_strength(execution_data, params.get('daily', {}))
+    # Override price change to be TRUE DAILY change
+    # In Long Term mode, execution_data is 1d. In Short Term mode, macro_data is 1d.
+    daily_source = execution_data if mode == StrategyMode.LONG_TERM else macro_data
+    if not daily_source.empty and len(daily_source) >= 2:
+        daily_change = ((daily_source['Close'].iloc[-1] - daily_source['Close'].iloc[-2]) / daily_source['Close'].iloc[-2]) * 100
+        strength.price_change_percent = round(daily_change, 2)
     strength.description = f"[{execution_label}] " + strength.description
     
     phase = analyze_market_phase(execution_data, params.get('daily', {}))
@@ -323,7 +329,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     def process_instrument(inst):
         sym = inst['symbol'].upper()
         try:
-            is_crypto = any(word in sym for word in ["BTC", "ETH", "USD", "CRYPTO", "BITCOIN"])
+            # Improved Crypto Detection: BTC, ETH, etc., but NOT EURUSD/USDJPY
+            is_crypto = any(sub in sym for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
             bench = btc_bench if is_crypto else spy_bench
             bench_exec_df = benchmarks_data.get("BTC_exec") if is_crypto else benchmarks_data.get("SPX_exec")
             
