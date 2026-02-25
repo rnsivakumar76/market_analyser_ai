@@ -68,5 +68,12 @@ infrastructure/terraform/*.txt
 infrastructure/terraform/*.json
 infrastructure/terraform/dist-local/
 frontend/dist-local/
+latest_*.txt
+*.log
+frontend/*.txt
+dist/
+out/
+dist-local/
+dist-output/
 
 

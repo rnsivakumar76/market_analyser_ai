@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem } from '../../services/market-analyzer.service';
 import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
@@ -1560,7 +1560,7 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
     }
   `]
 })
-export class InstrumentCardComponent {
+export class InstrumentCardComponent implements OnChanges {
   @Input({ required: true }) analysis!: InstrumentAnalysis;
   @Output() refresh = new EventEmitter<string>();
 
@@ -1577,6 +1577,28 @@ export class InstrumentCardComponent {
 
   closeNewsModal() {
     this.selectedNewsItem = null;
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['analysis'] && !changes['analysis'].firstChange) {
+      if (this.showChart) {
+        this.refreshChart();
+      }
+    }
+  }
+
+  refreshChart() {
+    this.isLoadingChart = true;
+    this.marketAnalyzerService.getChartData(this.analysis.symbol).subscribe({
+      next: (data) => {
+        this.chartData = data;
+        this.isLoadingChart = false;
+      },
+      error: (err) => {
+        console.error('Error refreshing chart data:', err);
+        this.isLoadingChart = false;
+      }
+    });
   }
 
   onRefresh() {

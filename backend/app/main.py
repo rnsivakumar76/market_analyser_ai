@@ -239,20 +239,33 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
 
     # Scheduler skip if no active user
     if user_id == "global_default":
-        logger.info(f"Scheduler disabled: no active user for user_id {user_id}")
-        return [], {}, {}, None    # 1. Check Cache First
+        # Check if we have a shared cache first to avoid re-calculating for every scheduler trigger
+        if nexus_db.is_dynamo_enabled():
+            cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240)
+            if cached:
+                logger.info(f"System scheduler: Serving cached results for {user_id}")
+                return cached.get('instruments', []), cached.get('weekly_performance', {}), cached.get('correlation_data', {}), cached.get('psychological_guardrail', {})
+        
+        logger.info(f"System scheduler: Running fresh analysis for {user_id}...")
+    
+    # 1. Check Cache First
     if nexus_db.is_dynamo_enabled():
         cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240) # 4 min cache
         if cached:
-            # Reconstruct the response from cache
+            logger.info(f"Serving cached results for {user_id} ({mode.value})")
+            from .models import InstrumentAnalysis, PerformanceSummary, CorrelationData, PsychologicalGuardrail
+            # Reconstruct models from dict
             try:
-                # Need to return the full tuple (results, perf, corr, guardrail)
-                # But since it's JSON, we need to be careful. 
-                # Actually, it's easier to just return the AnalysisResponse later.
-                # Let's adjust get_analyze_all to handle this.
-                pass
-            except:
-                pass
+                results = [InstrumentAnalysis(**i) for i in cached.get('instruments', [])]
+                perf = PerformanceSummary(**cached.get('weekly_performance', {}))
+                corr = CorrelationData(**cached.get('correlation_data', {}))
+                # guardrail might be missing in old cache
+                guard_dict = cached.get('psychological_guardrail')
+                guard = PsychologicalGuardrail(**guard_dict) if guard_dict else None
+                return results, perf, corr, guard
+            except Exception as e:
+                logger.warning(f"Failed to reconstruct models from cache: {e}")
+                # Fall back to fresh analysis
 
     logger.info(f"Running parallel market scan for user: {user_id} ({mode.value})...")
     config = load_config(user_id=user_id)
@@ -352,38 +365,66 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     return results, perf_summary, correlation_results, guardrail
 
 @app.get("/api/analyze")
-async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)):
+async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = Depends(get_current_user)):
     from .models import AnalysisResponse, StrategyMode
     
     # Cast mode if string
     if isinstance(mode, str):
-        mode = StrategyMode(mode)
+        try:
+            mode = StrategyMode(mode)
+        except ValueError:
+            mode = StrategyMode.LONG_TERM
     if mode is None:
         mode = StrategyMode.LONG_TERM
     
-    # Check Cache
-    if nexus_db.is_dynamo_enabled():
-        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240)
+    # 1. Optimistic Cache check (if not forced refresh)
+    # If we have something in cache less than 5 minutes old, serve it fast.
+    if not refresh and nexus_db.is_dynamo_enabled():
+        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=300)
         if cached:
+            logger.info(f"Fast-path: Serving cached {mode.value} for {user_id}")
             return AnalysisResponse(**cached)
     
-    results, perf, corr, guardrail = await run_scheduled_analysis(user_id=user_id, mode=mode)
-    response = AnalysisResponse(
-        analysis_timestamp=datetime.now(timezone.utc).isoformat(),
-        instruments=results,
-        weekly_performance=perf,
-        correlation_data=corr,
-        psychological_guardrail=guardrail
-    )
+    # 2. Perform Fresh Analysis
+    try:
+        results, perf, corr, guardrail = await run_scheduled_analysis(user_id=user_id, mode=mode)
+        
+        # Ensure we have results before building response
+        if not results and nexus_db.is_dynamo_enabled():
+            # If fresh scan returned empty (e.g. TwelveData partial outage), try stale cache fallback
+            stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=7200) # 2 hours
+            if stale:
+                logger.warning(f"Fresh scan empty, falling back to STALE cache for {user_id}")
+                return AnalysisResponse(**stale)
 
-    # Save to Cache
-    if nexus_db.is_dynamo_enabled():
-        try:
-            nexus_db.save_analysis_results(user_id, response.dict(), mode.value)
-        except Exception as e:
-            logger.error(f"Failed to cache analysis: {e}")
+        response = AnalysisResponse(
+            analysis_timestamp=datetime.now(timezone.utc).isoformat(),
+            instruments=results,
+            weekly_performance=perf,
+            correlation_data=corr,
+            psychological_guardrail=guardrail
+        )
 
-    return response
+        # Save to Cache
+        if nexus_db.is_dynamo_enabled() and results:
+            try:
+                nexus_db.save_analysis_results(user_id, response.dict(), mode.value)
+            except Exception as e:
+                logger.error(f"Failed to cache analysis: {e}")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Analysis Failed for {user_id}: {e}")
+        # 3. Emergency Fallback: Serve ANY cache available (up to 4 hours)
+        if nexus_db.is_dynamo_enabled():
+            emergency_stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=14400)
+            if emergency_stale:
+                logger.info(f"Returning EMERGENCY STALE data for {user_id} due to error: {e}")
+                return AnalysisResponse(**emergency_stale)
+        
+        # If absolutely nothing works, raise the error
+        raise HTTPException(status_code=503, detail="Market analysis currently unavailable. Please try again later.")
 
 @app.get("/api/analyze/{symbol}")
 async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(get_current_user)):
