@@ -147,6 +147,14 @@ jobs:
           # Enable prod imports if in prod workspace to adopt shared global resources
           if [ "$WORKSPACE" = "prod" ]; then
             mv imports_prod.tf.disabled imports_prod.tf || echo "No prod imports to enable"
+            # Surgical fix: Remove mistakenly imported dev environment resources from the production state file
+            terraform state rm aws_s3_bucket.frontend aws_s3_bucket.config \
+              aws_s3_bucket_website_configuration.frontend aws_s3_bucket_public_access_block.frontend \
+              aws_s3_bucket_public_access_block.config aws_s3_bucket_policy.frontend_public \
+              aws_lambda_function.api aws_lambda_permission.apigw aws_lambda_permission.eventbridge \
+              aws_apigatewayv2_api.http_api aws_apigatewayv2_stage.default aws_apigatewayv2_integration.lambda \
+              aws_apigatewayv2_route.proxy aws_iam_role.lambda_exec aws_iam_role_policy.lambda_s3_config \
+              aws_iam_role_policy.lambda_dynamodb aws_dynamodb_table.nexus || true
           fi
           
           terraform apply -auto-approve \
