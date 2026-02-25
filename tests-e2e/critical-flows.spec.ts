@@ -49,23 +49,24 @@ test.describe('Market Analyser - Critical Flows', () => {
             await page.click('.journal-btn');
 
             // Modal should be visible
-            await expect(page.locator('.modal-container')).toBeVisible();
+            await expect(page.locator('.journal-modal')).toBeVisible();
             await expect(page.locator('.modal-header h2')).toContainText('Trade Journal');
 
             // Verify "Log New Trade" section is there
-            await expect(page.getByText('Log New Execution')).toBeVisible();
+            await expect(page.getByText('Log New Trade')).toBeVisible();
         });
 
         test('Settings Flow: should be able to open settings modal', async ({ page }) => {
             // Open settings
             await page.click('.settings-btn');
 
-            // Should see "Manage Watchlist"
-            await expect(page.getByText('Manage Watchlist')).toBeVisible();
+            // Should see "Manage Symbols"
+            await expect(page.locator('.settings-modal')).toBeVisible();
+            await expect(page.getByText('Manage Symbols')).toBeVisible();
 
             // Close modal
-            await page.click('.modal-close');
-            await expect(page.locator('.modal-container')).not.toBeVisible();
+            await page.click('.close-btn');
+            await expect(page.locator('.settings-modal')).not.toBeVisible();
         });
 
         test('Theme/UI Toggle Flow: should persist strategy mode toggle', async ({ page }) => {
@@ -75,12 +76,12 @@ test.describe('Market Analyser - Critical Flows', () => {
             // Toggle it
             await modeBtn.click();
 
-            // Text should change
-            const newText = await modeBtn.innerText();
-            expect(initialText).not.toBe(newText);
+            // Text should change - using auto-retrying assertion
+            await expect(modeBtn).not.toHaveText(initialText);
 
-            // Verify it stays changed after reload (via the mock logic we implemented in Phase 4)
-            // Note: In real E2E, this would verify the PUT call to /api/preferences
+            // Toggle it back to verify flexibility
+            await modeBtn.click();
+            await expect(modeBtn).toHaveText(initialText);
         });
     });
 });
