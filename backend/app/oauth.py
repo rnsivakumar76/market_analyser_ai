@@ -43,6 +43,7 @@ async def login(request: Request):
     url = str(request.url_for('auth_callback'))
     if "localhost" not in url:
         url = url.replace("http://", "https://")
+    logger.info(f"Initiating Google login. Redirect URI: {url}")
     return await oauth.google.authorize_redirect(request, url)
 
 from fastapi.responses import RedirectResponse

@@ -5,17 +5,17 @@ twelvedata:
 fmp:
   api_key: bF2I9pQqYw0jRnnJbv3yrDmFwA4yyESM
 instruments:
-- symbol: XAU/USD
+- symbol: XAU
   name: Gold USD
-- symbol: XAG/USD
+- symbol: XAG
   name: Silver USD
-- symbol: BCO/USD
+- symbol: BCO
   name: Brent Crude Oil
-- symbol: USD/JPY
+- symbol: USDJPY
   name: USD/JPY
-- symbol: EUR/USD
+- symbol: EURUSD
   name: EUR/USD
-- symbol: SPY
+- symbol: SPX
   name: S&P 500 Index
 - symbol: AAPL
   name: Apple Inc.
@@ -23,7 +23,7 @@ instruments:
   name: NVIDIA Corporation
 - symbol: TSLA
   name: Tesla Inc
-- symbol: BTC/USD
+- symbol: BTC-USD
   name: Bitcoin USD
 analysis:
   monthly:

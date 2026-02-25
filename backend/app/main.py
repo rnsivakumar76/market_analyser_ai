@@ -236,9 +236,23 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     logger.info(f"Running parallel market scan for user: {user_id} ({mode.value})...")
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
+    logger.info(f"Loaded {len(instruments)} instruments for user {user_id}")
+    
     params = get_analysis_params(config)
     alert_config = get_alert_config(config)
-    strategy_settings = StrategySettings(**get_strategy_config(config))
+    
+    try:
+        strategy_settings = StrategySettings(**get_strategy_config(config))
+    except Exception as e:
+        logger.error(f"Failed to parse strategy settings: {e}. Using defaults.")
+        strategy_settings = StrategySettings(**{
+            "conviction_threshold": 70,
+            "adx_threshold": 25,
+            "atr_multiplier_tp": 3.0,
+            "atr_multiplier_sl": 1.5,
+            "portfolio_value": 10000.0,
+            "risk_per_trade_percent": 1.0
+        })
     
     # Parallel Fetch for BOTH Macro and Execution Benchmarks
     benchmarks_data = {}
