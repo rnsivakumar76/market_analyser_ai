@@ -79,11 +79,9 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
         pullback_label = "Day Trading"
         execution_label = "Execution (H1)"
 
-    try:
-        current_price = get_current_price(symbol)
-    except Exception as e:
-        logger.warning(f"Could not fetch current price for {symbol}: {e}. Using last execution close.")
-        current_price = float(execution_data['Close'].iloc[-1])
+    # Use the most recent close from execution data as the current price to save API credits
+    current_price = float(execution_data['Close'].iloc[-1])
+    logger.info(f"Using execution price for {symbol}: {current_price}")
     
     trend = analyze_monthly_trend(macro_data, params.get('monthly', {}))
     # Update description to reflect timeframe
@@ -107,7 +105,6 @@ def analyze_instrument_lazy(symbol: str, name: str, params: dict, benchmark_dire
     tech_indicators = analyze_technical_indicators(execution_data)
     news_sentiment = analyze_news_sentiment(symbol)
     
-    # Calculate volatility and fundamentals first to inform the action plan
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value)
     fundamentals = analyze_fundamentals(symbol)
     
@@ -232,6 +229,20 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     if mode is None:
         mode = StrategyMode.LONG_TERM
 
+    # 1. Check Cache First
+    if nexus_db.is_dynamo_enabled():
+        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240) # 4 min cache
+        if cached:
+            # Reconstruct the response from cache
+            try:
+                # Need to return the full tuple (results, perf, corr, guardrail)
+                # But since it's JSON, we need to be careful. 
+                # Actually, it's easier to just return the AnalysisResponse later.
+                # Let's adjust get_analyze_all to handle this.
+                pass
+            except:
+                pass
+
     logger.info(f"Running parallel market scan for user: {user_id} ({mode.value})...")
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
@@ -336,15 +347,32 @@ async def analyze_all(mode: Any = None, user_id: str = Depends(get_current_user)
     # Cast mode if string
     if isinstance(mode, str):
         mode = StrategyMode(mode)
+    if mode is None:
+        mode = StrategyMode.LONG_TERM
+    
+    # Check Cache
+    if nexus_db.is_dynamo_enabled():
+        cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=240)
+        if cached:
+            return AnalysisResponse(**cached)
     
     results, perf, corr, guardrail = await run_scheduled_analysis(user_id=user_id, mode=mode)
-    return AnalysisResponse(
+    response = AnalysisResponse(
         analysis_timestamp=datetime.now(timezone.utc).isoformat(),
         instruments=results,
         weekly_performance=perf,
         correlation_data=corr,
         psychological_guardrail=guardrail
     )
+
+    # Save to Cache
+    if nexus_db.is_dynamo_enabled():
+        try:
+            nexus_db.save_analysis_results(user_id, response.dict(), mode.value)
+        except Exception as e:
+            logger.error(f"Failed to cache analysis: {e}")
+
+    return response
 
 @app.get("/api/analyze/{symbol}")
 async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(get_current_user)):
@@ -556,7 +584,6 @@ async def health_check():
 async def test_gold():
     from .models import StrategySettings, Signal
     from .config_loader import load_config, get_analysis_params, get_strategy_config
-    from .data_fetcher import YF_SYMBOL_MAP, _get_yf_symbols
     
     config = load_config()
     params = get_analysis_params(config)
@@ -566,18 +593,14 @@ async def test_gold():
         # Pass Signal.NEUTRAL to avoid validation error
         analysis, _ = analyze_instrument_lazy("XAU", "Gold USD Test", params, benchmark_direction=Signal.NEUTRAL, strategy_settings=strategy_settings)
         return {
-            "analysis": analysis,
-            "yf_symbol_map": YF_SYMBOL_MAP,
-            "xau_symbols": _get_yf_symbols("XAU")
+            "analysis": analysis
         }
     except Exception as e:
         import traceback
         logger.error(f"Test Gold Failed: {e}\n{traceback.format_exc()}")
         return {
             "error": str(e),
-            "traceback": traceback.format_exc(),
-            "yf_symbol_map": YF_SYMBOL_MAP,
-            "xau_symbols": _get_yf_symbols("XAU")
+            "traceback": traceback.format_exc()
         }
 
 # ─── Trade Journal ────────────────────────────────────────────────

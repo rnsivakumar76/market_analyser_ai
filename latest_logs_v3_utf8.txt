@@ -1,0 +1,201 @@
+﻿/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	[ERROR]	2026-02-25T07:45:55.372Z	e0d8ca38-84a3-4ffb-b1f7-66349755b826	[TwelveData] Price error for TSLA: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:45:55.372Z	e0d8ca38-84a3-4ffb-b1f7-66349755b826	[STRICT ERROR] Twelve Data current price failed for TSLA: Failed to get current price for TSLA: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[WARNING]	2026-02-25T07:45:55.372Z	e0d8ca38-84a3-4ffb-b1f7-66349755b826	Could not fetch current price for TSLA: Twelve Data failed: Failed to get current price for TSLA: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing. Using last execution close.
+	/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	[ERROR]	2026-02-25T07:45:55.599Z	e0d8ca38-84a3-4ffb-b1f7-66349755b826	[TwelveData] Price error for AAPL: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:45:55.599Z	e0d8ca38-84a3-4ffb-b1f7-66349755b826	[STRICT ERROR] Twelve Data current price failed for AAPL: Failed to get current price for AAPL: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[WARNING]	2026-02-25T07:45:55.600Z	e0d8ca38-84a3-4ffb-b1f7-66349755b826	Could not fetch current price for AAPL: Twelve Data failed: Failed to get current price for AAPL: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing. Using last execution close.
+	/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	[WARNING]	2026-02-25T07:46:10.639Z	e0d8ca38-84a3-4ffb-b1f7-66349755b826	[SPX] Skipping ù ATR is 0
+	END RequestId: e0d8ca38-84a3-4ffb-b1f7-66349755b826
+	REPORT RequestId: e0d8ca38-84a3-4ffb-b1f7-66349755b826	Duration: 35053.89 ms	Billed Duration: 35054 ms	Memory Size: 3008 MB	Max Memory Used: 247 MB	
+	START RequestId: 2e62bb97-0712-44ce-8b98-cedc1d0eeaae Version: $LATEST
+	[ERROR]	2026-02-25T07:46:43.219Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[TwelveData] Error for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	[ERROR]	2026-02-25T07:46:43.219Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[STRICT ERROR] Twelve Data fetch failed for BCO: Failed to fetch Twelve Data for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	[ERROR]	2026-02-25T07:46:43.219Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	Error analyzing BCO: Twelve Data failed: Failed to fetch Twelve Data for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	[ERROR]	2026-02-25T07:46:57.002Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[TwelveData] Error for NVDA: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.002Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[STRICT ERROR] Twelve Data fetch failed for NVDA: Failed to fetch Twelve Data for NVDA: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.003Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	Error analyzing NVDA: Twelve Data failed: Failed to fetch Twelve Data for NVDA: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.055Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[TwelveData] Error for TSLA: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.055Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[STRICT ERROR] Twelve Data fetch failed for TSLA: Failed to fetch Twelve Data for TSLA: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.056Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	Error analyzing TSLA: Twelve Data failed: Failed to fetch Twelve Data for TSLA: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.252Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[TwelveData] Error for BTC-USD: You have run out of API credits for the current minute. 58 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.253Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[STRICT ERROR] Twelve Data fetch failed for BTC-USD: Failed to fetch Twelve Data for BTC-USD: You have run out of API credits for the current minute. 58 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.256Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	Error analyzing BTC-USD: Twelve Data failed: Failed to fetch Twelve Data for BTC-USD: You have run out of API credits for the current minute. 58 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.422Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[TwelveData] Error for AAPL: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.422Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[STRICT ERROR] Twelve Data fetch failed for AAPL: Failed to fetch Twelve Data for AAPL: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:46:57.422Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	Error analyzing AAPL: Twelve Data failed: Failed to fetch Twelve Data for AAPL: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[WARNING]	2026-02-25T07:46:57.679Z	2e62bb97-0712-44ce-8b98-cedc1d0eeaae	[SPX] Skipping ù ATR is 0
+	END RequestId: 2e62bb97-0712-44ce-8b98-cedc1d0eeaae
+	REPORT RequestId: 2e62bb97-0712-44ce-8b98-cedc1d0eeaae	Duration: 15843.51 ms	Billed Duration: 15844 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: fa8f290c-6a16-4c70-918d-2323e78c3821 Version: $LATEST
+	END RequestId: fa8f290c-6a16-4c70-918d-2323e78c3821
+	REPORT RequestId: fa8f290c-6a16-4c70-918d-2323e78c3821	Duration: 2.06 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 2898625d-a3a1-41a6-9106-83fc2a8dcf8b Version: $LATEST
+	[WARNING]	2026-02-25T07:47:20.617Z	2898625d-a3a1-41a6-9106-83fc2a8dcf8b	JWT validation failed: Not enough segments
+	END RequestId: 2898625d-a3a1-41a6-9106-83fc2a8dcf8b
+	REPORT RequestId: 2898625d-a3a1-41a6-9106-83fc2a8dcf8b	Duration: 2.74 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 37162a24-a2bc-4a27-a426-480ab6339326 Version: $LATEST
+	END RequestId: 37162a24-a2bc-4a27-a426-480ab6339326
+	REPORT RequestId: 37162a24-a2bc-4a27-a426-480ab6339326	Duration: 1.91 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 9871bc61-c84b-4de3-9fa9-7bba4ff9de90 Version: $LATEST
+	[WARNING]	2026-02-25T07:47:24.756Z	9871bc61-c84b-4de3-9fa9-7bba4ff9de90	JWT validation failed: Not enough segments
+	END RequestId: 9871bc61-c84b-4de3-9fa9-7bba4ff9de90
+	REPORT RequestId: 9871bc61-c84b-4de3-9fa9-7bba4ff9de90	Duration: 2.62 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 636a0e07-bafb-464f-abbc-6c7fb9ee77f7 Version: $LATEST
+	END RequestId: 636a0e07-bafb-464f-abbc-6c7fb9ee77f7
+	REPORT RequestId: 636a0e07-bafb-464f-abbc-6c7fb9ee77f7	Duration: 1.96 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: beef70fb-035c-40b7-aa62-9aa020a19ac8 Version: $LATEST
+	END RequestId: beef70fb-035c-40b7-aa62-9aa020a19ac8
+	REPORT RequestId: beef70fb-035c-40b7-aa62-9aa020a19ac8	Duration: 2.18 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: bd029841-6a86-4053-a85b-04f69ae6fb24 Version: $LATEST
+	[WARNING]	2026-02-25T07:47:28.859Z	bd029841-6a86-4053-a85b-04f69ae6fb24	JWT validation failed: Not enough segments
+	END RequestId: bd029841-6a86-4053-a85b-04f69ae6fb24
+	REPORT RequestId: bd029841-6a86-4053-a85b-04f69ae6fb24	Duration: 2.36 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: a2babe5f-835c-4c4e-96b5-2d1c248dbd05 Version: $LATEST
+	END RequestId: a2babe5f-835c-4c4e-96b5-2d1c248dbd05
+	REPORT RequestId: a2babe5f-835c-4c4e-96b5-2d1c248dbd05	Duration: 2.25 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: cea38b3a-31a6-4770-ac86-7531d5ca7149 Version: $LATEST
+	END RequestId: cea38b3a-31a6-4770-ac86-7531d5ca7149
+	REPORT RequestId: cea38b3a-31a6-4770-ac86-7531d5ca7149	Duration: 1.68 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: a0de5248-4a86-4bf1-92c7-5fb91b243488 Version: $LATEST
+	[WARNING]	2026-02-25T07:47:30.522Z	a0de5248-4a86-4bf1-92c7-5fb91b243488	JWT validation failed: Not enough segments
+	END RequestId: a0de5248-4a86-4bf1-92c7-5fb91b243488
+	REPORT RequestId: a0de5248-4a86-4bf1-92c7-5fb91b243488	Duration: 2.34 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: f771395d-f84a-4124-a6c9-27e102b1a1b6 Version: $LATEST
+	END RequestId: f771395d-f84a-4124-a6c9-27e102b1a1b6
+	REPORT RequestId: f771395d-f84a-4124-a6c9-27e102b1a1b6	Duration: 3.17 ms	Billed Duration: 4 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 8e57f94a-c421-4cce-a945-5a4b2563218e Version: $LATEST
+	[WARNING]	2026-02-25T07:47:39.995Z	8e57f94a-c421-4cce-a945-5a4b2563218e	JWT validation failed: Not enough segments
+	END RequestId: 8e57f94a-c421-4cce-a945-5a4b2563218e
+	REPORT RequestId: 8e57f94a-c421-4cce-a945-5a4b2563218e	Duration: 4.32 ms	Billed Duration: 5 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 682b532a-c751-4fd0-95da-68eea30049a2 Version: $LATEST
+	END RequestId: 682b532a-c751-4fd0-95da-68eea30049a2
+	REPORT RequestId: 682b532a-c751-4fd0-95da-68eea30049a2	Duration: 2.28 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 01259592-1c8e-4eb9-9229-ff95e5f18fce Version: $LATEST
+	[WARNING]	2026-02-25T07:47:40.757Z	01259592-1c8e-4eb9-9229-ff95e5f18fce	JWT validation failed: Not enough segments
+	END RequestId: 01259592-1c8e-4eb9-9229-ff95e5f18fce
+	REPORT RequestId: 01259592-1c8e-4eb9-9229-ff95e5f18fce	Duration: 2.55 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: ea809df4-01d2-4c13-b6e0-67aa43b50c42 Version: $LATEST
+	END RequestId: ea809df4-01d2-4c13-b6e0-67aa43b50c42
+	REPORT RequestId: ea809df4-01d2-4c13-b6e0-67aa43b50c42	Duration: 2.53 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 499069ac-abfc-45c0-91a3-7c9cdace3635 Version: $LATEST
+	[WARNING]	2026-02-25T07:47:41.679Z	499069ac-abfc-45c0-91a3-7c9cdace3635	JWT validation failed: Not enough segments
+	END RequestId: 499069ac-abfc-45c0-91a3-7c9cdace3635
+	REPORT RequestId: 499069ac-abfc-45c0-91a3-7c9cdace3635	Duration: 2.33 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 685be024-c24a-47fb-9eae-fe438b947a19 Version: $LATEST
+	END RequestId: 685be024-c24a-47fb-9eae-fe438b947a19
+	REPORT RequestId: 685be024-c24a-47fb-9eae-fe438b947a19	Duration: 2.15 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 0d51747d-71fa-446c-a1d5-d5db22393e26 Version: $LATEST
+	[WARNING]	2026-02-25T07:47:51.157Z	0d51747d-71fa-446c-a1d5-d5db22393e26	JWT validation failed: Not enough segments
+	END RequestId: 0d51747d-71fa-446c-a1d5-d5db22393e26
+	REPORT RequestId: 0d51747d-71fa-446c-a1d5-d5db22393e26	Duration: 2.37 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 5dc1476d-a666-4e98-bdb1-f7c01929cff2 Version: $LATEST
+	[WARNING]	2026-02-25T07:47:51.166Z	5dc1476d-a666-4e98-bdb1-f7c01929cff2	JWT validation failed: Not enough segments
+	END RequestId: 5dc1476d-a666-4e98-bdb1-f7c01929cff2
+	REPORT RequestId: 5dc1476d-a666-4e98-bdb1-f7c01929cff2	Duration: 2.31 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 330a5cbf-c20b-4cc4-9902-f34b187ed91b Version: $LATEST
+	END RequestId: 330a5cbf-c20b-4cc4-9902-f34b187ed91b
+	REPORT RequestId: 330a5cbf-c20b-4cc4-9902-f34b187ed91b	Duration: 1.88 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: b00576c4-24de-49aa-b899-e065b8fc7aab Version: $LATEST
+	END RequestId: b00576c4-24de-49aa-b899-e065b8fc7aab
+	REPORT RequestId: b00576c4-24de-49aa-b899-e065b8fc7aab	Duration: 1.86 ms	Billed Duration: 2 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 8c35e875-3c6f-4e76-8027-91ea603aa915 Version: $LATEST
+	[WARNING]	2026-02-25T07:47:52.817Z	8c35e875-3c6f-4e76-8027-91ea603aa915	JWT validation failed: Not enough segments
+	END RequestId: 8c35e875-3c6f-4e76-8027-91ea603aa915
+	REPORT RequestId: 8c35e875-3c6f-4e76-8027-91ea603aa915	Duration: 2.65 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 16a3bd78-0934-44ea-91be-3f4caf5191f0 Version: $LATEST
+	END RequestId: 16a3bd78-0934-44ea-91be-3f4caf5191f0
+	REPORT RequestId: 16a3bd78-0934-44ea-91be-3f4caf5191f0	Duration: 2.03 ms	Billed Duration: 3 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: ec919c9a-ada9-4b2d-8fcf-904b2b3ef529 Version: $LATEST
+	END RequestId: ec919c9a-ada9-4b2d-8fcf-904b2b3ef529
+	REPORT RequestId: ec919c9a-ada9-4b2d-8fcf-904b2b3ef529	Duration: 48.74 ms	Billed Duration: 49 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: d736500e-3de7-4831-96ac-fa0cefd7bbd6 Version: $LATEST
+	END RequestId: d736500e-3de7-4831-96ac-fa0cefd7bbd6
+	REPORT RequestId: d736500e-3de7-4831-96ac-fa0cefd7bbd6	Duration: 3.26 ms	Billed Duration: 4 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 32366a40-4be1-44d9-b890-40585d09a94c Version: $LATEST
+	[ERROR]	2026-02-25T07:51:50.244Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	[ERROR]	2026-02-25T07:51:50.244Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for BCO: Failed to fetch Twelve Data for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	[ERROR]	2026-02-25T07:51:50.244Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing BCO: Twelve Data failed: Failed to fetch Twelve Data for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	[ERROR]	2026-02-25T07:51:51.120Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for EURUSD: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.120Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for EURUSD: Failed to fetch Twelve Data for EURUSD: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.120Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing EURUSD: Twelve Data failed: Failed to fetch Twelve Data for EURUSD: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.392Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for SPX: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.392Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for SPX: Failed to fetch Twelve Data for SPX: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.392Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing SPX: Twelve Data failed: Failed to fetch Twelve Data for SPX: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.414Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for XAG: You have run out of API credits for the current minute. 58 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.414Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for XAG: Failed to fetch Twelve Data for XAG: You have run out of API credits for the current minute. 58 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.414Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing XAG: Twelve Data failed: Failed to fetch Twelve Data for XAG: You have run out of API credits for the current minute. 58 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.463Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for XAU: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.463Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for XAU: Failed to fetch Twelve Data for XAU: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.463Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing XAU: Twelve Data failed: Failed to fetch Twelve Data for XAU: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.505Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for USDJPY: You have run out of API credits for the current minute. 60 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.505Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for USDJPY: Failed to fetch Twelve Data for USDJPY: You have run out of API credits for the current minute. 60 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.505Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing USDJPY: Twelve Data failed: Failed to fetch Twelve Data for USDJPY: You have run out of API credits for the current minute. 60 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.651Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for AAPL: You have run out of API credits for the current minute. 62 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.651Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for AAPL: Failed to fetch Twelve Data for AAPL: You have run out of API credits for the current minute. 62 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.651Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing AAPL: Twelve Data failed: Failed to fetch Twelve Data for AAPL: You have run out of API credits for the current minute. 62 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.664Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for NVDA: You have run out of API credits for the current minute. 63 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.664Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for NVDA: Failed to fetch Twelve Data for NVDA: You have run out of API credits for the current minute. 63 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.664Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing NVDA: Twelve Data failed: Failed to fetch Twelve Data for NVDA: You have run out of API credits for the current minute. 63 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.719Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for TSLA: You have run out of API credits for the current minute. 64 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.719Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for TSLA: Failed to fetch Twelve Data for TSLA: You have run out of API credits for the current minute. 64 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.719Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing TSLA: Twelve Data failed: Failed to fetch Twelve Data for TSLA: You have run out of API credits for the current minute. 64 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.765Z	32366a40-4be1-44d9-b890-40585d09a94c	[TwelveData] Error for BTC-USD: You have run out of API credits for the current minute. 65 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.766Z	32366a40-4be1-44d9-b890-40585d09a94c	[STRICT ERROR] Twelve Data fetch failed for BTC-USD: Failed to fetch Twelve Data for BTC-USD: You have run out of API credits for the current minute. 65 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:51:51.766Z	32366a40-4be1-44d9-b890-40585d09a94c	Error analyzing BTC-USD: Twelve Data failed: Failed to fetch Twelve Data for BTC-USD: You have run out of API credits for the current minute. 65 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	END RequestId: 32366a40-4be1-44d9-b890-40585d09a94c
+	REPORT RequestId: 32366a40-4be1-44d9-b890-40585d09a94c	Duration: 3273.20 ms	Billed Duration: 3274 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: accc97be-21da-4d49-8904-efda47dcc52e Version: $LATEST
+	END RequestId: accc97be-21da-4d49-8904-efda47dcc52e
+	REPORT RequestId: accc97be-21da-4d49-8904-efda47dcc52e	Duration: 5.89 ms	Billed Duration: 6 ms	Memory Size: 3008 MB	Max Memory Used: 248 MB	
+	START RequestId: 1560675b-7ed0-4021-90a3-1d4db060a36c Version: $LATEST
+	[ERROR]	2026-02-25T07:56:50.231Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Error for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	[ERROR]	2026-02-25T07:56:50.232Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data fetch failed for BCO: Failed to fetch Twelve Data for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	[ERROR]	2026-02-25T07:56:50.232Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Error analyzing BCO: Twelve Data failed: Failed to fetch Twelve Data for BCO: **symbol** or **figi** parameter is missing or invalid. Please provide a valid symbol according to API documentation: https://twelvedata.com/docs#reference-data
+	[ERROR]	2026-02-25T07:56:51.762Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Error for EURUSD: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:51.762Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data fetch failed for EURUSD: Failed to fetch Twelve Data for EURUSD: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:51.762Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Error analyzing EURUSD: Twelve Data failed: Failed to fetch Twelve Data for EURUSD: You have run out of API credits for the current minute. 56 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.007Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Error for SPX: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.008Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data fetch failed for SPX: Failed to fetch Twelve Data for SPX: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.008Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Error analyzing SPX: Twelve Data failed: Failed to fetch Twelve Data for SPX: You have run out of API credits for the current minute. 57 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.253Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Error for AAPL: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.253Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data fetch failed for AAPL: Failed to fetch Twelve Data for AAPL: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.253Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Error analyzing AAPL: Twelve Data failed: Failed to fetch Twelve Data for AAPL: You have run out of API credits for the current minute. 59 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.514Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Error for NVDA: You have run out of API credits for the current minute. 60 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.514Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data fetch failed for NVDA: Failed to fetch Twelve Data for NVDA: You have run out of API credits for the current minute. 60 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.514Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Error analyzing NVDA: Twelve Data failed: Failed to fetch Twelve Data for NVDA: You have run out of API credits for the current minute. 60 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.605Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Price error for XAG: You have run out of API credits for the current minute. 61 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.605Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data current price failed for XAG: Failed to get current price for XAG: You have run out of API credits for the current minute. 61 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[WARNING]	2026-02-25T07:56:52.605Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Could not fetch current price for XAG: Twelve Data failed: Failed to get current price for XAG: You have run out of API credits for the current minute. 61 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing. Using last execution close.
+	[ERROR]	2026-02-25T07:56:52.662Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Price error for XAU: You have run out of API credits for the current minute. 62 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.662Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data current price failed for XAU: Failed to get current price for XAU: You have run out of API credits for the current minute. 62 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[WARNING]	2026-02-25T07:56:52.662Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Could not fetch current price for XAU: Twelve Data failed: Failed to get current price for XAU: You have run out of API credits for the current minute. 62 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing. Using last execution close.
+	[ERROR]	2026-02-25T07:56:52.724Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Price error for USDJPY: You have run out of API credits for the current minute. 63 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.724Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data current price failed for USDJPY: Failed to get current price for USDJPY: You have run out of API credits for the current minute. 63 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[WARNING]	2026-02-25T07:56:52.724Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Could not fetch current price for USDJPY: Twelve Data failed: Failed to get current price for USDJPY: You have run out of API credits for the current minute. 63 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing. Using last execution close.
+	[ERROR]	2026-02-25T07:56:52.766Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Error for TSLA: You have run out of API credits for the current minute. 64 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.766Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data fetch failed for TSLA: Failed to fetch Twelve Data for TSLA: You have run out of API credits for the current minute. 64 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:52.766Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Error analyzing TSLA: Twelve Data failed: Failed to fetch Twelve Data for TSLA: You have run out of API credits for the current minute. 64 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:53.012Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[TwelveData] Error for BTC-USD: You have run out of API credits for the current minute. 65 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:53.013Z	1560675b-7ed0-4021-90a3-1d4db060a36c	[STRICT ERROR] Twelve Data fetch failed for BTC-USD: Failed to fetch Twelve Data for BTC-USD: You have run out of API credits for the current minute. 65 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	[ERROR]	2026-02-25T07:56:53.013Z	1560675b-7ed0-4021-90a3-1d4db060a36c	Error analyzing BTC-USD: Twelve Data failed: Failed to fetch Twelve Data for BTC-USD: You have run out of API credits for the current minute. 65 API credits were used, with the current limit being 55. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+	/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	/var/task/app/analyzers/relative_strength_analyzer.py:29: FutureWarning: DataFrame.fillna with 'method' is deprecated and will raise in a future version. Use obj.ffill() or obj.bfill() instead.
+	}).fillna(method='ffill').dropna()
+	END RequestId: 1560675b-7ed0-4021-90a3-1d4db060a36c
+	REPORT RequestId: 1560675b-7ed0-4021-90a3-1d4db060a36c	Duration: 13460.44 ms	Billed Duration: 13461 ms	Memory Size: 3008 MB	Max Memory Used: 249 MB	
+
