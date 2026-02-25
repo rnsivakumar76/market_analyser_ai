@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface TrendAnalysis {
   direction: 'bullish' | 'bearish' | 'neutral';
@@ -251,7 +252,7 @@ export interface UserPreferences {
 })
 export class MarketAnalyzerService {
   private http = inject(HttpClient);
-  private apiUrl = 'https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api';
+  private apiUrl = environment.apiUrl;
 
   analyzeAll(mode: StrategyMode = 'long_term'): Observable<AnalysisResponse> {
     return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}`);
