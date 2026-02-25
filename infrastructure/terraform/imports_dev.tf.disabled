@@ -1,0 +1,12 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Import existing DEV resources if they become orphaned
+# This file is enabled ONLY in the 'dev' workspace by CI/CD
+# ──────────────────────────────────────────────────────────────────────────────
+
+/* 
+# Example: 
+import {
+  to = aws_dynamodb_table.nexus
+  id = "nexus-dev"
+}
+*/
