@@ -4,10 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { MarketAnalyzerService } from '../../services/market-analyzer.service';
 
 @Component({
-    selector: 'app-trade-journal',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-trade-journal',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="modal-overlay" (click)="close.emit()">
       <div class="journal-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
@@ -65,10 +65,13 @@ import { MarketAnalyzerService } from '../../services/market-analyzer.service';
               <span class="pnl-preview" [class]="previewPnl >= 0 ? 'positive' : 'negative'">
                 PnL: {{ previewPnl >= 0 ? '+' : '' }}{{ previewPnl.toFixed(2) }}%
               </span>
-              <button type="submit" class="submit-btn" [disabled]="!newTrade.symbol || !newTrade.entry_price">
-                💾 Save Trade
+              <button type="submit" class="submit-btn" [disabled]="!newTrade.symbol || !newTrade.entry_price || saving">
+                {{ saving ? '⏳ Saving...' : '💾 Save Trade' }}
               </button>
             </div>
+            @if (errorMsg) {
+              <div class="error-banner">❌ {{ errorMsg }}</div>
+            }
           </form>
           }
         </div>
@@ -142,7 +145,7 @@ import { MarketAnalyzerService } from '../../services/market-analyzer.service';
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -448,78 +451,99 @@ import { MarketAnalyzerService } from '../../services/market-analyzer.service';
       .trade-prices { margin-left: 0; }
       .journal-stats { gap: 12px; padding: 10px 16px; }
     }
+
+    .error-banner {
+      background: rgba(243,139,168,0.1);
+      border: 1px solid rgba(243,139,168,0.3);
+      color: #f38ba8;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      margin-top: 8px;
+    }
   `]
 })
 export class TradeJournalComponent implements OnInit {
-    @Output() close = new EventEmitter<void>();
-    private service = inject(MarketAnalyzerService);
+  @Output() close = new EventEmitter<void>();
+  private service = inject(MarketAnalyzerService);
 
-    trades: any[] = [];
-    loading = true;
-    showAddForm = false;
-    newTrade: any = { symbol: '', direction: 'long', entry_price: null, exit_price: null, size: null, date: '', notes: '' };
+  trades: any[] = [];
+  loading = true;
+  saving = false;
+  errorMsg = '';
+  showAddForm = false;
+  newTrade: any = { symbol: '', direction: 'long', entry_price: null, exit_price: null, size: null, date: '', notes: '' };
 
-    ngOnInit() {
-        this.service.getJournal().subscribe({
-            next: (data) => { this.trades = data.reverse(); this.loading = false; },
-            error: () => { this.loading = false; }
-        });
+  ngOnInit() {
+    this.service.getJournal().subscribe({
+      next: (data) => { this.trades = data.reverse(); this.loading = false; },
+      error: (err) => { this.loading = false; console.error('Journal load error:', err); }
+    });
+  }
+
+  get previewPnl(): number {
+    if (!this.newTrade.entry_price || !this.newTrade.exit_price) return 0;
+    const pnl = ((this.newTrade.exit_price - this.newTrade.entry_price) / this.newTrade.entry_price) * 100;
+    return this.newTrade.direction === 'short' ? -pnl : pnl;
+  }
+
+  get winRate(): number {
+    const closed = this.trades.filter(t => t.exit_price);
+    if (closed.length === 0) return 0;
+    const wins = closed.filter(t => this.getTradePnl(t) > 0).length;
+    return (wins / closed.length) * 100;
+  }
+
+  get totalPnl(): number {
+    return this.trades.filter(t => t.exit_price).reduce((sum, t) => sum + this.getTradePnl(t), 0);
+  }
+
+  get bestTrade(): string {
+    const closed = this.trades.filter(t => t.exit_price);
+    if (closed.length === 0) return 'N/A';
+    const best = closed.reduce((a, b) => this.getTradePnl(a) > this.getTradePnl(b) ? a : b);
+    return `${best.symbol} +${this.getTradePnl(best).toFixed(1)}%`;
+  }
+
+  get worstTrade(): string {
+    const closed = this.trades.filter(t => t.exit_price);
+    if (closed.length === 0) return 'N/A';
+    const worst = closed.reduce((a, b) => this.getTradePnl(a) < this.getTradePnl(b) ? a : b);
+    return `${worst.symbol} ${this.getTradePnl(worst).toFixed(1)}%`;
+  }
+
+  getTradePnl(trade: any): number {
+    if (!trade.entry_price || !trade.exit_price) return 0;
+    const pnl = ((trade.exit_price - trade.entry_price) / trade.entry_price) * 100;
+    return trade.direction === 'short' ? -pnl : pnl;
+  }
+
+  submitTrade(event: Event) {
+    event.preventDefault();
+    this.errorMsg = '';
+    this.saving = true;
+    if (!this.newTrade.date) {
+      this.newTrade.date = new Date().toISOString().slice(0, 10);
     }
+    this.service.addTrade({ ...this.newTrade }).subscribe({
+      next: (res) => {
+        this.trades.unshift(res.trade);
+        this.newTrade = { symbol: '', direction: 'long', entry_price: null, exit_price: null, size: null, date: '', notes: '' };
+        this.showAddForm = false;
+        this.saving = false;
+      },
+      error: (err) => {
+        this.saving = false;
+        this.errorMsg = err?.error?.detail || err?.message || 'Failed to save trade. Check your connection.';
+        console.error('Save trade error:', err);
+      }
+    });
+  }
 
-    get previewPnl(): number {
-        if (!this.newTrade.entry_price || !this.newTrade.exit_price) return 0;
-        const pnl = ((this.newTrade.exit_price - this.newTrade.entry_price) / this.newTrade.entry_price) * 100;
-        return this.newTrade.direction === 'short' ? -pnl : pnl;
-    }
-
-    get winRate(): number {
-        const closed = this.trades.filter(t => t.exit_price);
-        if (closed.length === 0) return 0;
-        const wins = closed.filter(t => this.getTradePnl(t) > 0).length;
-        return (wins / closed.length) * 100;
-    }
-
-    get totalPnl(): number {
-        return this.trades.filter(t => t.exit_price).reduce((sum, t) => sum + this.getTradePnl(t), 0);
-    }
-
-    get bestTrade(): string {
-        const closed = this.trades.filter(t => t.exit_price);
-        if (closed.length === 0) return 'N/A';
-        const best = closed.reduce((a, b) => this.getTradePnl(a) > this.getTradePnl(b) ? a : b);
-        return `${best.symbol} +${this.getTradePnl(best).toFixed(1)}%`;
-    }
-
-    get worstTrade(): string {
-        const closed = this.trades.filter(t => t.exit_price);
-        if (closed.length === 0) return 'N/A';
-        const worst = closed.reduce((a, b) => this.getTradePnl(a) < this.getTradePnl(b) ? a : b);
-        return `${worst.symbol} ${this.getTradePnl(worst).toFixed(1)}%`;
-    }
-
-    getTradePnl(trade: any): number {
-        if (!trade.entry_price || !trade.exit_price) return 0;
-        const pnl = ((trade.exit_price - trade.entry_price) / trade.entry_price) * 100;
-        return trade.direction === 'short' ? -pnl : pnl;
-    }
-
-    submitTrade(event: Event) {
-        event.preventDefault();
-        if (!this.newTrade.date) {
-            this.newTrade.date = new Date().toISOString().slice(0, 10);
-        }
-        this.service.addTrade({ ...this.newTrade }).subscribe({
-            next: (res) => {
-                this.trades.unshift(res.trade);
-                this.newTrade = { symbol: '', direction: 'long', entry_price: null, exit_price: null, size: null, date: '', notes: '' };
-                this.showAddForm = false;
-            }
-        });
-    }
-
-    deleteTrade(id: string) {
-        this.service.deleteTrade(id).subscribe({
-            next: () => { this.trades = this.trades.filter(t => t.id !== id); }
-        });
-    }
+  deleteTrade(id: string) {
+    this.service.deleteTrade(id).subscribe({
+      next: () => { this.trades = this.trades.filter(t => t.id !== id); },
+      error: (err) => { console.error('Delete trade error:', err); }
+    });
+  }
 }

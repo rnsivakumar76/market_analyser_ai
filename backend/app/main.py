@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from starlette.middleware.sessions import SessionMiddleware
 from mangum import Mangum
 from datetime import datetime, date, timezone
@@ -512,7 +512,8 @@ async def get_journal(user_id: str = Depends(get_current_user)):
     return _load_journal(user_id)
 
 @app.post("/api/journal")
-async def add_trade(trade: Dict[str, Any], user_id: str = Depends(get_current_user)):
+async def add_trade(request: Request, user_id: str = Depends(get_current_user)):
+    trade = await request.json()
     trades = _load_journal(user_id)
     trade["id"] = str(uuid.uuid4())
     trade["created_at"] = datetime.now(timezone.utc).isoformat()

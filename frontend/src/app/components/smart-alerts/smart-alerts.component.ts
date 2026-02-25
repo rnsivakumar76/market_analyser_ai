@@ -4,28 +4,28 @@ import { FormsModule } from '@angular/forms';
 import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
 interface AlertRule {
-    id: string;
-    type: 'score_threshold' | 'price_cross' | 'trade_worthy' | 'pullback_detected' | 'news_sentiment';
-    symbol: string | null; // null = all symbols
-    value: number;
-    enabled: boolean;
-    label: string;
+  id: string;
+  type: 'score_threshold' | 'price_cross' | 'trade_worthy' | 'pullback_detected' | 'news_sentiment';
+  symbol: string | null; // null = all symbols
+  value: number;
+  enabled: boolean;
+  label: string;
 }
 
 interface AlertLog {
-    id: string;
-    ruleLabel: string;
-    symbol: string;
-    message: string;
-    timestamp: string;
-    read: boolean;
+  id: string;
+  ruleLabel: string;
+  symbol: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
 }
 
 @Component({
-    selector: 'app-smart-alerts',
-    standalone: true,
-    imports: [CommonModule, FormsModule],
-    template: `
+  selector: 'app-smart-alerts',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
     <div class="modal-overlay" (click)="close.emit()">
       <div class="alerts-modal" (click)="$event.stopPropagation()">
         <div class="modal-header">
@@ -41,8 +41,12 @@ interface AlertLog {
         <!-- Enable Notifications -->
         @if (!notificationsEnabled) {
         <div class="enable-section">
-          <p>Enable browser notifications to receive real-time alerts when market conditions match your rules.</p>
-          <button class="enable-btn" (click)="enableNotifications()">🔔 Enable Notifications</button>
+          @if (notificationsBlocked) {
+            <p class="https-warning">⚠️ Browser push notifications require HTTPS. Your site is on HTTP, so push notifications are unavailable. <strong>In-app alerts still work normally</strong> — check "Recent Alerts" below.</p>
+          } @else {
+            <p>Enable browser notifications to receive real-time alerts when market conditions match your rules.</p>
+            <button class="enable-btn" (click)="enableNotifications()">🔔 Enable Notifications</button>
+          }
         </div>
         }
 
@@ -107,7 +111,7 @@ interface AlertLog {
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -196,6 +200,14 @@ interface AlertLog {
       transition: opacity 0.2s;
 
       &:hover { opacity: 0.9; }
+    }
+
+    .https-warning {
+      color: #f9e2af;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      margin: 0;
+      padding: 4px 0;
     }
 
     .rules-section, .history-section {
@@ -391,169 +403,182 @@ interface AlertLog {
   `]
 })
 export class SmartAlertsComponent implements OnInit {
-    @Input() instruments: InstrumentAnalysis[] = [];
-    @Output() close = new EventEmitter<void>();
+  @Input() instruments: InstrumentAnalysis[] = [];
+  @Output() close = new EventEmitter<void>();
 
-    notificationsEnabled = false;
-    rules: AlertRule[] = [];
-    alertHistory: AlertLog[] = [];
+  notificationsEnabled = false;
+  notificationsBlocked = false;
+  rules: AlertRule[] = [];
+  alertHistory: AlertLog[] = [];
 
-    private STORAGE_KEY = 'market_analyzer_alert_rules';
-    private HISTORY_KEY = 'market_analyzer_alert_history';
+  private STORAGE_KEY = 'market_analyzer_alert_rules';
+  private HISTORY_KEY = 'market_analyzer_alert_history';
 
-    ngOnInit() {
-        this.notificationsEnabled = Notification.permission === 'granted';
-        this.loadRules();
-        this.loadHistory();
-        this.evaluate();
+  ngOnInit() {
+    // Check if Notification API is available (requires HTTPS)
+    if ('Notification' in window && window.isSecureContext) {
+      this.notificationsEnabled = Notification.permission === 'granted';
+    } else {
+      this.notificationsBlocked = true;
     }
+    this.loadRules();
+    this.loadHistory();
+    this.evaluate();
+  }
 
-    enableNotifications() {
-        if ('Notification' in window) {
-            Notification.requestPermission().then(perm => {
-                this.notificationsEnabled = perm === 'granted';
-            });
-        }
+  enableNotifications() {
+    if (!('Notification' in window) || !window.isSecureContext) {
+      this.notificationsBlocked = true;
+      return;
     }
+    Notification.requestPermission().then(perm => {
+      this.notificationsEnabled = perm === 'granted';
+      if (perm === 'denied') {
+        this.notificationsBlocked = true;
+      }
+    }).catch(() => {
+      this.notificationsBlocked = true;
+    });
+  }
 
-    addRule() {
-        const rule: AlertRule = {
-            id: Date.now().toString(),
-            type: 'trade_worthy',
-            symbol: null,
-            value: 50,
-            enabled: true,
-            label: 'Alerts when a trade-worthy signal appears'
-        };
-        this.rules.push(rule);
-        this.saveRules();
+  addRule() {
+    const rule: AlertRule = {
+      id: Date.now().toString(),
+      type: 'trade_worthy',
+      symbol: null,
+      value: 50,
+      enabled: true,
+      label: 'Alerts when a trade-worthy signal appears'
+    };
+    this.rules.push(rule);
+    this.saveRules();
+  }
+
+  removeRule(id: string) {
+    this.rules = this.rules.filter(r => r.id !== id);
+    this.saveRules();
+  }
+
+  updateRuleLabel(rule: AlertRule) {
+    switch (rule.type) {
+      case 'score_threshold': rule.label = `Score ≥ ${rule.value}`; break;
+      case 'trade_worthy': rule.label = 'Trade-worthy signal detected'; break;
+      case 'pullback_detected': rule.label = 'Pullback warning triggered'; break;
+      case 'news_sentiment': rule.label = 'Bearish news sentiment alert'; break;
+      default: rule.label = '';
     }
+  }
 
-    removeRule(id: string) {
-        this.rules = this.rules.filter(r => r.id !== id);
-        this.saveRules();
-    }
+  saveRules() {
+    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.rules));
+  }
 
-    updateRuleLabel(rule: AlertRule) {
+  loadRules() {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      this.rules = stored ? JSON.parse(stored) : [];
+    } catch { this.rules = []; }
+  }
+
+  loadHistory() {
+    try {
+      const stored = localStorage.getItem(this.HISTORY_KEY);
+      this.alertHistory = stored ? JSON.parse(stored) : [];
+    } catch { this.alertHistory = []; }
+  }
+
+  saveHistory() {
+    // Keep only latest 50
+    this.alertHistory = this.alertHistory.slice(0, 50);
+    localStorage.setItem(this.HISTORY_KEY, JSON.stringify(this.alertHistory));
+  }
+
+  clearHistory() {
+    this.alertHistory = [];
+    localStorage.removeItem(this.HISTORY_KEY);
+  }
+
+  evaluate() {
+    if (!this.instruments || this.instruments.length === 0) return;
+
+    const activeRules = this.rules.filter(r => r.enabled);
+    for (const rule of activeRules) {
+      for (const instrument of this.instruments) {
+        let triggered = false;
+        let message = '';
+
         switch (rule.type) {
-            case 'score_threshold': rule.label = `Score ≥ ${rule.value}`; break;
-            case 'trade_worthy': rule.label = 'Trade-worthy signal detected'; break;
-            case 'pullback_detected': rule.label = 'Pullback warning triggered'; break;
-            case 'news_sentiment': rule.label = 'Bearish news sentiment alert'; break;
-            default: rule.label = '';
-        }
-    }
-
-    saveRules() {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.rules));
-    }
-
-    loadRules() {
-        try {
-            const stored = localStorage.getItem(this.STORAGE_KEY);
-            this.rules = stored ? JSON.parse(stored) : [];
-        } catch { this.rules = []; }
-    }
-
-    loadHistory() {
-        try {
-            const stored = localStorage.getItem(this.HISTORY_KEY);
-            this.alertHistory = stored ? JSON.parse(stored) : [];
-        } catch { this.alertHistory = []; }
-    }
-
-    saveHistory() {
-        // Keep only latest 50
-        this.alertHistory = this.alertHistory.slice(0, 50);
-        localStorage.setItem(this.HISTORY_KEY, JSON.stringify(this.alertHistory));
-    }
-
-    clearHistory() {
-        this.alertHistory = [];
-        localStorage.removeItem(this.HISTORY_KEY);
-    }
-
-    evaluate() {
-        if (!this.instruments || this.instruments.length === 0) return;
-
-        const activeRules = this.rules.filter(r => r.enabled);
-        for (const rule of activeRules) {
-            for (const instrument of this.instruments) {
-                let triggered = false;
-                let message = '';
-
-                switch (rule.type) {
-                    case 'score_threshold':
-                        if (Math.abs(instrument.trade_signal.score) >= rule.value) {
-                            triggered = true;
-                            message = `${instrument.symbol} has score ${instrument.trade_signal.score} (threshold: ${rule.value})`;
-                        }
-                        break;
-                    case 'trade_worthy':
-                        if (instrument.trade_signal.trade_worthy) {
-                            triggered = true;
-                            message = `${instrument.symbol} is now trade-worthy (${instrument.trade_signal.recommendation}, score ${instrument.trade_signal.score})`;
-                        }
-                        break;
-                    case 'pullback_detected':
-                        if (instrument.pullback_warning?.is_warning) {
-                            triggered = true;
-                            message = `Pullback detected in ${instrument.symbol}: ${instrument.pullback_warning.description}`;
-                        }
-                        break;
-                    case 'news_sentiment':
-                        if (instrument.news_sentiment?.label === 'Bearish') {
-                            triggered = true;
-                            message = `Bearish news for ${instrument.symbol}: ${instrument.news_sentiment.sentiment_summary}`;
-                        }
-                        break;
-                }
-
-                if (triggered) {
-                    // Deduplicate: don't re-alert same message in last 1 hour
-                    const isDuplicate = this.alertHistory.some(a =>
-                        a.symbol === instrument.symbol &&
-                        a.ruleLabel === rule.label &&
-                        (Date.now() - new Date(a.timestamp).getTime()) < 3600000
-                    );
-
-                    if (!isDuplicate) {
-                        const alert: AlertLog = {
-                            id: Date.now().toString() + instrument.symbol,
-                            ruleLabel: rule.label,
-                            symbol: instrument.symbol,
-                            message,
-                            timestamp: new Date().toISOString(),
-                            read: false
-                        };
-                        this.alertHistory.unshift(alert);
-                        this.sendBrowserNotification(instrument.symbol, message);
-                    }
-                }
+          case 'score_threshold':
+            if (Math.abs(instrument.trade_signal.score) >= rule.value) {
+              triggered = true;
+              message = `${instrument.symbol} has score ${instrument.trade_signal.score} (threshold: ${rule.value})`;
             }
+            break;
+          case 'trade_worthy':
+            if (instrument.trade_signal.trade_worthy) {
+              triggered = true;
+              message = `${instrument.symbol} is now trade-worthy (${instrument.trade_signal.recommendation}, score ${instrument.trade_signal.score})`;
+            }
+            break;
+          case 'pullback_detected':
+            if (instrument.pullback_warning?.is_warning) {
+              triggered = true;
+              message = `Pullback detected in ${instrument.symbol}: ${instrument.pullback_warning.description}`;
+            }
+            break;
+          case 'news_sentiment':
+            if (instrument.news_sentiment?.label === 'Bearish') {
+              triggered = true;
+              message = `Bearish news for ${instrument.symbol}: ${instrument.news_sentiment.sentiment_summary}`;
+            }
+            break;
         }
-        this.saveHistory();
-    }
 
-    private sendBrowserNotification(symbol: string, message: string) {
-        if (this.notificationsEnabled && 'Notification' in window) {
-            new Notification(`Market Analyzer — ${symbol}`, {
-                body: message,
-                icon: '🔔',
-                tag: symbol
-            });
+        if (triggered) {
+          // Deduplicate: don't re-alert same message in last 1 hour
+          const isDuplicate = this.alertHistory.some(a =>
+            a.symbol === instrument.symbol &&
+            a.ruleLabel === rule.label &&
+            (Date.now() - new Date(a.timestamp).getTime()) < 3600000
+          );
+
+          if (!isDuplicate) {
+            const alert: AlertLog = {
+              id: Date.now().toString() + instrument.symbol,
+              ruleLabel: rule.label,
+              symbol: instrument.symbol,
+              message,
+              timestamp: new Date().toISOString(),
+              read: false
+            };
+            this.alertHistory.unshift(alert);
+            this.sendBrowserNotification(instrument.symbol, message);
+          }
         }
+      }
     }
+    this.saveHistory();
+  }
 
-    formatTime(timestamp: string): string {
-        const d = new Date(timestamp);
-        const now = new Date();
-        const diffMs = now.getTime() - d.getTime();
-        const diffMin = Math.floor(diffMs / 60000);
-        if (diffMin < 1) return 'Just now';
-        if (diffMin < 60) return `${diffMin}m ago`;
-        const diffH = Math.floor(diffMin / 60);
-        if (diffH < 24) return `${diffH}h ago`;
-        return d.toLocaleDateString();
+  private sendBrowserNotification(symbol: string, message: string) {
+    if (this.notificationsEnabled && 'Notification' in window) {
+      new Notification(`Market Analyzer — ${symbol}`, {
+        body: message,
+        icon: '🔔',
+        tag: symbol
+      });
     }
+  }
+
+  formatTime(timestamp: string): string {
+    const d = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ago`;
+    return d.toLocaleDateString();
+  }
 }

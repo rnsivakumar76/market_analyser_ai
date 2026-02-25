@@ -2,6 +2,7 @@
   min-height: 100vh;
   background: #11111b;
   color: #cdd6f4;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .header {
@@ -14,11 +15,14 @@
 }
 
 .header h1 {
-  font-size: 1.75rem;
-  font-weight: 800;
+  font-size: 1.5rem;
+  font-weight: 900;
   margin: 0;
-  color: #cdd6f4;
-  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #89b4fa, #cba6f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 2px;
 }
 
 .logo-area {
@@ -27,20 +31,44 @@
   gap: 12px;
 }
 
+.app-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  filter: drop-shadow(0 0 8px rgba(137, 180, 250, 0.3));
+}
+
+.brand-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .badge {
   background: linear-gradient(135deg, #f5c2e7, #cba6f7);
   color: #11111b;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 800;
   padding: 2px 6px;
   border-radius: 4px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .subtitle {
   color: #6c7086;
-  margin-top: 4px;
-  font-size: 0.9rem;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.loading-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  filter: drop-shadow(0 0 16px rgba(137, 180, 250, 0.4));
 }
 
 .user-profile {
