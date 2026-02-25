@@ -185,13 +185,23 @@ class TwelveDataFetcher:
     def _normalize_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """Normalizes TwelveData column names and index."""
         if df is None or df.empty: return pd.DataFrame()
+        
+        # If reset_index created an 'index' column instead of 'datetime'
+        if 'index' in df.columns and 'datetime' not in df.columns:
+            df = df.rename(columns={'index': 'datetime'})
+            
         column_mapping = {'datetime': 'Date', 'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}
         for old_col, new_col in column_mapping.items():
             if old_col in df.columns:
                 df = df.rename(columns={old_col: new_col})
+                
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'])
             df = df.set_index('Date')
+        elif df.index.name != 'Date':
+            # Fallback if it's already an index but not named correctly
+            df.index.name = 'Date'
+            df.index = pd.to_datetime(df.index)
             
         # Fix missing Volume for Indices/Forex
         if 'Volume' not in df.columns:

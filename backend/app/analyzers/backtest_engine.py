@@ -27,7 +27,7 @@ CACHE_FILE = CACHE_DIR / "backtest_cache.json"
 
 def _load_cache():
     if not CACHE_DIR.exists():
-        CACHE_DIR.mkdir(parents=True)
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
     if CACHE_FILE.exists():
         try:
             with open(CACHE_FILE, 'r') as f:
