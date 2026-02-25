@@ -115,15 +115,30 @@ class TwelveDataFetcher:
 
                     if isinstance(batch_data, pd.DataFrame):
                         if not batch_data.empty:
-                            td_sym = chunk[0]
-                            orig_sym = map_back.get(td_sym)
-                            if orig_sym: results[orig_sym] = self._normalize_df(batch_data)
-                    else:
+                            if isinstance(batch_data.index, pd.MultiIndex):
+                                symbols_in_df = batch_data.index.get_level_values(0).unique()
+                                for td_sym in symbols_in_df:
+                                    orig_sym = map_back.get(td_sym)
+                                    if orig_sym and orig_sym not in results:
+                                        # Use xs to cleanly rip the level without breaking the DataFrame rows
+                                        df_sym = batch_data.xs(td_sym, level=0).copy()
+                                        df_sym.reset_index(inplace=True)
+                                        results[orig_sym] = self._normalize_df(df_sym)
+                            else:
+                                td_sym = chunk[0]
+                                orig_sym = map_back.get(td_sym)
+                                if orig_sym and orig_sym not in results:
+                                    df_sym = batch_data.copy()
+                                    df_sym.reset_index(inplace=True)
+                                    results[orig_sym] = self._normalize_df(df_sym)
+                    elif isinstance(batch_data, dict):
                         for td_sym, df in batch_data.items():
                             if isinstance(df, pd.DataFrame) and not df.empty:
                                 orig_sym = map_back.get(td_sym)
                                 if orig_sym and orig_sym not in results:
-                                    results[orig_sym] = self._normalize_df(df)
+                                    df_sym = df.copy()
+                                    df_sym.reset_index(inplace=True)
+                                    results[orig_sym] = self._normalize_df(df_sym)
                 except Exception as chunk_e:
                     logger.warning(f"Batch chunk failed: {chunk_e}")
 
