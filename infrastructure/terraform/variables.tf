@@ -86,6 +86,13 @@ variable "jwt_secret_key" {
   default     = ""
 }
 
+variable "session_secret" {
+  description = "Secret key for OAuth session management"
+  type        = string
+  sensitive   = true
+  default     = "market-analyser-session-secret-key-change-it"
+}
+
 variable "twelvedata_api_key" {
   description = "Twelve Data API Key"
   type        = string

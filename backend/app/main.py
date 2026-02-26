@@ -22,17 +22,27 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Middleware - essential for browser-to-lambda cross-domain calls
+# CORS Middleware - Refined for security + credentials
+# We allow * for convenience but restrict manually if needed. 
+# In same-domain production (CloudFront), CORS is less critical but good to have right.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True, # Critical for session cookies if cross-domain
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Required for Authlib OAuth state storage
-app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET", "super-secret-session-key"))
+# Use same_site='lax' to allow redirects from Google to work while keeping cookie secure
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "super-secret-session-key")
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=SESSION_SECRET,
+    session_cookie="nexus_session",
+    same_site="lax",
+    https_only=True if "localhost" not in os.environ.get("FRONTEND_URL", "") else False
+)
 
 # Include Auth routes at top level - these are fast enough
 app.include_router(auth_router, prefix="/api")
