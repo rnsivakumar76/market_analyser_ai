@@ -154,7 +154,6 @@
     <div class="detail-panel">
       @if (selectedInstrument()) {
       <div class="detail-view-inner">
-        <app-multi-timeframe-overlay [analysis]="selectedInstrument()!"></app-multi-timeframe-overlay>
         <app-instrument-card [analysis]="selectedInstrument()!"
           (refresh)="refreshInstrument($event)"></app-instrument-card>
       </div>
