@@ -39,10 +39,16 @@ oauth.register(
 
 @router.get('/login')
 async def login(request: Request):
-    # Force https for the redirect_uri in production
-    url = str(request.url_for('auth_callback'))
-    if "localhost" not in url:
-        url = url.replace("http://", "https://")
+    # Construct exact redirect URI using FRONTEND_URL to avoid proxy hostname issues
+    # FRONTEND_URL is something like https://d123.cloudfront.net
+    if "localhost" in str(request.base_url):
+        url = str(request.url_for('auth_callback'))
+    else:
+        # For production, we must use the CloudFront/Public URL precisely
+        # FRONTEND_URL already has protocol
+        base = FRONTEND_URL.rstrip('/')
+        url = f"{base}/api/auth/callback"
+        
     logger.info(f"Initiating Google login. Redirect URI: {url}")
     return await oauth.google.authorize_redirect(request, url)
 
@@ -55,12 +61,16 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
 @router.get('/callback', name='auth_callback')
 async def auth_callback(request: Request):
     try:
+        logger.info("Auth callback received. Attempting to exchange code for token...")
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get('userinfo')
         if not user_info:
+            logger.error("Failed to get user info from Google response")
             raise HTTPException(status_code=400, detail="Failed to get user info from Google")
         
         user_id = user_info['sub']
+        logger.info(f"Successfully authenticated Google user: {user_id}")
+        
         access_token = create_access_token(data={
             "sub": user_id, 
             "email": user_info.get("email"), 
@@ -76,11 +86,18 @@ async def auth_callback(request: Request):
             "picture": user_info.get("picture")
         }
         query_string = urllib.parse.urlencode(params)
-        return RedirectResponse(url=f"{FRONTEND_URL}?{query_string}")
+        redirect_url = f"{FRONTEND_URL}/dashboard?{query_string}" # Added /dashboard to avoid loop
+        logger.info(f"Redirecting user to frontend: {FRONTEND_URL}")
+        return RedirectResponse(url=redirect_url)
         
     except Exception as e:
-        logger.error(f"OAuth error: {e}")
-        return RedirectResponse(url=f"{FRONTEND_URL}?error=auth_failed")
+        import traceback
+        error_msg = f"OAuth error: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        # Check if cookie issue (Session state error)
+        if "state" in str(e).lower():
+            logger.warning("Session state/cookie mismatch detected. Check SESSION_SECRET and CORS.")
+        return RedirectResponse(url=f"{FRONTEND_URL}?error=auth_failed&msg={urllib.parse.quote(str(e))}")
 
 # In-memory user database for demo purposes
 # In production, use a real database

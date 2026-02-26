@@ -81,6 +81,17 @@ resource "aws_cloudfront_distribution" "frontend" {
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
+  # Origin for API Gateway
+  origin {
+    domain_name = replace(aws_apigatewayv2_api.http_api.api_endpoint, "/^https?://([^/]+).*/", "$1")
+    origin_id   = "APIGatewayOrigin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
   }
 
   enabled             = true
@@ -100,6 +111,27 @@ resource "aws_cloudfront_distribution" "frontend" {
     response_code         = 200
     response_page_path    = "/index.html"
     error_caching_min_ttl = 300
+  }
+
+  # API Behavior (No caching, passing everything)
+  ordered_cache_behavior {
+    path_pattern     = "/api/*"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "APIGatewayOrigin"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Origin", "Referer"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "https-only"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
   }
 
   default_cache_behavior {
