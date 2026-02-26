@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# S3 Bucket — Angular Frontend Static Hosting (PER-ENVIRONMENT)
+# S3 Bucket  Angular Frontend Static Hosting (PER-ENVIRONMENT)
 # ------------------------------------------------------------------------------
 
 locals {
@@ -16,7 +16,7 @@ resource "aws_s3_bucket" "frontend" {
 }
 
 # ------------------------------------------------------------------------------
-# S3 Bucket — Application Configuration persistence (PER-ENVIRONMENT)
+# S3 Bucket  Application Configuration persistence (PER-ENVIRONMENT)
 # ------------------------------------------------------------------------------
 resource "aws_s3_bucket" "config" {
   bucket = "${var.app_name}-config${local.env_suffix}-${var.aws_account_id}"
@@ -68,9 +68,8 @@ resource "aws_s3_bucket_policy" "frontend_public" {
 
 
 # ------------------------------------------------------------------------------
-# CloudFront — HTTPS & Content Delivery (DISABLED FOR NOW)
+# CloudFront  HTTPS & Content Delivery
 # ------------------------------------------------------------------------------
-/*
 resource "aws_cloudfront_distribution" "frontend" {
   origin {
     domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
@@ -136,4 +135,3 @@ resource "aws_cloudfront_distribution" "frontend" {
     Environment = var.environment
   }
 }
-*/
