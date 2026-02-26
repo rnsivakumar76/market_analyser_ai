@@ -75,6 +75,7 @@ export interface TradeSignal {
   psychological_guard: string;
   pyramiding_plan: string;
   scaling_plan: string;
+  executive_summary: string;
 }
 
 export interface VolatilityAnalysis {

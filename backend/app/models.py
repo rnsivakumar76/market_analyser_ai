@@ -148,6 +148,7 @@ class TradeSignal(BaseModel):
     psychological_guard: str = ""
     pyramiding_plan: str = ""
     scaling_plan: str = ""
+    executive_summary: str = ""
 
 
 class PositionSizing(BaseModel):

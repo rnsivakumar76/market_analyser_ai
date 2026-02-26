@@ -47,6 +47,14 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
           <div class="action-plan" [class]="getSignalClass()">
             <div class="plan-header">Strategic Action Plan</div>
             <div class="plan-title">{{ analysis.trade_signal.action_plan }}</div>
+
+            @if (analysis.trade_signal.executive_summary) {
+              <div class="executive-summary-callout">
+                <span class="summary-icon">💡</span>
+                <p class="summary-text">{{ analysis.trade_signal.executive_summary }}</p>
+              </div>
+            }
+
             <p class="plan-details">{{ analysis.trade_signal.action_plan_details }}</p>
 
             @if (analysis.trade_signal.psychological_guard) {
@@ -1074,6 +1082,43 @@ import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.c
       color: #a6adc8;
       line-height: 1.5;
       margin: 0;
+    }
+
+    .executive-summary-callout {
+      background: rgba(137, 180, 250, 0.1);
+      border: 1px solid rgba(137, 180, 250, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .summary-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      margin-top: -2px;
+    }
+
+    .summary-text {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #cdd6f4;
+      font-weight: 500;
+      margin: 0;
+      font-style: italic;
+    }
+
+    .action-plan.bullish .executive-summary-callout {
+      background: rgba(166, 227, 161, 0.08);
+      border-color: rgba(166, 227, 161, 0.2);
+    }
+    
+    .action-plan.bearish .executive-summary-callout {
+      background: rgba(243, 139, 168, 0.08);
+      border-color: rgba(243, 139, 168, 0.2);
     }
 
     .psych-guard, .pyramid-plan, .scaling-plan {
