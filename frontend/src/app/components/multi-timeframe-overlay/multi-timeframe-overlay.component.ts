@@ -16,56 +16,233 @@ interface TimeframeSignal {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="mtf-vertical-container">
-      @for (tf of timeframes; track tf.label) {
-        <div class="mtf-node-vertical" [class]="getNodeClass(tf)">
-          <div class="node-header">
-            <span class="status-badge" [class]="tf.direction">{{ tf.direction.toUpperCase() }}</span>
-            <span class="node-label">{{ tf.label }}</span>
+    <div class="mtf-container">
+      <div class="mtf-header">
+        <span class="mtf-title">MULTI-TIMEFRAME ALIGNMENT</span>
+        <span class="alignment-badge" [class]="getAlignmentClass()">
+          {{ getAlignmentLabel() }}
+        </span>
+      </div>
+      <div class="timeframe-chain">
+        @for (tf of timeframes; track tf.label) {
+          <div class="tf-node" [class]="getNodeClass(tf)">
+            <div class="tf-label">{{ tf.label }}</div>
+            <div class="tf-direction-badge" [class]="tf.direction">
+              {{ tf.direction.toUpperCase() }}
+            </div>
+            <div class="tf-details">
+              <span class="tf-phase">{{ tf.phase }}</span>
+              <span class="tf-strength" [class]="tf.strength">{{ tf.strength }}</span>
+            </div>
+            @if (tf.pullback) {
+              <span class="tf-pullback-dot" title="Pullback detected">↩</span>
+            }
           </div>
-          <div class="node-body">
-            <p class="node-subtitle">{{ tf.phase }} {{ tf.direction !== 'neutral' ? 'trend signals' : 'neutral' }}</p>
-          </div>
-          @if (tf.pullback) { <span class="pullback-indicator">↩ PULLBACK</span> }
-        </div>
-      }
+          @if (!$last) {
+            <div class="tf-connector" [class]="getConnectorClass($index)">
+              <div class="connector-line"></div>
+              <div class="connector-arrow">→</div>
+            </div>
+          }
+        }
+      </div>
+      <p class="mtf-description">{{ getDescription() }}</p>
     </div>
   `,
   styles: [`
-    .mtf-vertical-container { display: flex; flex-direction: column; gap: 12px; }
-    
-    .mtf-node-vertical { 
-      background: #121220; border: 1px solid #1f1f3a; border-radius: 8px; 
-      padding: 12px; position: relative; overflow: hidden;
-      transition: border-color 0.2s;
-    }
-    .mtf-node-vertical:hover { border-color: #31315a; }
-
-    .node-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    
-    .status-badge { 
-      font-size: 0.6rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; 
-      color: #11111b; min-width: 60px; text-align: center;
-    }
-    .status-badge.bullish { background: #a6e3a1; color: #11111b; }
-    .status-badge.bearish { background: #f38ba8; color: #11111b; }
-    .status-badge.neutral { background: #f9e2af; color: #11111b; }
-
-    .node-label { font-size: 0.85rem; font-weight: 800; color: #cdd6f4; text-transform: uppercase; letter-spacing: 0.5px; }
-    
-    .node-body { padding-left: 0; }
-    .node-subtitle { font-size: 0.75rem; color: #9399b2; margin: 0; line-height: 1.4; }
-
-    .pullback-indicator { 
-      position: absolute; top: 12px; right: 12px; font-size: 0.6rem; 
-      font-weight: 800; color: #fab387; background: rgba(250, 179, 135, 0.1); 
-      padding: 2px 6px; border-radius: 4px; 
+    .mtf-container {
+      background: #1e1e2e;
+      border: 1px solid #313244;
+      border-radius: 12px;
+      padding: 16px;
     }
 
-    /* Node side borders to match image theme */
-    .mtf-node-vertical.bullish-node { border-left: 3px solid #a6e3a1; }
-    .mtf-node-vertical.bearish-node { border-left: 3px solid #f38ba8; }
-    .mtf-node-vertical.neutral-node { border-left: 3px solid #f9e2af; }
+    .mtf-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .mtf-title {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: #6c7086;
+    }
+
+    .alignment-badge {
+      font-size: 0.6rem;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .alignment-badge.aligned {
+      background: rgba(166, 227, 161, 0.15);
+      color: #a6e3a1;
+      border: 1px solid rgba(166, 227, 161, 0.3);
+    }
+
+    .alignment-badge.partial {
+      background: rgba(249, 226, 175, 0.15);
+      color: #f9e2af;
+      border: 1px solid rgba(249, 226, 175, 0.3);
+    }
+
+    .alignment-badge.conflicting {
+      background: rgba(243, 139, 168, 0.15);
+      color: #f38ba8;
+      border: 1px solid rgba(243, 139, 168, 0.3);
+    }
+
+    .timeframe-chain {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 0;
+    }
+
+    .tf-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: rgba(17, 17, 27, 0.5);
+      border: 1px solid #313244;
+      min-width: 85px;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .tf-node.bullish-node {
+      border-color: rgba(166, 227, 161, 0.25);
+      background: rgba(166, 227, 161, 0.05);
+    }
+
+    .tf-node.bearish-node {
+      border-color: rgba(243, 139, 168, 0.25);
+      background: rgba(243, 139, 168, 0.05);
+    }
+
+    .tf-node.neutral-node {
+      border-color: rgba(249, 226, 175, 0.2);
+      background: rgba(249, 226, 175, 0.03);
+    }
+
+    .tf-label {
+      font-size: 0.6rem;
+      font-weight: 800;
+      color: #6c7086;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .tf-direction-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .tf-direction-badge.bullish {
+      background: rgba(166, 227, 161, 0.2);
+      color: #a6e3a1;
+    }
+
+    .tf-direction-badge.bearish {
+      background: rgba(243, 139, 168, 0.2);
+      color: #f38ba8;
+    }
+
+    .tf-direction-badge.neutral {
+      background: rgba(249, 226, 175, 0.15);
+      color: #f9e2af;
+    }
+
+    .tf-details {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+    }
+
+    .tf-phase {
+      font-size: 0.55rem;
+      font-weight: 700;
+      color: #585b70;
+      text-transform: uppercase;
+    }
+
+    .tf-strength {
+      font-size: 0.55rem;
+      font-weight: 700;
+    }
+
+    .tf-strength.bullish { color: #a6e3a1; }
+    .tf-strength.bearish { color: #f38ba8; }
+    .tf-strength.neutral { color: #6c7086; }
+
+    .tf-pullback-dot {
+      position: absolute;
+      top: -6px;
+      right: -4px;
+      font-size: 0.75rem;
+      background: rgba(250, 179, 135, 0.2);
+      color: #fab387;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tf-connector {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .connector-line {
+      width: 20px;
+      height: 2px;
+      background: #313244;
+    }
+
+    .connector-arrow {
+      font-size: 0.8rem;
+      color: #45475a;
+    }
+
+    .tf-connector.aligned .connector-line {
+      background: #a6e3a1;
+    }
+
+    .tf-connector.aligned .connector-arrow {
+      color: #a6e3a1;
+    }
+
+    .tf-connector.conflicting .connector-line {
+      background: #f38ba8;
+    }
+
+    .tf-connector.conflicting .connector-arrow {
+      color: #f38ba8;
+    }
+
+    .mtf-description {
+      font-size: 0.8rem;
+      color: #a6adc8;
+      margin: 12px 0 0;
+      font-style: italic;
+      text-align: center;
+    }
   `]
 })
 export class MultiTimeframeOverlayComponent {

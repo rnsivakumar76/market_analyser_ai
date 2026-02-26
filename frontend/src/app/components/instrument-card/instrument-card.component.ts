@@ -9,8 +9,14 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
   standalone: true,
   imports: [CommonModule, InstrumentChartComponent, MultiTimeframeOverlayComponent],
   template: `
-    <div class="card" [class]="getCardClass()">
-      <div class="card-header">
+    <div class="instrument-view-container">
+      <!-- Top Multi-Timeframe Area (from Image 1 & 2 layout) -->
+      <div class="mtf-top-card">
+        <app-multi-timeframe-overlay [analysis]="analysis"></app-multi-timeframe-overlay>
+      </div>
+
+      <div class="card" [class]="getCardClass()">
+        <div class="card-header">
         <div class="symbol-info">
           <div class="symbol-row">
             <span class="symbol">{{ analysis.symbol }}</span>
@@ -95,12 +101,7 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                     📊 View Interactive Chart
                   </button>
 
-                  <!-- 4. MULTI-TIMEFRAME STAGES -->
-                  <div class="mtf-vertical-list">
-                    <app-multi-timeframe-overlay [analysis]="analysis"></app-multi-timeframe-overlay>
-                  </div>
-
-                  <!-- 5. NEWS INTELLIGENCE -->
+                  <!-- 4. NEWS INTELLIGENCE -->
                   <div class="section-card news-intel-card">
                     <div class="news-header">
                       <span class="news-title"><span class="icon">📰</span> News Intelligence</span>
@@ -284,9 +285,36 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
         </div>
       }
     </div>
+    </div>
   `,
   styles: [`
+    .instrument-view-container { display: flex; flex-direction: column; gap: 16px; }
+    .mtf-top-card { width: 100%; border-radius: 12px; }
+
     .card { background: #0b0b15; border-radius: 12px; padding: 20px; border: 1px solid #1a1a2a; }
+
+    /* Fix Header Layout */
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #1f1f3a; }
+    .symbol-info { display: flex; flex-direction: column; gap: 4px; }
+    .symbol-row { display: flex; align-items: center; gap: 12px; }
+    .symbol { font-size: 1.8rem; font-weight: 900; color: #cdd6f4; letter-spacing: 0.5px; }
+    .name { font-size: 1rem; color: #9399b2; }
+    
+    .beta-status, .alpha-status { font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; }
+    .beta-status.good { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; border: 1px solid rgba(166, 227, 161, 0.2); }
+    .beta-status.bad { background: rgba(243, 139, 168, 0.1); color: #f38ba8; border: 1px solid rgba(243, 139, 168, 0.2); }
+    .alpha-status.leader { background: rgba(137, 180, 250, 0.1); color: #89b4fa; border: 1px solid rgba(137, 180, 250, 0.2); }
+    .alpha-status.laggard { background: rgba(250, 179, 135, 0.1); color: #fab387; border: 1px solid rgba(250, 179, 135, 0.2); }
+
+    .header-actions-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .price-info { display: flex; align-items: baseline; gap: 12px; }
+    .price { font-size: 2rem; font-weight: 900; color: #cdd6f4; line-height: 1; }
+    .change { font-size: 1.1rem; font-weight: 800; }
+    .change.positive { color: #a6e3a1; }
+    .change.negative { color: #f38ba8; }
+    .last-updated-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #6c7086; font-style: italic; }
+    .btn-refresh-local { background: none; border: none; font-size: 0.8rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+    .btn-refresh-local:hover { opacity: 1; transform: rotate(180deg); }
 
     /* Tactical Grid Layout */
     .tactical-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
