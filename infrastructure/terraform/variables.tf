@@ -62,6 +62,18 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
+variable "domain_name" {
+  description = "Custom domain name (e.g., app.yourdomain.com)"
+  type        = string
+  default     = ""
+}
+
+variable "acm_certificate_arn" {
+  description = "ARN of the ACM certificate in us-east-1 for the custom domain"
+  type        = string
+  default     = ""
+}
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Google Auth & Security
 # ──────────────────────────────────────────────────────────────────────────────
