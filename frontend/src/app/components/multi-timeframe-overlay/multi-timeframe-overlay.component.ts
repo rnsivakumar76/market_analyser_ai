@@ -16,40 +16,6 @@ interface TimeframeSignal {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="mtf-container">
-      <div class="mtf-header">
-        <span class="mtf-title">MULTI-TIMEFRAME ALIGNMENT</span>
-        <span class="alignment-badge" [class]="getAlignmentClass()">
-          {{ getAlignmentLabel() }}
-        </span>
-      </div>
-      <div class="timeframe-chain">
-        @for (tf of timeframes; track tf.label) {
-          <div class="tf-node" [class]="getNodeClass(tf)">
-            <div class="tf-label">{{ tf.label }}</div>
-            <div class="tf-direction-badge" [class]="tf.direction">
-              {{ tf.direction.toUpperCase() }}
-            </div>
-            <div class="tf-details">
-              <span class="tf-phase">{{ tf.phase }}</span>
-              <span class="tf-strength" [class]="tf.strength">{{ tf.strength }}</span>
-            </div>
-            @if (tf.pullback) {
-              <span class="tf-pullback-dot" title="Pullback detected">↩</span>
-            }
-          </div>
-          @if (!$last) {
-            <div class="tf-connector" [class]="getConnectorClass($index)">
-              <div class="connector-line"></div>
-              <div class="connector-arrow">→</div>
-            </div>
-          }
-        }
-      </div>
-      <p class="mtf-description">{{ getDescription() }}</p>
-    </div>
-  `,
-  styles: [`
     <div class="mtf-vertical-container">
       @for (tf of timeframes; track tf.label) {
         <div class="mtf-node-vertical" [class]="getNodeClass(tf)">
@@ -65,7 +31,7 @@ interface TimeframeSignal {
       }
     </div>
   `,
-    styles: [`
+  styles: [`
     .mtf-vertical-container { display: flex; flex-direction: column; gap: 12px; }
     
     .mtf-node-vertical { 
