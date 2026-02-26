@@ -81,6 +81,8 @@ resource "aws_cloudfront_distribution" "frontend" {
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
+  }
+
   # Origin for API Gateway
   origin {
     domain_name = replace(aws_apigatewayv2_api.http_api.api_endpoint, "/^https?://([^/]+).*/", "$1")
