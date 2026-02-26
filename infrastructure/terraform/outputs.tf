@@ -13,6 +13,16 @@ output "frontend_s3_bucket" {
   value       = aws_s3_bucket.frontend.bucket
 }
 
+output "cloudfront_url" {
+  description = "CloudFront Distribution URL"
+  value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront Distribution ID for cache invalidation"
+  value       = aws_cloudfront_distribution.frontend.id
+}
+
 output "ecr_backend_url" {
   description = "ECR repository URL for the backend image"
   value       = local.ecr_backend_url

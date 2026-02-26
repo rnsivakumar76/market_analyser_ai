@@ -218,6 +218,10 @@ jobs:
         run: |
           BUCKET=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_s3_bucket']['value'])")
           aws s3 sync ./dist/ s3://$BUCKET/ --delete
+      - name: Invalidate CloudFront
+        run: |
+          DIST_ID=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['cloudfront_distribution_id']['value'])")
+          aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
       - name: Summary
         run: |
           ENV=${{ needs.setup.outputs.environment }}

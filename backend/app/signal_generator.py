@@ -229,6 +229,43 @@ def generate_trade_signal(
             pyramiding_plan = "N/A"
             scaling_plan = "N/A - Sideways Market"
 
+    # Layman's Terms Executive Summary
+    summary_parts = []
+    
+    # 1. State the trend and recommendation
+    if recommendation == Signal.NEUTRAL:
+        summary_parts.append("The system advises staying sidelined right now due to mixed or conflicting signals.")
+    elif recommendation == Signal.BULLISH and trade_worthy:
+        summary_parts.append("The system has generated a high-probability BUY signal, meaning multiple technical and fundamental factors show strong upward momentum.")
+    elif recommendation == Signal.BEARISH and trade_worthy:
+        summary_parts.append("The system has generated a high-probability SELL signal, warning that the asset is in a concerning downtrend.")
+    else:
+        if recommendation == Signal.BULLISH:
+            summary_parts.append("The system leans slightly bullish, but conditions are not strong enough to risk capital yet.")
+        else:
+            summary_parts.append("The system leans bearish, but the setup is incomplete and too risky to short right now.")
+
+    # 2. Add structural context
+    trend_str = "an uptrend" if trend.direction == Signal.BULLISH else "a downtrend" if trend.direction == Signal.BEARISH else "sideways consolidation"
+    summary_parts.append(f"The macro (long-term) picture is currently in {trend_str}.")
+    
+    if strength.signal == Signal.BULLISH and trend.direction == Signal.BEARISH:
+        summary_parts.append("However, short-term momentum is fighting the overall trend, creating a dangerous 'falling knife' scenario.")
+    elif strength.signal == Signal.BEARISH and trend.direction == Signal.BULLISH:
+        summary_parts.append("Short-term momentum is currently cooling off, which may provide a dip-buying opportunity if support holds.")
+        
+    # 3. Add fundamental warning context
+    if fundamentals and fundamentals.has_high_impact_events:
+        summary_parts.append("WARNING: Extreme volatility is expected soon due to major upcoming economic news or earnings. Do not trade unless prepared for violent swings.")
+        
+    # 4. Action Summary
+    if trade_worthy:
+        summary_parts.append(f"Conclusion: Mathematical alignment is strong enough to execute the '{action_plan}' framework.")
+    else:
+        summary_parts.append("Conclusion: Wait patiently for better mathematical alignment or a clearer setup before taking action.")
+
+    executive_summary = " ".join(summary_parts)
+
     return TradeSignal(
         recommendation=recommendation,
         score=score,
@@ -238,5 +275,6 @@ def generate_trade_signal(
         action_plan_details=action_plan_details,
         psychological_guard=psychological_guard,
         pyramiding_plan=pyramiding_plan,
-        scaling_plan=scaling_plan
+        scaling_plan=scaling_plan,
+        executive_summary=executive_summary
     )
