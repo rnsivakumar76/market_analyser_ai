@@ -55,285 +55,205 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
         @switch (selectedTab) {
           @case ('plan') {
             <div class="tab-panel action-tab">
-              <!-- A. STRATEGIC SIGNAL -->
-              <div class="signal-summary-row">
-                <div class="trade-signal-mini" [class]="getSignalClass()">
-                  <div class="signal-badge" [class]="getSignalClass()">
-                    <span class="signal-icon">{{ getSignalIcon() }}</span>
-                    <span class="signal-text">{{ analysis.trade_signal.recommendation.toUpperCase() }}</span>
-                  </div>
-                  <div class="score">
-                    <span class="score-label">Score:</span>
-                    <span class="score-value" [class]="getScoreClass()">{{ analysis.trade_signal.score }}</span>
-                  </div>
-                  @if (analysis.trade_signal.trade_worthy) {
-                    <span class="trade-worthy-badge">✓ TRADABLE</span>
-                  }
-                </div>
-              </div>
+              <div class="tactical-grid">
+                <!-- LEFT COLUMN: STRATEGY & NARRATIVE -->
+                <div class="tactical-left">
+                  <!-- 1. ACTION PLAN -->
+                  <div class="section-card strategy-plan-card" [class]="getSignalClass()">
+                    <div class="card-header-mini">STRATEGIC ACTION PLAN</div>
+                    <div class="plan-hero-text">{{ analysis.trade_signal.action_plan }}</div>
+                    <p class="plan-sub-text">{{ analysis.trade_signal.action_plan_details }}</p>
 
-              <!-- B. ACTION PLAN -->
-              <div class="action-plan-container" [class]="getSignalClass()">
-                <div class="plan-card">
-                  <div class="plan-header">Strategic Action Plan</div>
-                  <div class="plan-title">{{ analysis.trade_signal.action_plan }}</div>
-
-                  @if (analysis.trade_signal.executive_summary) {
-                    <div class="summary-callout">
-                      <span class="summary-icon">💡</span>
-                      <p class="summary-text">{{ analysis.trade_signal.executive_summary }}</p>
+                    <div class="rule-box" *ngIf="analysis.trade_signal.psychological_guard">
+                       <span class="icon">💡</span>
+                       <div class="rule-text">
+                         <strong>Psychological Rule:</strong> {{ analysis.trade_signal.psychological_guard }}
+                       </div>
                     </div>
-                  }
 
-                  <p class="plan-details">{{ analysis.trade_signal.action_plan_details }}</p>
+                    <div class="rule-box scaling" *ngIf="analysis.trade_signal.scaling_plan">
+                       <span class="icon">⚖️</span>
+                       <div class="rule-text">
+                         <strong>Scaling Plan:</strong> {{ analysis.trade_signal.scaling_plan }}
+                       </div>
+                    </div>
+                  </div>
 
-                  <div class="rules-grid">
-                    @if (analysis.trade_signal.psychological_guard) {
-                      <div class="rule-item">
-                        <span class="rule-icon">🛡️</span>
-                        <div class="rule-content">
-                          <strong>Psychological Rule:</strong>
-                          <span>{{ analysis.trade_signal.psychological_guard }}</span>
+                  <!-- 2. PULLBACK RISK -->
+                  <div class="section-card pullback-assessment-card" [class.warning]="analysis.pullback_warning?.is_warning">
+                    <div class="p-header">
+                      <span class="p-title">⚠️ PULLBACK RISK ASSESSMENT</span>
+                      <span class="p-score">SCORE: {{ analysis.pullback_warning?.warning_score || 0 }}/8</span>
+                    </div>
+                    <p class="p-desc">
+                      {{ analysis.pullback_warning?.description || 'Momentum is healthy. No immediate pullback signals detected.' }}
+                    </p>
+                  </div>
+
+                  <!-- 3. CHART LINK -->
+                  <button class="btn-chart-link" (click)="setTab('insight')">
+                    📊 View Interactive Chart
+                  </button>
+
+                  <!-- 4. MULTI-TIMEFRAME STAGES -->
+                  <div class="mtf-vertical-list">
+                    <app-multi-timeframe-overlay [analysis]="analysis"></app-multi-timeframe-overlay>
+                  </div>
+
+                  <!-- 5. NEWS INTELLIGENCE -->
+                  <div class="section-card news-intel-card">
+                    <div class="news-header">
+                      <span class="news-title"><span class="icon">📰</span> News Intelligence</span>
+                      <span class="sentiment-tag" [class]="analysis.news_sentiment?.label?.toLowerCase() || 'neutral'">
+                        {{ analysis.news_sentiment?.label || 'NEUTRAL' }}
+                      </span>
+                    </div>
+                    <p class="sentiment-brief">{{ analysis.news_sentiment?.sentiment_summary }}</p>
+                    <div class="news-mini-list">
+                      @for (item of analysis.news_sentiment?.news_items?.slice(0, 3); track item.title) {
+                        <div class="news-item-row" (click)="openNewsModal(item)">
+                          <div class="n-info">
+                            <span class="n-title">{{ item.title }}</span>
+                            <span class="n-source">{{ item.source }} • 4 hours ago</span>
+                          </div>
+                          <span class="n-status" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
                         </div>
-                      </div>
-                    }
-                    @if (analysis.trade_signal.scaling_plan) {
-                      <div class="rule-item">
-                        <span class="rule-icon">⚖️</span>
-                        <div class="rule-content">
-                          <strong>Scaling Plan:</strong>
-                          <span>{{ analysis.trade_signal.scaling_plan }}</span>
-                        </div>
-                      </div>
-                    }
+                      }
+                    </div>
                   </div>
                 </div>
 
-                <!-- C. PULLBACK RISK -->
-                @if (analysis.pullback_warning) {
-                  <div class="pullback-risk-card" [class.warning]="analysis.pullback_warning.is_warning">
-                    <div class="p-risk-header">
-                      <span>⚠️ PULLBACK RISK ASSESSMENT</span>
-                      <span class="p-risk-score">SCORE: {{ analysis.pullback_warning.warning_score }}/8</span>
-                    </div>
-                    <p class="p-risk-desc">{{ analysis.pullback_warning.description }}</p>
+                <!-- RIGHT COLUMN: DATA & RISK -->
+                <div class="tactical-right">
+                  <div class="signal-score-badge" [class]="getSignalClass()">
+                    <span class="s-label">{{ analysis.trade_signal.recommendation.toUpperCase() }}</span>
+                    <span class="s-score">Score: <strong>{{ analysis.trade_signal.score }}</strong></span>
                   </div>
-                }
-              </div>
 
-              <!-- D. SIZING & RISK -->
-              <div class="data-grid-layout">
-                @if (analysis.position_sizing) {
-                  <div class="data-card sizing-card">
-                    <div class="data-card-header">
-                      <span class="icon">💰</span> RISK-ADJUSTED SIZING
+                  <!-- 1. RISK-ADJUSTED SIZING -->
+                  <div class="section-card data-card sizing-card">
+                    <div class="data-header"><span class="icon">⚖️</span> RISK-ADJUSTED SIZING</div>
+                    <div class="data-row-grid">
+                      <div class="data-col"><span class="label">Suggested Units</span><span class="value accent">{{ analysis.position_sizing?.suggested_units }}</span></div>
+                      <div class="data-col"><span class="label">Risk Amount</span><span class="value">\${{ analysis.position_sizing?.risk_amount }}</span></div>
+                      <div class="data-col"><span class="label">Risk %</span><span class="value">{{ analysis.position_sizing?.final_risk_percent }}%</span></div>
+                      <div class="data-col"><span class="label">Corr. Penalty</span><span class="value">-{{ (analysis.position_sizing?.correlation_penalty || 0) * 100 }}%</span></div>
                     </div>
-                    <div class="data-grid">
-                      <div class="data-item">
-                        <span class="label">Suggested Units</span>
-                        <span class="value highlight">{{ analysis.position_sizing.suggested_units }}</span>
-                      </div>
-                      <div class="data-item">
-                        <span class="label">Risk Amount</span>
-                        <span class="value">\${{ analysis.position_sizing.risk_amount }}</span>
-                      </div>
-                      <div class="data-item">
-                        <span class="label">Risk %</span>
-                        <span class="value">{{ analysis.position_sizing.final_risk_percent }}%</span>
-                      </div>
-                      <div class="data-item">
-                        <span class="label">Corr. Penalty</span>
-                        <span class="value" [class.negative]="analysis.position_sizing.correlation_penalty > 0">
-                          -{{ (analysis.position_sizing.correlation_penalty * 100).toFixed(0) }}%
-                        </span>
-                      </div>
-                    </div>
+                    <div class="sizing-footer">Risk {{ analysis.position_sizing?.final_risk_percent }}% of portfolio. Full size allocated — independent signal.</div>
                   </div>
-                }
 
-                @if (analysis.volatility_risk) {
-                  <div class="data-card risk-card">
-                    <div class="data-card-header">
-                      <span class="icon">🛡️</span> RISK & VOLATILITY
+                  <!-- 2. RISK & VOLATILITY MANAGEMENT -->
+                  <div class="section-card data-card volatility-card">
+                    <div class="data-header"><span class="icon">🛡️</span> RISK & VOLATILITY MANAGEMENT</div>
+                    <div class="data-row-grid">
+                      <div class="data-col"><span class="label">ATR (14D)</span><span class="value">{{ analysis.volatility_risk.atr.toFixed(3) }}</span></div>
+                      <div class="data-col"><span class="label">Stop Loss</span><span class="value bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
+                      <div class="data-col"><span class="label">Take Profit</span><span class="value bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
+                      <div class="data-col"><span class="label">RR Ratio</span><span class="value">{{ analysis.volatility_risk.risk_reward_ratio.toFixed(2) }}</span></div>
                     </div>
-                    <div class="data-grid">
-                      <div class="data-item">
-                        <span class="label">ATR (14D)</span>
-                        <span class="value">{{ analysis.volatility_risk.atr.toFixed(3) }}</span>
-                      </div>
-                      <div class="data-item">
-                        <span class="label">Stop Loss</span>
-                        <span class="value sl">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
-                      </div>
-                      <div class="data-item">
-                        <span class="label">Take Profit</span>
-                        <span class="value tp">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
-                      </div>
-                      <div class="data-item">
-                        <span class="label">RR Ratio</span>
-                        <span class="value">{{ analysis.volatility_risk.risk_reward_ratio.toFixed(2) }}</span>
-                      </div>
-                    </div>
+                    <div class="sizing-footer">Neutral market. ATR is {{ analysis.volatility_risk.atr.toFixed(2) }}. Expect daily swings.</div>
                   </div>
-                }
-              </div>
 
-              <!-- E. TRUSTWORTHY SIGNALS -->
-              <div class="trust-signals-section">
-                <div class="section-divider">Trustworthy Signals</div>
-                <div class="reasons-pill-container">
-                  @for (reason of analysis.trade_signal.reasons; track reason) {
-                    <div class="reason-pill">
-                      <span class="pill-dot"></span>
-                      {{ reason }}
+                  <!-- 3. FUNDAMENTAL CONTEXT (ECONOMIC DATA) -->
+                  <div class="section-card data-card fundamentals-card">
+                    <div class="data-header"><span class="icon">🌍</span> FUNDAMENTAL CONTEXT</div>
+                    @if (analysis.fundamentals?.has_high_impact_events) {
+                      <div class="impact-warning">WARNING! High volatility expected: Economic events today.</div>
+                    }
+                    <div class="event-stack">
+                      @for (event of analysis.fundamentals?.events; track event) {
+                        <div class="event-line">
+                          <span class="icon">🔔</span> {{ event }}
+                        </div>
+                      }
                     </div>
-                  }
+                    <p class="fund-summary">{{ analysis.fundamentals?.description }}</p>
+                  </div>
+
+                  <!-- 4. TRUSTWORTHY SIGNALS -->
+                  <div class="section-card data-card trust-signals-card">
+                    <div class="data-header">Trustworthy Signals</div>
+                    <ul class="trust-list">
+                      @for (reason of analysis.trade_signal.reasons; track reason) {
+                        <li>{{ reason }}</li>
+                      }
+                    </ul>
+                  </div>
+
+                  <!-- 5. INLINE METRICS -->
+                  <div class="inline-metrics-row">
+                    <div class="m-item"><span class="l">RSI</span><span class="v">{{ analysis.daily_strength.rsi.toFixed(1) }}</span></div>
+                    <div class="m-item"><span class="l">ADX</span><span class="v">{{ analysis.daily_strength.adx.toFixed(1) }}</span></div>
+                    <div class="m-item"><span class="l">Volume</span><span class="v">{{ analysis.daily_strength.volume_ratio.toFixed(2) }}x</span></div>
+                    <div class="m-item"><span class="l">20 MA</span><span class="v">\${{ analysis.current_price.toFixed(2) }}</span></div>
+                  </div>
                 </div>
               </div>
             </div>
+
 
           }
 
           @case ('insight') {
             <div class="tab-panel insight-tab">
-              <!-- A. TREND & ALIGNMENT -->
-              <app-multi-timeframe-overlay [analysis]="analysis"></app-multi-timeframe-overlay>
-
-              <!-- B. TECHNICAL MATRICES -->
-              <div class="data-grid-layout mt-16">
-                @if (analysis.technical_indicators) {
-                  <div class="data-card pivot-card">
-                    <div class="data-card-header">
-                      <span class="icon">🎯</span> STRATEGIC PIVOT MATRIX
-                    </div>
-                    <div class="pivot-matrix-main">
-                      <div class="pivot-row">
-                        <div class="p-col"><span class="p-tag res">R3</span> \${{ analysis.technical_indicators.pivot_points.r3 }}</div>
-                        <div class="p-col"><span class="p-tag res">R2</span> \${{ analysis.technical_indicators.pivot_points.r2 }}</div>
-                        <div class="p-col"><span class="p-tag res">R1</span> \${{ analysis.technical_indicators.pivot_points.r1 }}</div>
-                      </div>
-                      <div class="pivot-row">
-                        <div class="p-col"><span class="p-tag sup">S1</span> \${{ analysis.technical_indicators.pivot_points.s1 }}</div>
-                        <div class="p-col"><span class="p-tag sup">S2</span> \${{ analysis.technical_indicators.pivot_points.s2 }}</div>
-                        <div class="p-col"><span class="p-tag sup">S3</span> \${{ analysis.technical_indicators.pivot_points.s3 }}</div>
+              <div class="insight-layout">
+                <div class="insight-top-grid">
+                   @if (analysis.technical_indicators) {
+                    <div class="section-card data-card pivot-card">
+                      <div class="data-header"><span class="icon">🎯</span> STRATEGIC PIVOT MATRIX</div>
+                      <div class="pivot-grid-main">
+                        <div class="pivot-row">
+                          <div class="p-item"><span class="t res">R3</span> \${{ analysis.technical_indicators.pivot_points.r3 }}</div>
+                          <div class="p-item"><span class="t res">R2</span> \${{ analysis.technical_indicators.pivot_points.r2 }}</div>
+                          <div class="p-item"><span class="t res">R1</span> \${{ analysis.technical_indicators.pivot_points.r1 }}</div>
+                        </div>
+                        <div class="pivot-row">
+                          <div class="p-item"><span class="t sup">S1</span> \${{ analysis.technical_indicators.pivot_points.s1 }}</div>
+                          <div class="p-item"><span class="t sup">S2</span> \${{ analysis.technical_indicators.pivot_points.s2 }}</div>
+                          <div class="p-item"><span class="t sup">S3</span> \${{ analysis.technical_indicators.pivot_points.s3 }}</div>
+                        </div>
                       </div>
                       <div class="pivot-footer">
-                        <span>Daily Pivot: <strong>\${{ analysis.technical_indicators.pivot_points.pivot }}</strong></span>
-                        <span>Least Resistance: <strong [class]="analysis.technical_indicators.least_resistance_line">{{ analysis.technical_indicators.least_resistance_line.toUpperCase() }}</strong></span>
+                        <span>Daily Pivot: \${{ analysis.technical_indicators.pivot_points.pivot }}</span>
+                        <span>Resistance Line: <strong [class]="analysis.technical_indicators.least_resistance_line">{{ analysis.technical_indicators.least_resistance_line.toUpperCase() }}</strong></span>
                       </div>
                     </div>
-                  </div>
 
-                  <div class="data-card fib-card">
-                    <div class="data-card-header">
-                      <span class="icon">📊</span> SWING FIBONACCI RANGES
-                    </div>
-                    @if (analysis.technical_indicators.fibonacci) {
-                      <div class="fib-grid">
-                        <div class="fib-item"><span class="label">Ext 1.618</span><span class="value">\${{ analysis.technical_indicators.fibonacci.ext_1618.toFixed(2) }}</span></div>
-                        <div class="fib-item"><span class="label">Ext 1.272</span><span class="value">\${{ analysis.technical_indicators.fibonacci.ext_1272.toFixed(2) }}</span></div>
-                        <div class="fib-item"><span class="label">Swing High</span><span class="value">\${{ analysis.technical_indicators.fibonacci.swing_high.toFixed(2) }}</span></div>
-                        <div class="fib-item"><span class="label">Ret 38.2%</span><span class="value">\${{ analysis.technical_indicators.fibonacci.ret_382.toFixed(2) }}</span></div>
-                        <div class="fib-item"><span class="label">Ret 61.8%</span><span class="value">\${{ analysis.technical_indicators.fibonacci.ret_618.toFixed(2) }}</span></div>
-                        <div class="fib-item"><span class="label">Swing Low</span><span class="value">\${{ analysis.technical_indicators.fibonacci.swing_low.toFixed(2) }}</span></div>
+                    <div class="section-card data-card fib-card">
+                      <div class="data-header"><span class="icon">📊</span> SWING FIBONACCI RANGES</div>
+                      <div class="fib-grid-main">
+                        <div class="f-box"><span class="l">Ext 1.618</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ext_1618?.toFixed(2) }}</span></div>
+                        <div class="f-box"><span class="l">Ext 1.272</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ext_1272?.toFixed(2) }}</span></div>
+                        <div class="f-box"><span class="l">Swing High</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.swing_high?.toFixed(2) }}</span></div>
+                        <div class="f-box"><span class="l">Ret 38.2%</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ret_382?.toFixed(2) }}</span></div>
+                        <div class="f-box"><span class="l">Ret 61.8%</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ret_618?.toFixed(2) }}</span></div>
+                        <div class="f-box"><span class="l">Swing Low</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.swing_low?.toFixed(2) }}</span></div>
                       </div>
-                    }
-                  </div>
-                }
-              </div>
-
-              <!-- C. PROBABILITY & BACKTEST -->
-              @if (analysis.backtest_results) {
-                <div class="backtest-horizontal mt-16">
-                  <div class="data-card-header">
-                    <span class="icon">📈</span> STRATEGY PROBABILITY (1Y BACKTEST)
-                  </div>
-                  <div class="backtest-stats">
-                    <div class="b-item">
-                      <span class="label">Win Rate</span>
-                      <span class="value" [class.good]="analysis.backtest_results.win_rate >= 50">{{ analysis.backtest_results.win_rate.toFixed(1) }}%</span>
-                    </div>
-                    <div class="b-item">
-                      <span class="label">Total Trades</span>
-                      <span class="value">{{ analysis.backtest_results.total_trades }}</span>
-                    </div>
-                    <div class="b-item">
-                      <span class="label">Profit Factor</span>
-                      <span class="value" [class.good]="analysis.backtest_results.profit_factor > 1.5">{{ analysis.backtest_results.profit_factor }}</span>
-                    </div>
-                  </div>
-                  <p class="b-desc">{{ analysis.backtest_results.description }}</p>
-                </div>
-              }
-
-              <!-- D. FUNDAMENTALS & NEWS -->
-              <div class="intelligence-section mt-16">
-                <div class="section-divider">Intelligence & Fundamentals</div>
-                
-                @if (analysis.fundamentals) {
-                  <div class="fundamentals-context">
-                    <div class="fund-header">
-                      <span class="icon">🌍</span> FUNDAMENTAL CONTEXT
-                      @if (analysis.fundamentals.has_high_impact_events) {
-                        <span class="impact-badge high">HIGH IMPACT EVENTS</span>
-                      }
-                    </div>
-                    <p class="fund-desc">{{ analysis.fundamentals.description }}</p>
-                    @if (analysis.fundamentals.events.length > 0) {
-                      <div class="event-list">
-                        @for (event of analysis.fundamentals.events; track event) {
-                          <div class="event-item">
-                            <span class="event-dot"></span> {{ event }}
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-
-                @if (analysis.news_sentiment) {
-                  <div class="news-intelligence mt-16">
-                    <div class="news-header-row">
-                      <span class="news-title-text"><span class="icon">📰</span> News Intelligence</span>
-                      <span class="sentiment-badge" [class]="analysis.news_sentiment.label.toLowerCase()">
-                        {{ analysis.news_sentiment.label.toUpperCase() }}
-                      </span>
-                    </div>
-                    <p class="sentiment-summary">{{ analysis.news_sentiment.sentiment_summary }}</p>
-                    <div class="news-grid-compact">
-                      @for (item of analysis.news_sentiment.news_items.slice(0, 3); track item.title) {
-                        <div (click)="openNewsModal(item)" class="news-mini-card">
-                          <span class="n-title">{{ item.title }}</span>
-                          <span class="n-meta">{{ item.sentiment_label }} • {{ item.source }}</span>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-
-              <!-- E. INTERACTIVE CHART -->
-              <div class="embedded-chart-section mt-24">
-                <div class="section-divider">Market Dynamics</div>
-                <div class="chart-container-embedded">
-                  <div class="chart-controls">
-                    <button class="btn-load-chart" (click)="toggleChart()" *ngIf="!showChart">
-                      🚀 Initialize {{ analysis.symbol }} Intelligence Chart
-                    </button>
-                  </div>
-                  
-                  @if (showChart) {
-                    <div class="chart-wrapper-embedded">
-                      @if (isLoadingChart) { <div class="chart-loading">Processing data...</div> }
-                      @else if (chartData.length > 0) {
-                        <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol"></app-instrument-chart>
-                      }
-                      @else { <div class="chart-error">Unable to stream data.</div> }
                     </div>
                   }
                 </div>
+
+                <div class="section-card backtest-card mt-16">
+                  <div class="data-header"><span class="icon">📈</span> STRATEGY PROBABILITY (1Y BACKTEST)</div>
+                  <div class="backtest-stats-row">
+                    <div class="b-stat"><span class="tl">Win Rate</span><span class="tv highlight">{{ analysis.backtest_results?.win_rate?.toFixed(1) }}%</span></div>
+                    <div class="b-stat"><span class="tl">Total Trades</span><span class="tv">{{ analysis.backtest_results?.total_trades }}</span></div>
+                    <div class="b-stat"><span class="tl">Profit Factor</span><span class="tv">{{ analysis.backtest_results?.profit_factor }}</span></div>
+                  </div>
+                </div>
+
+                <div class="section-card chart-card mt-16">
+                   <div class="data-header"><span class="icon">📈</span> MARKET DYNAMICS VIEW</div>
+                   <div class="chart-box">
+                      <button class="btn-load-chart" (click)="toggleChart()" *ngIf="!showChart">🚀 Initialize Intelligence Chart</button>
+                      <div class="chart-wrap" *ngIf="showChart">
+                        <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol" *ngIf="chartData.length > 0"></app-instrument-chart>
+                      </div>
+                   </div>
+                </div>
               </div>
             </div>
+
 
           }
         }
@@ -366,130 +286,102 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
     </div>
   `,
   styles: [`
-    .tab-panel { animation: fadeIn 0.3s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .card { background: #0b0b15; border-radius: 12px; padding: 20px; border: 1px solid #1a1a2a; }
 
-    /* Tactical Tab Styles */
-    .signal-summary-row { margin-bottom: 20px; }
-    .trade-signal-mini { 
-      display: flex; align-items: center; justify-content: space-between; 
-      padding: 16px; border-radius: 12px; border: 1px solid #313244;
-      background: rgba(24, 24, 37, 0.6);
-    }
-    .trade-signal-mini.bullish { border-left: 4px solid #a6e3a1; }
-    .trade-signal-mini.bearish { border-left: 4px solid #f38ba8; }
-    .trade-signal-mini.neutral { border-left: 4px solid #f9e2af; }
+    /* Tactical Grid Layout */
+    .tactical-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
 
-    .signal-badge { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.1rem; }
-    .score-value { font-size: 1.4rem; font-weight: 900; }
-    .trade-worthy-badge { 
-      background: #fab387; color: #1e1e2e; padding: 4px 10px; 
-      border-radius: 6px; font-weight: 900; font-size: 0.75rem; 
-      box-shadow: 0 0 15px rgba(250, 179, 135, 0.3);
-    }
+    .section-card { background: #121220; border: 1px solid #1f1f3a; border-radius: 10px; padding: 16px; margin-bottom: 16px; transition: border-color 0.2s; }
+    .section-card:hover { border-color: #31315a; }
 
-    .action-plan-container { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
-    .plan-card { 
-      background: rgba(30, 30, 46, 0.6); border: 1px solid #313244; 
-      border-radius: 12px; padding: 20px;
-    }
-    .plan-header { font-size: 0.7rem; color: #9399b2; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
-    .plan-title { font-size: 1.3rem; font-weight: 850; color: #cdd6f4; margin-bottom: 12px; }
-    .summary-callout { 
-      background: rgba(137, 180, 250, 0.1); border: 1px solid rgba(137, 180, 250, 0.2);
-      border-radius: 8px; padding: 12px; margin-bottom: 16px; display: flex; gap: 12px;
-    }
-    .summary-text { font-size: 0.95rem; color: #cdd6f4; font-style: italic; margin: 0; line-height: 1.5; }
-    .plan-details { font-size: 0.9rem; color: #a6adc8; line-height: 1.6; margin-bottom: 20px; }
+    /* Strategy Card */
+    .strategy-plan-card { border-left: 4px solid #89b4fa; }
+    .strategy-plan-card.bullish { border-left-color: #a6e3a1; }
+    .strategy-plan-card.bearish { border-left-color: #f38ba8; }
+    .card-header-mini { font-size: 0.65rem; color: #9399b2; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+    .plan-hero-text { font-size: 1.4rem; font-weight: 850; color: #cdd6f4; margin-bottom: 8px; }
+    .plan-sub-text { font-size: 0.9rem; color: #9399b2; margin-bottom: 16px; line-height: 1.4; }
+    .rule-box { background: rgba(137, 180, 250, 0.05); border: 1px dashed rgba(137, 180, 250, 0.2); border-radius: 8px; padding: 12px; display: flex; gap: 10px; margin-top: 10px; }
+    .rule-box.scaling { background: rgba(249, 226, 175, 0.05); border-color: rgba(249, 226, 175, 0.2); }
+    .rule-text { font-size: 0.85rem; color: #bac2de; }
+    .rule-text strong { color: #89b4fa; display: block; font-size: 0.75rem; margin-bottom: 2px; }
 
-    .rules-grid { display: grid; grid-template-columns: 1fr; gap: 12px; border-top: 1px solid #313244; pt: 16px; }
-    .rule-item { display: flex; gap: 12px; align-items: flex-start; }
-    .rule-icon { font-size: 1.2rem; }
-    .rule-content { display: flex; flex-direction: column; gap: 2px; }
-    .rule-content strong { font-size: 0.75rem; color: #89b4fa; text-transform: uppercase; }
-    .rule-content span { font-size: 0.85rem; color: #cdd6f4; }
+    /* Pullback Assessment */
+    .pullback-assessment-card { background: rgba(250, 179, 135, 0.03); border: 1px solid rgba(250, 179, 135, 0.1); }
+    .pullback-assessment-card.warning { border-color: #f38ba8; background: rgba(243, 139, 168, 0.05); }
+    .p-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .p-title { font-size: 0.75rem; font-weight: 800; color: #fab387; }
+    .p-score { font-size: 0.75rem; color: #cdd6f4; font-weight: 800; }
+    .p-desc { font-size: 0.85rem; color: #9399b2; margin: 0; }
 
-    .pullback-risk-card { 
-      background: rgba(166, 227, 161, 0.05); border: 1px solid rgba(166, 227, 161, 0.15); 
-      border-radius: 10px; padding: 16px;
-    }
-    .pullback-risk-card.warning { background: rgba(243, 139, 168, 0.05); border-color: rgba(243, 139, 168, 0.2); }
-    .p-risk-header { display: flex; justify-content: space-between; font-weight: 800; font-size: 0.75rem; color: #9399b2; margin-bottom: 8px; }
-    .p-risk-score { color: #fab387; }
-    .p-risk-desc { font-size: 0.85rem; color: #a6adc8; margin: 0; }
+    .btn-chart-link { width: 100%; padding: 14px; background: rgba(137, 180, 250, 0.1); border: 1px solid rgba(137, 180, 250, 0.2); color: #89b4fa; border-radius: 8px; cursor: pointer; font-weight: 700; margin-bottom: 16px; transition: all 0.2s; }
+    .btn-chart-link:hover { background: rgba(137, 180, 250, 0.2); border-color: #89b4fa; }
 
-    .data-grid-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .data-card { background: #181825; border: 1px solid #313244; border-radius: 12px; padding: 16px; }
-    .data-card-header { font-size: 0.75rem; font-weight: 800; color: #9399b2; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .data-item { display: flex; flex-direction: column; gap: 4px; }
-    .data-item .label { font-size: 0.65rem; color: #6c7086; text-transform: uppercase; }
-    .data-item .value { font-size: 1rem; font-weight: 700; color: #cdd6f4; }
-    .data-item .value.highlight { color: #fab387; font-size: 1.2rem; }
-    .data-item .value.sl { color: #f38ba8; }
-    .data-item .value.tp { color: #a6e3a1; }
-    .data-item .value.negative { color: #f38ba8; }
+    /* Right Column Badges */
+    .signal-score-badge { display: flex; justify-content: space-between; align-items: center; background: #1a1a2e; border: 1px solid #2a2a4a; padding: 14px 20px; border-radius: 40px; margin-bottom: 20px; }
+    .signal-score-badge.bullish { border-color: #a6e3a1; color: #a6e3a1; }
+    .signal-score-badge.bearish { border-color: #f38ba8; color: #f38ba8; }
+    .s-label { font-weight: 900; font-size: 1.2rem; }
+    .s-score { color: #cdd6f4; font-size: 1rem; }
 
-    .trust-signals-section { margin-top: 24px; }
-    .reasons-pill-container { display: flex; flex-wrap: wrap; gap: 8px; }
-    .reason-pill { 
-      background: rgba(49, 50, 68, 0.4); border: 1px solid #313244; 
-      padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; 
-      color: #bac2de; display: flex; align-items: center; gap: 8px;
-    }
-    .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: #a6e3a1; }
+    /* Data Cards */
+    .data-header { font-size: 0.7rem; font-weight: 800; color: #9399b2; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1f1f3a; padding-bottom: 8px; }
+    .data-row-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .data-col { display: flex; flex-direction: column; gap: 4px; }
+    .data-col .label { font-size: 0.6rem; color: #6c7086; text-transform: uppercase; }
+    .data-col .value { font-size: 1rem; font-weight: 800; color: #cdd6f4; }
+    .data-col .value.accent { color: #fab387; }
+    .data-col .value.bullish { color: #a6e3a1; }
+    .data-col .value.bearish { color: #f38ba8; }
+    .sizing-footer { font-size: 0.7rem; color: #6c7086; font-style: italic; margin-top: 12px; }
 
-    /* Insight Tab Styles */
-    .pivot-matrix-main { background: rgba(17, 17, 27, 0.4); border-radius: 8px; padding: 12px; }
-    .pivot-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .p-col { font-size: 0.85rem; color: #cdd6f4; display: flex; items-center: center; gap: 8px; }
-    .p-tag { font-size: 0.6rem; font-weight: 800; padding: 2px 4px; border-radius: 4px; width: 20px; text-align: center; }
-    .p-tag.res { background: rgba(243, 139, 168, 0.15); color: #f38ba8; }
-    .p-tag.sup { background: rgba(166, 227, 161, 0.15); color: #a6e3a1; }
-    .pivot-footer { border-top: 1px solid #313244; padding-top: 8px; mt: 8px; display: flex; justify-content: space-between; font-size: 0.75rem; color: #9399b2; }
-    .pivot-footer strong.up { color: #a6e3a1; }
-    .pivot-footer strong.down { color: #f38ba8; }
+    /* Economic Context */
+    .impact-warning { background: rgba(243, 139, 168, 0.1); border: 1px solid #f38ba8; color: #f38ba8; padding: 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; margin-bottom: 12px; }
+    .event-stack { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+    .event-line { font-size: 0.8rem; color: #bac2de; display: flex; align-items: center; gap: 8px; }
+    .fund-summary { font-size: 0.8rem; color: #9399b2; line-height: 1.4; margin: 0; }
 
-    .fib-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .fib-item { display: flex; flex-direction: column; align-items: center; text-align: center; }
-    .fib-item .label { font-size: 0.6rem; color: #6c7086; }
-    .fib-item .value { font-size: 0.85rem; font-weight: 700; color: #cdd6f4; }
+    /* Trust List */
+    .trust-list { list-style: disc; padding-left: 16px; margin: 0; }
+    .trust-list li { font-size: 0.8rem; color: #a6adc8; margin-bottom: 4px; }
 
-    .backtest-horizontal { background: #181825; border: 1px solid #313244; border-radius: 12px; padding: 16px; }
-    .backtest-stats { display: flex; justify-content: space-between; margin-bottom: 12px; }
-    .b-item { display: flex; flex-direction: column; gap: 4px; }
-    .b-item .label { font-size: 0.7rem; color: #6c7086; }
-    .b-item .value { font-size: 1.1rem; font-weight: 800; color: #cdd6f4; }
-    .b-item .value.good { color: #a6e3a1; }
-    .b-desc { font-size: 0.8rem; color: #9399b2; font-style: italic; margin: 0; }
+    /* News Item Row */
+    .news-mini-list { display: flex; flex-direction: column; gap: 10px; }
+    .news-item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #0b0b15; border: 1px solid #1a1a2a; border-radius: 8px; cursor: pointer; }
+    .n-info { display: flex; flex-direction: column; gap: 2px; }
+    .n-title { font-size: 0.8rem; color: #cdd6f4; line-height: 1.3; }
+    .n-source { font-size: 0.65rem; color: #6c7086; }
+    .n-status { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
+    .n-status.bullish { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; }
+    .n-status.bearish { background: rgba(243, 139, 168, 0.1); color: #f38ba8; }
 
-    .fundamentals-context { background: rgba(30, 30, 46, 0.4); border: 1px solid #313244; border-radius: 12px; padding: 16px; }
-    .fund-header { font-size: 0.8rem; font-weight: 800; color: #cdd6f4; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
-    .impact-badge { font-size: 0.6rem; padding: 2px 6px; border-radius: 4px; }
-    .impact-badge.high { background: #f38ba8; color: #11111b; }
-    .fund-desc { font-size: 0.85rem; color: #a6adc8; line-height: 1.5; margin-bottom: 12px; }
-    .event-list { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #313244; padding-top: 12px; }
-    .event-item { font-size: 0.8rem; color: #bac2de; display: flex; align-items: center; gap: 8px; }
-    .event-dot { width: 4px; height: 4px; border-radius: 50%; background: #fab387; }
+    /* Inline Metrics */
+    .inline-metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .m-item { background: #121220; padding: 10px; border-radius: 8px; border: 1px solid #1f1f3a; text-align: center; }
+    .m-item .l { font-size: 0.6rem; color: #6c7086; display: block; margin-bottom: 4px; }
+    .m-item .v { font-size: 0.9rem; font-weight: 800; color: #cdd6f4; }
 
-    .news-intelligence { background: rgba(17, 17, 27, 0.4); border-radius: 12px; border: 1px solid #313244; padding: 16px; }
-    .news-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .news-title-text { font-size: 0.85rem; font-weight: 800; color: #cdd6f4; }
-    .sentiment-badge { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; }
-    .sentiment-badge.bullish { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; }
-    .sentiment-badge.bearish { background: rgba(243, 139, 168, 0.1); color: #f38ba8; }
-    .sentiment-summary { font-size: 0.8rem; color: #9399b2; font-style: italic; margin-bottom: 16px; line-height: 1.4; }
-    .news-grid-compact { display: flex; flex-direction: column; gap: 8px; }
-    .news-mini-card { background: #1e1e2e; border: 1px solid #313244; padding: 10px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-    .news-mini-card:hover { border-color: #89b4fa; transform: translateX(4px); }
-    .news-mini-card .n-title { font-size: 0.8rem; color: #cdd6f4; display: block; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
-    .news-mini-card .n-meta { font-size: 0.65rem; color: #6c7086; }
+    /* Insight Layout */
+    .insight-top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .pivot-grid-main { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; }
+    .p-item { font-size: 0.85rem; color: #cdd6f4; display: flex; gap: 8px; align-items: center; }
+    .p-item .t { font-size: 0.6rem; padding: 2px 4px; border-radius: 4px; width: 22px; text-align: center; }
+    .p-item .t.res { background: rgba(243, 139, 168, 0.15); color: #f38ba8; }
+    .p-item .t.sup { background: rgba(166, 227, 161, 0.15); color: #a6e3a1; }
+    .pivot-footer { border-top: 1px solid #1f1f3a; padding-top: 8px; display: flex; justify-content: space-between; font-size: 0.7rem; color: #6c7086; }
 
-    @media (max-width: 600px) {
-      .data-grid-layout { grid-template-columns: 1fr; }
-      .fib-grid { grid-template-columns: 1fr 1fr; }
-      .backtest-stats { flex-direction: column; gap: 12px; }
-    }
+    .fib-grid-main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .f-box { background: #0b0b15; border: 1px solid #1a1a2a; padding: 8px; border-radius: 6px; text-align: center; }
+    .f-box .l { font-size: 0.55rem; color: #6c7086; display: block; }
+    .f-box .v { font-size: 0.8rem; font-weight: 700; color: #cdd6f4; }
+
+    .backtest-stats-row { display: flex; justify-content: space-between; }
+    .b-stat { display: flex; flex-direction: column; gap: 4px; }
+    .b-stat .tl { font-size: 0.7rem; color: #6c7086; }
+    .b-stat .tv { font-size: 1.2rem; font-weight: 900; color: #cdd6f4; }
+    .b-stat .tv.highlight { color: #a6e3a1; }
+
+    @media (max-width: 900px) { .tactical-grid { grid-template-columns: 1fr; } }
   `]
 })
 export class InstrumentCardComponent implements OnChanges {
