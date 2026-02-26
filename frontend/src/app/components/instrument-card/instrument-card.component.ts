@@ -42,29 +42,20 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
       </div>
 
       <div class="tabs-nav">
-        <button class="tab-btn" (click)="setTab('execution')" [class.active]="selectedTab === 'execution'">
-          <span class="tab-icon">🎯</span> Strategy
+        <button class="tab-btn" (click)="setTab('plan')" [class.active]="selectedTab === 'plan'">
+          <span class="tab-icon">🎯</span> Tactical Plan
         </button>
-        <button class="tab-btn" (click)="setTab('trend')" [class.active]="selectedTab === 'trend'">
-          <span class="tab-icon">📡</span> Trend
-        </button>
-        <button class="tab-btn" (click)="setTab('matrix')" [class.active]="selectedTab === 'matrix'">
-          <span class="tab-icon">🧠</span> Matrix
-        </button>
-        <button class="tab-btn" (click)="setTab('news')" [class.active]="selectedTab === 'news'">
-          <span class="tab-icon">🌐</span> News
-        </button>
-        <button class="tab-btn" (click)="setTab('backtest')" [class.active]="selectedTab === 'backtest'">
-          <span class="tab-icon">📈</span> Results
+        <button class="tab-btn" (click)="setTab('insight')" [class.active]="selectedTab === 'insight'">
+          <span class="tab-icon">🧠</span> Insight & Data
         </button>
       </div>
 
-      <!-- Main Column (Left): Execution & Warnings -->
+      <!-- Main Content Area -->
       <div class="card-content-tabbed">
         @switch (selectedTab) {
-          @case ('execution') {
-            <div class="tab-panel execution-panel">
-              <!-- Summary of Signal -->
+          @case ('plan') {
+            <div class="tab-panel action-tab">
+              <!-- A. STRATEGIC SIGNAL -->
               <div class="signal-summary-row">
                 <div class="trade-signal-mini">
                   <div class="signal-badge" [class]="getSignalClass()">
@@ -72,16 +63,16 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                     <span class="signal-text">{{ analysis.trade_signal.recommendation.toUpperCase() }}</span>
                   </div>
                   <div class="score">
-                    <span class="score-label">Score:</span>
+                    <span class="score-label">Conviction:</span>
                     <span class="score-value" [class]="getScoreClass()">{{ analysis.trade_signal.score }}</span>
                   </div>
                   @if (analysis.trade_signal.trade_worthy) {
-                    <span class="trade-worthy">✓ Trade Worthy</span>
+                    <span class="trade-worthy">✓ Worthy</span>
                   }
                 </div>
               </div>
 
-              <!-- 1. ACTIONABLE PLAN -->
+              <!-- B. ACTION PLAN -->
               <div class="action-plan" [class]="getSignalClass()">
                 <div class="plan-header">Strategic Action Plan</div>
                 <div class="plan-title">{{ analysis.trade_signal.action_plan }}</div>
@@ -103,22 +94,18 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                 }
               </div>
 
-              <!-- 2. POSITION SIZING & RISK (Pulled from side column) -->
+              <!-- C. SIZING & RISK -->
               <div class="sizing-risk-row">
                 @if (analysis.position_sizing) {
                   <div class="sizing-section">
-                    <div class="sizing-header">Risk-Adjusted Sizing</div>
+                    <div class="sizing-header">Position Size</div>
                     <div class="sizing-grid">
                       <div class="sizing-item main">
                         <span class="sizing-label">Units</span>
                         <span class="sizing-value highlight">{{ analysis.position_sizing.suggested_units }}</span>
                       </div>
                       <div class="sizing-item">
-                        <span class="sizing-label">Risk</span>
-                        <span class="sizing-value">\${{ analysis.position_sizing.risk_amount }}</span>
-                      </div>
-                      <div class="sizing-item">
-                        <span class="sizing-label">Risk %</span>
+                        <span class="sizing-label">Risk \${{ analysis.position_sizing.risk_amount }}</span>
                         <span class="sizing-value">{{ analysis.position_sizing.final_risk_percent }}%</span>
                       </div>
                     </div>
@@ -130,15 +117,11 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                     <div class="risk-header">Risk Management</div>
                     <div class="risk-grid">
                       <div class="risk-item">
-                        <span class="risk-label">Stop Loss</span>
-                        <span class="risk-value sl">\${{ analysis.volatility_risk.stop_loss.toFixed(3) }}</span>
+                        <span class="risk-label">SL \${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
+                        <span class="risk-value tp">TP \${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
                       </div>
                       <div class="risk-item">
-                        <span class="risk-label">Take Profit</span>
-                        <span class="risk-value tp">\${{ analysis.volatility_risk.take_profit.toFixed(3) }}</span>
-                      </div>
-                      <div class="risk-item">
-                        <span class="risk-label">RR</span>
+                        <span class="risk-label">R:R</span>
                         <span class="risk-value">{{ analysis.volatility_risk.risk_reward_ratio.toFixed(2) }}</span>
                       </div>
                     </div>
@@ -146,234 +129,123 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                 }
               </div>
 
-              <!-- 3. PULLBACK WARNING (URGENT ALERT) -->
-              @if (analysis.pullback_warning) {
-                <div class="pullback-warning-section" [class.active-warning]="analysis.pullback_warning.is_warning">
-                  <div class="warning-header">
-                    <span class="warning-icon">⚠️</span>
-                    Pullback Risk
-                    <span class="warning-score" [class.risky]="analysis.pullback_warning.is_warning">
-                      Score: {{ analysis.pullback_warning.warning_score }}/8
-                    </span>
+              <!-- D. MATRIX (The Facts) -->
+              <div class="matrix-section">
+                <div class="section-divider">Technical Matrix</div>
+                <div class="indicators indicators-compact">
+                  <div class="indicator-item">
+                    <span class="ind-label">RSI</span>
+                    <span class="ind-value">{{ analysis.daily_strength.rsi.toFixed(0) }}</span>
                   </div>
-                  <p class="description">{{ analysis.pullback_warning.description }}</p>
-                </div>
-              }
-            </div>
-          }
-
-          @case ('trend') {
-            <div class="tab-panel trend-panel">
-              <!-- Integrated MTFA Overlay -->
-              <app-multi-timeframe-overlay [analysis]="analysis"></app-multi-timeframe-overlay>
-
-              <div class="analysis-grid mt-16">
-                <div class="analysis-item">
-                  <div class="analysis-header">
-                    <span class="trend-badge" [class]="getTrendClass()">
-                      {{ analysis.monthly_trend.direction.toUpperCase() }}
-                    </span>
-                    <span class="label">Primary Trend</span>
+                  <div class="indicator-item">
+                    <span class="ind-label">ADX</span>
+                    <span class="ind-value" [class.strong]="analysis.daily_strength.adx > 25">{{ analysis.daily_strength.adx.toFixed(0) }}</span>
                   </div>
-                  <p class="description">{{ analysis.monthly_trend.description }}</p>
-                </div>
-
-                <div class="analysis-item phase-item">
-                  <div class="analysis-header">
-                    <span class="phase-badge" [class]="getPhaseClass()">
-                      {{ analysis.market_phase.phase.toUpperCase() }}
-                    </span>
-                    <span class="label">Structure Phase</span>
-                  </div>
-                  <p class="description">{{ analysis.market_phase.description }}</p>
-                </div>
-              </div>
-              
-              <!-- Intermediate & Tactical Momentum -->
-              <div class="analysis-grid mt-12">
-                <div class="analysis-item">
-                  <div class="analysis-header">
-                    <span class="trend-badge" [class]="getPullbackClass()">
-                      {{ analysis.weekly_pullback.detected ? 'PULLBACK' : 'EXTENDED' }}
-                    </span>
-                    <span class="label">Intermediate State</span>
-                  </div>
-                  <p class="description">{{ analysis.weekly_pullback.description }}</p>
-                </div>
-
-                <div class="analysis-item">
-                  <div class="analysis-header">
-                    <span class="trend-badge" [class]="getStrengthClass()">
-                      {{ analysis.daily_strength.signal.toUpperCase() }}
-                    </span>
-                    <span class="label">Tactical Momentum</span>
-                  </div>
-                  <p class="description">{{ analysis.daily_strength.description }}</p>
-                </div>
-              </div>
-            </div>
-          }
-
-          @case ('matrix') {
-            <div class="tab-panel matrix-panel">
-               <!-- Technical Indicators (Top Row) -->
-               <div class="indicators mb-16">
-                <div class="indicator-item">
-                  <span class="ind-label">RSI</span>
-                  <span class="ind-value">{{ analysis.daily_strength.rsi.toFixed(1) }}</span>
-                </div>
-                <div class="indicator-item">
-                  <span class="ind-label">ADX</span>
-                  <span class="ind-value" [class.strong]="analysis.daily_strength.adx > 25">{{ analysis.daily_strength.adx.toFixed(1) }}</span>
-                </div>
-                <div class="indicator-item">
-                  <span class="ind-label">Vol Ratio</span>
-                  <span class="ind-value">{{ analysis.daily_strength.volume_ratio.toFixed(2) }}x</span>
-                </div>
-                <div class="indicator-item">
-                  <span class="ind-label">20 MA</span>
-                  <span class="ind-value">\${{ analysis.monthly_trend.fast_ma.toFixed(2) }}</span>
-                </div>
-              </div>
-
-              <!-- Candle Triggers -->
-              @if (analysis.candle_patterns && analysis.candle_patterns.pattern !== 'none') {
-                <div class="candle-trigger mb-16" [class.bullish]="analysis.candle_patterns.is_bullish === true" [class.bearish]="analysis.candle_patterns.is_bullish === false">
-                  <span class="trigger-label">Trigger Candle:</span>
-                  <span class="trigger-value">{{ analysis.candle_patterns.pattern.replace('_', ' ').toUpperCase() }}</span>
-                  <p class="trigger-desc">{{ analysis.candle_patterns.description }}</p>
-                </div>
-              }
-
-              <!-- Pivot Matrix -->
-              @if (analysis.technical_indicators) {
-                <div class="tech-indicators-section">
-                  <div class="tech-header">Strategic Pivot Matrix</div>
-                  <div class="tech-grid pivot-matrix">
-                    <div class="tech-item"><span class="tech-label">R3</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r3 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">R2</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r2 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">R1</span><span class="tech-value res">\${{ analysis.technical_indicators.pivot_points.r1 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">S1</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s1 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">S2</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s2 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">S3</span><span class="tech-value sup">\${{ analysis.technical_indicators.pivot_points.s3 }}</span></div>
-                  </div>
-                  
-                  <p class="description tech-desc mt-8">{{ analysis.technical_indicators.description }}</p>
-
-                  <div class="tech-header fib-header mt-16">Swing Fibonacci Ranges</div>
-                  <div class="tech-grid fib-matrix">
-                    <div class="tech-item"><span class="tech-label">Ext 1.618</span><span class="tech-value ext">\${{ analysis.technical_indicators.fibonacci.ext_1618 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">Ext 1.272</span><span class="tech-value ext">\${{ analysis.technical_indicators.fibonacci.ext_1272 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">Swing High</span><span class="tech-value swing">\${{ analysis.technical_indicators.fibonacci.swing_high }}</span></div>
-                    <div class="tech-item"><span class="tech-label">Ret 38.2%</span><span class="tech-value ret">\${{ analysis.technical_indicators.fibonacci.ret_382 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">Ret 61.8%</span><span class="tech-value ret">\${{ analysis.technical_indicators.fibonacci.ret_618 }}</span></div>
-                    <div class="tech-item"><span class="tech-label">Swing Low</span><span class="tech-value swing">\${{ analysis.technical_indicators.fibonacci.swing_low }}</span></div>
+                  <div class="indicator-item">
+                    <span class="ind-label">Vol</span>
+                    <span class="ind-value">{{ analysis.daily_strength.volume_ratio.toFixed(1) }}x</span>
                   </div>
                 </div>
-              }
-            </div>
-          }
 
-          @case ('news') {
-            <div class="tab-panel news-panel">
-               @if (analysis.fundamentals) {
-                <div class="fundamentals-section mb-16" [class.warning]="analysis.fundamentals.has_high_impact_events">
-                  <div class="fundamentals-header">Fundamental Context</div>
-                  <p class="description fund-desc">{{ analysis.fundamentals.description }}</p>
-                  @if (analysis.fundamentals.events.length > 0) {
-                    <ul class="fund-events">
-                      @for (event of analysis.fundamentals.events; track event) {
-                        <li>{{ event }}</li>
-                      }
-                    </ul>
-                  }
-                </div>
-              }
-
-              @if (analysis.news_sentiment && analysis.news_sentiment.news_items.length > 0) {
-                <div class="news-section">
-                  <div class="news-header">
-                    News Intelligence
-                    <span class="news-sentiment-badge" [class]="analysis.news_sentiment.label.toLowerCase()">
-                      {{ analysis.news_sentiment.label }}
-                    </span>
-                  </div>
-                  <p class="news-summary">{{ analysis.news_sentiment.sentiment_summary }}</p>
-                  <div class="news-items">
-                    @for (item of analysis.news_sentiment.news_items.slice(0, 5); track item.title) {
-                      <div (click)="openNewsModal(item)" class="news-item-link">
-                        <span class="news-item-title">{{ item.title }}</span>
-                        <div class="news-item-meta">
-                          <span class="news-source">{{ item.source }}</span>
-                          <span class="news-sentiment" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
-                        </div>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-          }
-
-          @case ('backtest') {
-            <div class="tab-panel backtest-panel">
-              @if (analysis.backtest_results) {
-                <div class="backtest-section" [class.low-confidence]="analysis.backtest_results.win_rate < 45">
-                  <div class="backtest-header">Strategy Probability (1Y Backtest)</div>
-                  <div class="backtest-stats">
-                    <div class="backtest-stat">
-                      <span class="stat-label">Win Rate</span>
-                      <span class="stat-val" [class.good]="analysis.backtest_results.win_rate >= 50">
-                        {{ analysis.backtest_results.win_rate.toFixed(1) }}%
-                      </span>
+                @if (analysis.technical_indicators) {
+                  <div class="pivot-matrix-compact mt-12">
+                    <div class="pivot-row">
+                      <span class="p-label res">R3 \${{ analysis.technical_indicators.pivot_points.r3 }}</span>
+                      <span class="p-label res">R2 \${{ analysis.technical_indicators.pivot_points.r2 }}</span>
+                      <span class="p-label res">R1 \${{ analysis.technical_indicators.pivot_points.r1 }}</span>
                     </div>
-                    <div class="backtest-stat">
-                      <span class="stat-label">Trades</span>
-                      <span class="stat-val">{{ analysis.backtest_results.total_trades }}</span>
-                    </div>
-                    <div class="backtest-stat">
-                      <span class="stat-label">Profit Factor</span>
-                      <span class="stat-val">{{ analysis.backtest_results.profit_factor }}</span>
+                    <div class="pivot-row">
+                      <span class="p-label sup">S3 \${{ analysis.technical_indicators.pivot_points.s3 }}</span>
+                      <span class="p-label sup">S2 \${{ analysis.technical_indicators.pivot_points.s2 }}</span>
+                      <span class="p-label sup">S1 \${{ analysis.technical_indicators.pivot_points.s1 }}</span>
                     </div>
                   </div>
-                  <p class="description backtest-desc">{{ analysis.backtest_results.description }}</p>
-                </div>
-              }
+                }
+              </div>
 
-              @if (analysis.trade_signal.reasons.length > 0) {
-                <div class="reasons highlight-reasons mt-16">
-                  <h4>Trustworthy Signals</h4>
-                  <ul>
-                    @for (reason of analysis.trade_signal.reasons; track reason) {
+              <!-- E. RESULTS (Backtest) -->
+              <div class="results-section mt-16">
+                <div class="section-divider">Backtest Probability</div>
+                @if (analysis.backtest_results) {
+                  <div class="backtest-summary">
+                    <div class="b-stat">Win Rate: <span [class.good]="analysis.backtest_results.win_rate >= 50">{{ analysis.backtest_results.win_rate.toFixed(1) }}%</span></div>
+                    <div class="b-stat">PF: {{ analysis.backtest_results.profit_factor }}</div>
+                    <div class="b-stat">Trades: {{ analysis.backtest_results.total_trades }}</div>
+                  </div>
+                }
+                
+                @if (analysis.trade_signal.reasons.length > 0) {
+                  <ul class="reasons-list">
+                    @for (reason of analysis.trade_signal.reasons.slice(0, 3); track reason) {
                       <li>{{ reason }}</li>
                     }
                   </ul>
+                }
+              </div>
+            </div>
+          }
+
+          @case ('insight') {
+            <div class="tab-panel insight-tab">
+              <!-- A. TREND INTELLIGENCE -->
+              <app-multi-timeframe-overlay [analysis]="analysis"></app-multi-timeframe-overlay>
+
+              <div class="trend-summary-compact mt-16">
+                <div class="t-row">
+                  <span class="t-label">Structure:</span>
+                  <span class="t-value" [class]="getTrendClass()">{{ analysis.monthly_trend.direction.toUpperCase() }} ({{ analysis.market_phase.phase }})</span>
                 </div>
-              }
+                <p class="description t-desc">{{ analysis.monthly_trend.description }}</p>
+              </div>
+
+              <!-- B. FUNDAMENTALS & NEWS -->
+              <div class="intelligence-section mt-16">
+                <div class="section-divider">Intelligence & News</div>
+                @if (analysis.fundamentals) {
+                   <p class="description fund-desc-compact">
+                    <strong>Economic Context:</strong> {{ analysis.fundamentals.description }}
+                   </p>
+                }
+
+                @if (analysis.news_sentiment) {
+                  <div class="news-list-compact mt-12">
+                    @for (item of analysis.news_sentiment.news_items.slice(0, 3); track item.title) {
+                      <div (click)="openNewsModal(item)" class="news-tiny-item">
+                        <span class="n-title">{{ item.title }}</span>
+                        <span class="n-sentiment" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <!-- C. INTERACTIVE CHART -->
+              <div class="embedded-chart-section mt-24">
+                <div class="section-divider">Market Dynamics</div>
+                <div class="chart-container-embedded">
+                  <div class="chart-controls">
+                    <button class="btn-load-chart" (click)="toggleChart()" *ngIf="!showChart">
+                      🚀 Initialize {{ analysis.symbol }} Intelligence Chart
+                    </button>
+                  </div>
+                  
+                  @if (showChart) {
+                    <div class="chart-wrapper-embedded">
+                      @if (isLoadingChart) { <div class="chart-loading">Processing data...</div> }
+                      @else if (chartData.length > 0) {
+                        <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol"></app-instrument-chart>
+                      }
+                      @else { <div class="chart-error">Unable to stream data.</div> }
+                    </div>
+                  }
+                </div>
+              </div>
             </div>
           }
         }
       </div>
 
-      <!-- 3. CHART INTERACTION (Always visible at bottom or specifically toggled) -->
-      <div class="chart-action-sticky">
-        <button class="btn-chart" (click)="toggleChart()" [class.active]="showChart">
-          {{ showChart ? '📊 Close Chart' : '📊 View Interactive Chart' }}
-        </button>
-      </div>
-
-      @if (showChart) {
-        <div class="chart-wrapper">
-          @if (isLoadingChart) {
-            <div class="chart-loading">Loading chart data...</div>
-          } @else if (chartData.length > 0) {
-            <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol"></app-instrument-chart>
-          } @else {
-            <div class="chart-error">Failed to load chart data.</div>
-          }
-        </div>
-      }
-
+      <!-- Footer for modal overlays -->
       @if (selectedNewsItem) {
         <div class="news-modal-overlay" (click)="closeNewsModal()">
           <div class="news-modal-content news-preview-card" (click)="$event.stopPropagation()">
@@ -527,43 +399,62 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
         grid-template-columns: 1fr;
       }
       .tab-btn {
-        min-width: 70px;
-        padding: 6px 8px;
-      }
+    .tabs-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 4px;
+      background: rgba(24, 24, 37, 0.5);
+      border-radius: 10px;
+      border: 1px solid #313244;
     }
 
-    .analysis-header {
+    .tab-btn {
+      flex: 1;
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .trend-badge {
-      font-size: 0.65rem;
-      font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 4px;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: #9399b2;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       letter-spacing: 0.5px;
     }
 
-    .trend-badge.bullish { background: rgba(166, 227, 161, 0.15); color: #a6e3a1; border: 1px solid rgba(166, 227, 161, 0.3); }
-    .trend-badge.bearish { background: rgba(243, 139, 168, 0.15); color: #f38ba8; border: 1px solid rgba(243, 139, 168, 0.3); }
-    .trend-badge.neutral { background: rgba(249, 226, 175, 0.15); color: #f9e2af; border: 1px solid rgba(249, 226, 175, 0.3); }
-
-    .label {
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: #6c7086;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+    .tab-btn.active {
+      background: #313244;
+      color: #cdd6f4;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
 
-    .description {
-      font-size: 0.9rem;
-      line-height: 1.5;
-      color: #cdd6f4;
-      margin: 0;
+    .tab-btn:hover:not(.active) {
+      background: rgba(49, 50, 68, 0.5);
+      color: #bac2de;
+    }
+
+    .section-divider {
+      color: #6c7086;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0 16px;
+    }
+
+    .section-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, #313244, transparent);
     }
 
     .analysis-header {
@@ -700,71 +591,39 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
     .change.positive { color: #a6e3a1; }
     .change.negative { color: #f38ba8; }
 
-    .trade-signal {
+    .indicators-compact {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .pivot-matrix-compact {
       display: flex;
-      align-items: center;
-      gap: 16px;
+      flex-direction: column;
+      gap: 8px;
       padding: 12px;
       background: #181825;
       border-radius: 8px;
-      margin-bottom: 16px;
+      border: 1px solid #313244;
     }
 
-    .signal-badge {
+    .pivot-row {
       display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 0.85rem;
+      justify-content: space-between;
+      gap: 8px;
     }
 
-    .signal-badge.bullish {
-      background: rgba(166, 227, 161, 0.2);
-      color: #a6e3a1;
-    }
-
-    .signal-badge.bearish {
-      background: rgba(243, 139, 168, 0.2);
-      color: #f38ba8;
-    }
-
-    .signal-badge.neutral {
-      background: rgba(249, 226, 175, 0.2);
-      color: #f9e2af;
-    }
-
-    .signal-icon {
-      font-size: 1rem;
-    }
-
-    .score {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .score-label {
-      color: #6c7086;
-      font-size: 0.85rem;
-    }
-
-    .score-value {
+    .p-label {
+      font-size: 0.7rem;
       font-weight: 700;
-      font-size: 1.1rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      flex: 1;
+      text-align: center;
     }
 
-    .score-value.positive { color: #a6e3a1; }
-    .score-value.negative { color: #f38ba8; }
-    .score-value.neutral { color: #f9e2af; }
-
-    .trade-worthy {
-      margin-left: auto;
-      color: #a6e3a1;
-      font-weight: 600;
-      font-size: 0.85rem;
-    }
+    .p-label.res { background: rgba(243, 139, 168, 0.1); color: #f38ba8; }
+    .p-label.sup { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; }
 
     .analysis-grid {
       display: flex;
@@ -1247,31 +1106,109 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
       color: #cba6f7;
     }
 
-    .reasons {
-      padding: 16px;
+    .backtest-summary {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      background: #181825;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .b-stat {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #cdd6f4;
+    }
+
+    .b-stat span.good { color: #a6e3a1; }
+
+    .reasons-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .reasons-list li {
+      font-size: 0.8rem;
+      color: #9399b2;
+      padding: 4px 0 4px 18px;
+      position: relative;
+    }
+
+    .reasons-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #a6e3a1;
+      font-weight: 800;
+    }
+
+    .trend-summary-compact {
+      padding: 12px;
+      background: #181825;
       border-radius: 8px;
     }
 
-    .highlight-reasons {
-      background: rgba(137, 180, 250, 0.05);
-      border: 1px dashed rgba(137, 180, 250, 0.3);
-    }
-
-    .reasons h4 {
-      color: #cdd6f4;
-      font-size: 0.9rem;
-      margin: 0 0 8px 0;
-    }
-
-    .reasons ul {
-      margin: 0;
-      padding-left: 20px;
-    }
-
-    .reasons li {
-      color: #a6adc8;
-      font-size: 0.8rem;
+    .t-row {
+      display: flex;
+      gap: 8px;
       margin-bottom: 4px;
+    }
+
+    .t-label { color: #6c7086; font-size: 0.8rem; font-weight: 700; }
+    .t-value { font-weight: 800; font-size: 0.8rem; }
+    .t-value.bullish { color: #a6e3a1; }
+    .t-value.bearish { color: #f38ba8; }
+    .t-desc { font-size: 0.8rem; line-height: 1.4; color: #a6adc8; }
+
+    .news-tiny-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #181825;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .news-tiny-item:hover { background: #313244; }
+    .n-title { font-size: 0.8rem; color: #cdd6f4; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
+    .n-sentiment { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
+    .n-sentiment.positive { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; }
+    .n-sentiment.negative { background: rgba(243, 139, 168, 0.1); color: #f38ba8; }
+
+    .chart-container-embedded {
+      background: #181825;
+      border-radius: 8px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #313244;
+    }
+
+    .btn-load-chart {
+      width: 100%;
+      padding: 20px;
+      background: transparent;
+      border: none;
+      color: #89b4fa;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-load-chart:hover {
+      background: rgba(137, 180, 250, 0.05);
+      color: #b4befe;
+    }
+
+    .chart-wrapper-embedded {
+      height: 300px;
+      position: relative;
     }
 
     .tech-indicators-section {
@@ -1697,9 +1634,9 @@ export class InstrumentCardComponent implements OnChanges {
   isLoadingChart = false;
   selectedNewsItem: NewsItem | null = null;
 
-  selectedTab: 'execution' | 'trend' | 'matrix' | 'news' | 'backtest' = 'execution';
+  selectedTab: 'plan' | 'insight' = 'plan';
 
-  setTab(tab: any) {
+  setTab(tab: 'plan' | 'insight') {
     this.selectedTab = tab;
   }
 
