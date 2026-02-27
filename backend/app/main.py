@@ -230,7 +230,9 @@ def analyze_instrument_lazy(
         trade_signal.score = max(trade_signal.score - 15, -100)
         trade_signal.reasons.append(f"Market Laggard: Weak Relative Strength vs {bench_sym} (-15 penalty)")
 
-    backtest = get_backtest_results(symbol, execution_data, params)
+    # Selection of daily data for backtesting (1Y perspective)
+    backtest_source = execution_data if mode == StrategyMode.LONG_TERM else macro_data
+    backtest = get_backtest_results(symbol, backtest_source, params, settings=strategy_settings)
     
     return InstrumentAnalysis(
         symbol=symbol,

@@ -23,6 +23,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             <div class="th-symbol-row">
               <span class="th-symbol">{{ analysis.symbol }}</span>
               <span class="th-name">{{ analysis.name }}</span>
+              <div class="th-clocks">
+                <span class="th-clock session" [class]="getCurrentSession().toLowerCase().replace(' ', '-')">{{ getCurrentSession() }}</span>
+                <span class="th-clock event" [class.impact]="analysis.fundamentals?.has_high_impact_events">{{ getNextEvent() }}</span>
+              </div>
             </div>
             <div class="th-badges">
               <span class="th-badge strategy" [class]="analysis.strategy_mode">
@@ -101,6 +105,19 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                <div class="tg-footer">Distance to VWAP: <strong [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct?.toFixed(2) }}%</strong></div>
             </div>
             
+                        <!-- Position Calculator -->
+            <div class="position-calculator">
+               <div class="pc-header">🧮 RISK CALCULATOR</div>
+               <div class="pc-toggles">
+                  <button (click)="riskMultiplier = 0.5" [class.active]="riskMultiplier === 0.5">0.5%</button>
+                  <button (click)="riskMultiplier = 1.0" [class.active]="riskMultiplier === 1.0">1.0%</button>
+                  <button (click)="riskMultiplier = 2.0" [class.active]="riskMultiplier === 2.0">2.0%</button>
+               </div>
+               <div class="pc-result">
+                  <div class="pcr-item"><span>LOTS/UNITS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
+                  <div class="pcr-item"><span>RISK $</span><strong>{{ getRiskAmount() }}</strong></div>
+               </div>
+            </div>
             <div class="tile-actions">
               <button class="btn-primary" (click)="openJournalModal()">📒 Log Trade</button>
               <button class="btn-secondary" (click)="toggleChart()">📊 {{ showChart ? 'Hide Chart' : 'View Intelligence Chart' }}</button>
@@ -123,6 +140,11 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   {{ getRSIDivergenceLabel() }}
                 </div>
             }
+                          @if (analysis.position_sizing?.correlation_penalty && analysis.position_sizing!.correlation_penalty > 1.0) {
+                <div class="correlation-warning">
+                   ⚠️ Concentration Risk: {{ ((analysis.position_sizing!.correlation_penalty - 1) * 100).toFixed(0) }}% penalty applied.
+                </div>
+              }
             <div class="verdict-banner" [class]="getOverallCheckClass()">
                {{ getTradeVerdict() }}
             </div>
@@ -373,6 +395,30 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     .terminal-chart-area { padding: 24px; background: #000; height: 400px; }
 
+    
+    /* HUD CLOCKS */
+    .th-clocks { display: flex; gap: 8px; margin-left: 12px; }
+    .th-clock { font-size: 0.55rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; color: #6c7086; }
+    .th-clock.london { color: #89b4fa; border-color: #89b4fa; }
+    .th-clock.new-york { color: #f9e2af; border-color: #f9e2af; }
+    .th-clock.asia { color: #a6e3a1; border-color: #a6e3a1; }
+    .th-clock.transition { color: #585b70; border-color: #585b70; }
+    .th-clock.event.impact { color: #f38ba8; border-color: #f38ba8; animation: blink 1s infinite; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+    /* POSITION CALCULATOR */
+    .position-calculator { background: #11111b; border: 1px solid #1f1f3a; border-radius: 8px; padding: 12px; margin-bottom: 24px; }
+    .pc-header { font-size: 0.55rem; color: #45475a; font-weight: 950; margin-bottom: 10px; }
+    .pc-toggles { display: flex; gap: 4px; margin-bottom: 12px; }
+    .pc-toggles button { flex: 1; background: #1e1e2e; border: 1px solid #313244; color: #bac2de; font-size: 0.65rem; font-weight: 800; padding: 6px; border-radius: 4px; cursor: pointer; }
+    .pc-toggles button.active { background: #89b4fa; color: #11111b; border-color: #89b4fa; }
+    .pc-result { display: flex; justify-content: space-between; gap: 12px; }
+    .pcr-item { flex: 1; display: flex; flex-direction: column; }
+    .pcr-item span { font-size: 0.45rem; color: #45475a; font-weight: 900; }
+    .pcr-item strong { font-size: 0.95rem; color: #cdd6f4; font-weight: 950; }
+
+    .correlation-warning { font-size: 0.65rem; color: #f9e2af; background: rgba(249, 226, 175, 0.05); padding: 8px; border-radius: 4px; border: 1px dashed rgba(249, 226, 175, 0.3); margin-bottom: 12px; }
+
     /* RESPONSIVE */
     @media (max-width: 1100px) {
       .terminal-grid { grid-template-columns: 1fr 1fr; }
@@ -397,6 +443,36 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
   `]
 })
 export class InstrumentCardComponent implements OnChanges {
+  riskMultiplier = 1.0;
+  
+  getCalculatedLotSize(): string {
+    if (!this.analysis.position_sizing) return 'N/A';
+    // Base units from backend are for 1% risk. Adjust locally.
+    const units = this.analysis.position_sizing.suggested_units * this.riskMultiplier;
+    return units.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+
+  getRiskAmount(): string {
+    if (!this.analysis.position_sizing) return 'N/A';
+    const amount = this.analysis.position_sizing.risk_amount * this.riskMultiplier;
+    return amount.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+  }
+
+  getCurrentSession(): string {
+    const hour = new Date().getUTCHours();
+    if (hour >= 8 && hour < 16) return 'LONDON';
+    if (hour >= 13 && hour < 21) return 'NEW YORK';
+    if (hour >= 23 || hour < 8) return 'ASIA';
+    return 'TRANSITION';
+  }
+
+  getNextEvent(): string {
+    if (this.analysis.fundamentals?.has_high_impact_events) {
+       return this.analysis.fundamentals.events[0] || 'High Impact Event';
+    }
+    return 'Clean Calendar';
+  }
+
   @Input() analysis!: InstrumentAnalysis;
   @Output() refresh = new EventEmitter<string>();
   @Output() modeChange = new EventEmitter<'long_term' | 'short_term'>();
