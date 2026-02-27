@@ -49,13 +49,12 @@ async def login(request: Request):
     # 2. Localhost fallback
     elif "localhost" in str(request.base_url) or "127.0.0.1" in str(request.base_url):
         url = str(request.url_for('auth_callback'))
-    # 3. Dynamic Discovery - Use the Host header to build the redirect
+    # 3. Production Gateway (CloudFront / Custom Domain)
     else:
-        # Use whatever host the user is currently on (CloudFront or APIGW)
-        # This prevents mismatch if they hit the direct URL
-        host = request.headers.get("host")
-        proto = request.headers.get("x-forwarded-proto", "https")
-        url = f"{proto}://{host}/api/auth/callback"
+        # We MUST use the public domain (CloudFront) that Google expects.
+        # Use FRONTEND_URL if set, otherwise try to reconstruct from headers.
+        base = FRONTEND_URL.rstrip('/')
+        url = f"{base}/api/auth/callback"
         
     logger.info(f"Initiating Google login. Final Redirect URI: {url}")
     try:

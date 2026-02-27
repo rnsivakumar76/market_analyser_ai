@@ -10,16 +10,9 @@ import os
 from .auth import get_current_user
 from .oauth import router as auth_router
 
-# Base logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 # Primary DB abstraction
 from . import db as nexus_db
-
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import traceback
 
 app = FastAPI(
     title="Market Analyzer API",
@@ -27,28 +20,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add a catch-all exception handler to surface errors in production
-@app.middleware("http")
-async def catch_exceptions_middleware(request: Request, call_next):
-    try:
-        return await call_next(request)
-    except Exception as e:
-        err_type = type(e).__name__
-        err_msg = str(e)
-        stack = traceback.format_exc()
-        logger.error(f"Global Crash: {err_type}: {err_msg}\n{stack}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "Unhandled Backend Exception",
-                "type": err_type,
-                "message": err_msg,
-                "stack": stack if os.environ.get("DEBUG") == "true" or True else "Redacted"
-            }
-        )
-
-# CORS Middleware - Refined for security + credentials
-# IMPORTANT: When allow_credentials is True, allow_origins MUST be a specific list (not "*").
+# CORS Middleware
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
 ALLOWED_ORIGINS = ["http://localhost:4200", "http://127.0.0.1:4200", FRONTEND_URL]
 
@@ -60,9 +32,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include Auth routes at top level - these are fast enough
+app.include_router(auth_router, prefix="/api")
+
 # Required for Authlib OAuth state storage
-# Use same_site='none' for cross-site OAuth redirects to ensure session state is preserved.
-# This requires https_only=True, which is ensured by CloudFront/HTTPS.
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "super-secret-session-key")
 app.add_middleware(
     SessionMiddleware, 
