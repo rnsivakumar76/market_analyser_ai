@@ -39,13 +39,17 @@ oauth.register(
 
 @router.get('/login')
 async def login(request: Request):
-    # Construct exact redirect URI using FRONTEND_URL to avoid proxy hostname issues
-    # FRONTEND_URL is something like https://d123.cloudfront.net
-    if "localhost" in str(request.base_url):
+    # Determine the redirect URI. 
+    # 1. Check for explicit override in environment
+    explicit_redirect = os.environ.get("GOOGLE_REDIRECT_URI")
+    if explicit_redirect:
+        url = explicit_redirect
+    # 2. If localhost/127.0.0.1, use the current request's URL for the callback
+    elif "localhost" in str(request.base_url) or "127.0.0.1" in str(request.base_url):
         url = str(request.url_for('auth_callback'))
+    # 3. In production, use the FRONTEND_URL (which should be the CloudFront/Custom domain)
     else:
-        # For production, we must use the CloudFront/Public URL precisely
-        # FRONTEND_URL already has protocol
+        # We ensure it goes through the public gateway (CloudFront)
         base = FRONTEND_URL.rstrip('/')
         url = f"{base}/api/auth/callback"
         
