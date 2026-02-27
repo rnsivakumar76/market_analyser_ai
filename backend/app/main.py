@@ -20,6 +20,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# GLOBAL CACHE for expensive/slow benchmark data (10 min TTL)
+# This prevents TwelveData 8-requests/min rate limits on refreshes
+import time
+_BENCHMARK_CACHE = {"timestamp": 0, "data": None}
+_BENCH_TTL = 600
+
 # CORS Middleware
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
 ALLOWED_ORIGINS = ["http://localhost:4200", "http://127.0.0.1:4200", FRONTEND_URL]
@@ -348,29 +354,39 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             "risk_per_trade_percent": 1.0
         })
     
-    # Parallel Fetch for BOTH Macro and Execution Benchmarks
-    benchmarks_data = {}
+    # Performance Context: Intervals for scan
+    from .models import StrategyMode
     bench_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
     exec_interval = "1d" if mode == StrategyMode.LONG_TERM else "1h"
     exec_days = 500 if mode == StrategyMode.LONG_TERM else 20
 
-    # Optimized Benchmarks: Fetch once and share
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        futures = {
-            executor.submit(fetch_historical_data, "SPX", days=1000, interval=bench_interval): "SPX_macro",
-            executor.submit(fetch_historical_data, "BTC", days=1000, interval=bench_interval): "BTC_macro",
-            executor.submit(fetch_historical_data, "SPX", days=exec_days, interval=exec_interval): "SPX_exec",
-            executor.submit(fetch_historical_data, "BTC", days=exec_days, interval=exec_interval): "BTC_exec",
-            executor.submit(fetch_historical_data, "DX-Y.NYB", days=30, interval="1d"): "DXY",
-            executor.submit(fetch_historical_data, "TNX", days=30, interval="1d"): "US10Y"
+    # 4. Optimized Benchmarks: Fetch once and share (BATCHED)
+    global _BENCHMARK_CACHE
+    now = time.time()
+    
+    if now - _BENCHMARK_CACHE["timestamp"] < _BENCH_TTL and _BENCHMARK_CACHE["data"] is not None:
+        logger.info("Using cached global benchmarks (macro/yields)")
+        benchmarks_data = _BENCHMARK_CACHE["data"]
+    else:
+        logger.info("Fetching fresh global benchmarks via BATCH...")
+        from .twelvedata_fetcher import TwelveDataFetcher
+        bench_fetcher = TwelveDataFetcher()
+        # Fetching SPX, BTC, DXY, TNX in 1-2 calls total
+        bench_batch = ["SPX", "BTC", "DX-Y.NYB", "TNX"]
+        
+        # We need both Macro (1mo/1d) and Execution (1d/1h) for benchmarks too
+        b_macro = bench_fetcher.fetch_batch_data(bench_batch, interval=bench_interval, days=1000)
+        b_exec = bench_fetcher.fetch_batch_data(bench_batch, interval=exec_interval, days=exec_days)
+        
+        benchmarks_data = {
+            "SPX_macro": b_macro.get("SPX"),
+            "BTC_macro": b_macro.get("BTC"),
+            "SPX_exec": b_exec.get("SPX"),
+            "BTC_exec": b_exec.get("BTC"),
+            "DXY": b_macro.get("DX-Y.NYB"),
+            "US10Y": b_macro.get("TNX")
         }
-        for future in as_completed(futures):
-            sym = futures[future]
-            try:
-                benchmarks_data[sym] = future.result()
-            except Exception as e:
-                logger.warning(f"Benchmark {sym} fetch failed (will try fallback): {e}")
-                benchmarks_data[sym] = None
+        _BENCHMARK_CACHE = {"timestamp": now, "data": benchmarks_data}
 
     spy_bench = Signal.NEUTRAL
     btc_bench = Signal.NEUTRAL
