@@ -15,6 +15,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 app = FastAPI(
     title="Market Analyzer API",
@@ -28,20 +29,24 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True, # Critical for session cookies if cross-domain
+    allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Trust proxy headers (CloudFront -> API Gateway -> Lambda)
+app.add_middleware(ProxyHeadersMiddleware, trusted_proxies="*")
+
 # Required for Authlib OAuth state storage
-# Use same_site='lax' to allow redirects from Google to work while keeping cookie secure
+# Use same_site='none' for cross-site OAuth redirects to ensure session state is preserved.
+# This requires https_only=True, which we ensure in production.
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "super-secret-session-key")
 app.add_middleware(
     SessionMiddleware, 
     secret_key=SESSION_SECRET,
     session_cookie="nexus_session",
-    same_site="lax",
-    https_only=True if ("localhost" not in os.environ.get("FRONTEND_URL", "") and "127.0.0.1" not in os.environ.get("FRONTEND_URL", "")) else False
+    same_site="none",
+    https_only=True
 )
 
 # Include Auth routes at top level - these are fast enough

@@ -66,6 +66,12 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
 async def auth_callback(request: Request):
     try:
         logger.info("Auth callback received. Attempting to exchange code for token...")
+        # Debug: check for session
+        if not request.session:
+            logger.warning("No session cookie found in callback request! This will cause state mismatch.")
+        elif 'google:state' not in request.session:
+            logger.warning(f"Session found but 'google:state' is missing. Available keys: {list(request.session.keys())}")
+            
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get('userinfo')
         if not user_info:
