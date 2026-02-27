@@ -25,6 +25,8 @@ export interface StrengthAnalysis {
   rsi: number;
   volume_ratio: number;
   adx: number;
+  vwap?: number;
+  vwap_dist_pct?: number;
   price_change_percent: number;
   description: string;
 }
@@ -63,6 +65,16 @@ export interface TechnicalAnalysis {
   trend_breakout: 'bullish_breakout' | 'bearish_breakout' | 'none';
   breakout_confidence: number;
   rsi_divergence: 'bullish' | 'bearish' | null;
+  std_dev_1?: number;
+  std_dev_2?: number;
+  description: string;
+}
+
+export interface SessionContext {
+  pdh: number;
+  pdl: number;
+  london_open?: number;
+  current_session_range_pct: number;
   description: string;
 }
 
@@ -204,6 +216,7 @@ export interface InstrumentAnalysis {
   relative_strength?: RelativeStrengthAnalysis;
   strategy_mode: StrategyMode;
   intermarket_context?: IntermarketContext;
+  session_context?: SessionContext;
 }
 
 export interface WeeklyPerformance {

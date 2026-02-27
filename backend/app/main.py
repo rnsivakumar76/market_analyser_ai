@@ -69,7 +69,7 @@ def analyze_instrument_lazy(
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
         get_backtest_results, detect_candle_patterns, analyze_technical_indicators,
         analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength,
-        analyze_intermarket_context
+        analyze_intermarket_context, analyze_session_context
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode, IntermarketContext
@@ -147,6 +147,7 @@ def analyze_instrument_lazy(
     
     tech_indicators = analyze_technical_indicators(execution_data)
     news_sentiment = analyze_news_sentiment(symbol)
+    session_ctx = analyze_session_context(execution_data)
     
     # NEW: Intermarket Context (DXY / Yields)
     intermarket = analyze_intermarket_context(symbol, dxy_df, us10y_df)
@@ -249,10 +250,10 @@ def analyze_instrument_lazy(
         trade_signal=trade_signal,
         technical_indicators=tech_indicators,
         news_sentiment=news_sentiment,
-        pullback_warning=pullback_warning,
         relative_strength=rs_analysis,
         strategy_mode=mode,
-        intermarket_context=intermarket
+        intermarket_context=intermarket,
+        session_context=session_ctx
     ), execution_data
 
 @app.get("/")

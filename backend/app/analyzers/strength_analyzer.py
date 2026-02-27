@@ -38,6 +38,31 @@ def calculate_volume_ratio(volume: pd.Series, ma_period: int = 20) -> float:
     return round(current_volume / avg_volume, 2)
 
 
+def calculate_vwap(data: pd.DataFrame, period: int = 20) -> tuple[float, float]:
+    """
+    Calculate Volume Weighted Average Price (VWAP).
+    Returns (vwap_value, distance_pct).
+    """
+    if 'Volume' not in data.columns or (data['Volume'] == 0).all():
+        return 0.0, 0.0
+    
+    recent = data.tail(period).copy()
+    typical_price = (recent['High'] + recent['Low'] + recent['Close']) / 3
+    tp_v = typical_price * recent['Volume']
+    
+    total_tp_v = tp_v.sum()
+    total_vol = recent['Volume'].sum()
+    
+    if total_vol == 0:
+        return 0.0, 0.0
+    
+    vwap = total_tp_v / total_vol
+    current_price = float(data['Close'].iloc[-1])
+    dist_pct = ((current_price - vwap) / vwap) * 100
+    
+    return float(vwap), float(dist_pct)
+
+
 def calculate_adx(data: pd.DataFrame, period: int = 14) -> float:
     """
     Calculate Average Directional Index (ADX).
@@ -108,6 +133,7 @@ def analyze_daily_strength(
     rsi = calculate_rsi(close_prices, rsi_period)
     volume_ratio = calculate_volume_ratio(volume, volume_ma_period)
     adx = calculate_adx(daily_data, 14)
+    vwap, vwap_dist = calculate_vwap(daily_data)
     
     # Calculate daily price change
     if len(close_prices) >= 2:
@@ -119,6 +145,15 @@ def analyze_daily_strength(
     bullish_signals = 0
     bearish_signals = 0
     reasons = []
+    
+    # VWAP analysis
+    if vwap > 0:
+        if vwap_dist > 1.5:
+            bearish_signals += 1
+            reasons.append(f"Price overextended from VWAP (+{vwap_dist:.1f}%)")
+        elif vwap_dist < -1.5:
+            bullish_signals += 1
+            reasons.append(f"Price at discount to VWAP ({vwap_dist:.1f}%)")
     
     # RSI analysis
     if rsi < rsi_oversold:
@@ -165,6 +200,8 @@ def analyze_daily_strength(
         rsi=float(round(rsi, 2)),
         volume_ratio=float(round(volume_ratio, 2)),
         adx=float(round(adx, 2)),
+        vwap=float(round(vwap, 2)) if vwap > 0 else None,
+        vwap_dist_pct=float(round(vwap_dist, 2)) if vwap > 0 else None,
         price_change_percent=float(round(price_change, 2)),
         description=description
     )

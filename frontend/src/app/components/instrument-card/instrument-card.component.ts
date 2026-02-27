@@ -165,6 +165,12 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                         <span class="ptc-text">Market beta</span>
                         <span class="ptc-val">{{ analysis.benchmark_direction | uppercase }}</span>
                       </div>
+                      
+                      <div class="ptc-item" [class]="getVWAPClass()">
+                        <span class="ptc-icon">⚖️</span>
+                        <span class="ptc-text">VWAP Distance</span>
+                        <span class="ptc-val">{{ analysis.daily_strength.vwap_dist_pct?.toFixed(2) }}%</span>
+                      </div>
                       <div class="ptc-item" [class]="getPullbackCheck()">
                         <span class="ptc-icon">{{ getPullbackCheck() === 'pass' ? '✅' : getPullbackCheck() === 'warn' ? '⚠️' : '❌' }}</span>
                         <span class="ptc-text">No overextension</span>
@@ -279,7 +285,15 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                         <span class="g-lab">R1</span>
                         <span class="g-lab">R2</span>
                       </div>
+                      
                       <div class="gauge-track">
+                        <!-- Sigma Bands -->
+                        @if (analysis.technical_indicators?.std_dev_1) {
+                          <div class="sigma-band s1" [style.left.%]="getSigmaPosition(-1)" [style.right.%]="100 - getSigmaPosition(1)"></div>
+                          <div class="sigma-band s2" [style.left.%]="getSigmaPosition(-2)" [style.right.%]="100 - getSigmaPosition(2)"></div>
+                        }
+                        <div class="gauge-fill" [style.left.%]="getPricePositionPercent()"></div>
+
                         <div class="gauge-fill" [style.left.%]="getPricePositionPercent()"></div>
                         <div class="gauge-marker pivot" style="left: 50%"></div>
                       </div>
@@ -292,6 +306,32 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     </div>
                   </div>
 
+
+                  <!-- 3. SESSION RANGE CONTEXT -->
+                  @if (analysis.session_context) {
+                    <div class="section-card data-card session-card">
+                      <div class="data-header"><span class="icon">🕒</span> SESSION CONTEXT</div>
+                      <div class="session-grid">
+                        <div class="s-box">
+                          <span class="s-label">Prev Day High</span>
+                          <span class="s-val bullish">\${{ analysis.session_context.pdh.toFixed(2) }}</span>
+                        </div>
+                        <div class="s-box">
+                          <span class="s-label">Prev Day Low</span>
+                          <span class="s-val bearish">\${{ analysis.session_context.pdl.toFixed(2) }}</span>
+                        </div>
+                        @if (analysis.session_context.london_open) {
+                          <div class="s-box full">
+                            <span class="s-label">London Open</span>
+                            <span class="s-val accent">\${{ analysis.session_context.london_open.toFixed(2) }}</span>
+                          </div>
+                        }
+                      </div>
+                      <div class="session-footer">
+                        Current Range: <strong>{{ analysis.session_context.current_session_range_pct }}%</strong>
+                      </div>
+                    </div>
+                  }
                   <!-- 3. FUNDAMENTAL CONTEXT (ECONOMIC DATA) -->
                   <div class="section-card data-card fundamentals-card">
                     <div class="data-header"><span class="icon">🌍</span> FUNDAMENTAL CONTEXT</div>
@@ -723,6 +763,21 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .im-implication { font-size: 0.65rem; color: #9399b2; padding: 10px; border-radius: 6px; background: #0b0b15; line-height: 1.4; border-left: 3px solid #45475a; }
     .im-implication.bullish { border-left-color: #a6e3a1; color: #a6e3a1; background: rgba(166, 227, 161, 0.05); }
     .im-implication.bearish { border-left-color: #f38ba8; color: #f38ba8; background: rgba(243, 139, 168, 0.05); }
+
+    /* Sigma Bands on Gauge */
+    .sigma-band { position: absolute; top: 0; bottom: 0; pointer-events: none; }
+    .sigma-band.s1 { background: rgba(137, 180, 250, 0.05); border-left: 1px dashed rgba(137, 180, 250, 0.2); border-right: 1px dashed rgba(137, 180, 250, 0.2); }
+    .sigma-band.s2 { background: rgba(243, 139, 168, 0.03); border-left: 1px dotted rgba(243, 139, 168, 0.15); border-right: 1px dotted rgba(243, 139, 168, 0.15); }
+
+    /* Session Context */
+    .session-card { background: rgba(17, 17, 27, 0.4) !important; border-color: #313244 !important; }
+    .session-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .s-box { background: #0b0b15; border: 1px solid #1f1f3a; padding: 10px; border-radius: 6px; text-align: center; }
+    .s-box.full { grid-column: span 2; display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; }
+    .s-label { font-size: 0.55rem; color: #6c7086; text-transform: uppercase; font-weight: 800; display: block; margin-bottom: 2px; }
+    .s-box.full .s-label { margin-bottom: 0; }
+    .s-val { font-size: 0.9rem; font-weight: 900; }
+    .session-footer { font-size: 0.62rem; color: #585b70; text-align: center; border-top: 1px solid #1f1f3a; padding-top: 8px; }
     @media (max-width: 900px) { .tactical-grid { grid-template-columns: 1fr; } }
 
   `]
@@ -874,6 +929,29 @@ export class InstrumentCardComponent implements OnChanges {
     const range = pp.r2 - pp.s2;
     if (range === 0) return 50;
     const percent = ((price - pp.s2) / range) * 100;
+    return Math.max(0, Math.min(100, percent));
+  }
+
+
+  getVWAPClass(): string {
+    const dist = this.analysis.daily_strength.vwap_dist_pct;
+    if (dist === undefined || dist === null) return 'neutral';
+    if (dist > 1.5) return 'bearish';
+    if (dist < -1.5) return 'bullish';
+    return 'neutral';
+  }
+
+  getSigmaPosition(sigma: number): number {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    const s1 = this.analysis.technical_indicators?.std_dev_1 || 0;
+    if (!pp || s1 === 0) return 50;
+    
+    const range = (pp.r2 - pp.s2);
+    if (range === 0) return 50;
+    
+    // Position of Pivot + (sigma * std_dev_1) relative to S2-R2 range
+    const val = pp.pivot + (sigma * s1);
+    const percent = ((val - pp.s2) / range) * 100;
     return Math.max(0, Math.min(100, percent));
   }
 
