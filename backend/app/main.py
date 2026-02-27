@@ -41,7 +41,7 @@ app.add_middleware(
     secret_key=SESSION_SECRET,
     session_cookie="nexus_session",
     same_site="lax",
-    https_only=True if "localhost" not in os.environ.get("FRONTEND_URL", "") else False
+    https_only=True if ("localhost" not in os.environ.get("FRONTEND_URL", "") and "127.0.0.1" not in os.environ.get("FRONTEND_URL", "")) else False
 )
 
 # Include Auth routes at top level - these are fast enough
