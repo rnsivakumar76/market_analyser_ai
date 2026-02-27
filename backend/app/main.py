@@ -24,11 +24,13 @@ app = FastAPI(
 )
 
 # CORS Middleware - Refined for security + credentials
-# We allow * for convenience but restrict manually if needed. 
-# In same-domain production (CloudFront), CORS is less critical but good to have right.
+# IMPORTANT: When allow_credentials is True, allow_origins MUST be a specific list (not "*").
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
+ALLOWED_ORIGINS = ["http://localhost:4200", "http://127.0.0.1:4200", FRONTEND_URL]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True, 
     allow_methods=["*"],
     allow_headers=["*"],
@@ -266,6 +268,23 @@ def analyze_instrument_lazy(
 @app.get("/")
 async def root():
     return {"message": "Market Analyzer API", "status": "running"}
+
+@app.get("/api/health/config-check")
+async def config_check():
+    """Diagnostic endpoint to verify environment settings in production."""
+    frontend_url = os.environ.get("FRONTEND_URL", "NOT_SET")
+    env_name = os.environ.get("ENVIRONMENT", "NOT_SET")
+    
+    # Masking for security but revealing the domain
+    masked_url = frontend_url if len(frontend_url) < 10 else f"{frontend_url[:15]}...{frontend_url[-10:]}"
+    
+    return {
+        "environment": env_name,
+        "frontend_url_detected": masked_url,
+        "is_production": env_name == "production",
+        "redirect_uri_config": os.environ.get("GOOGLE_REDIRECT_URI", "AUTO_RESOLVED"),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
 
 # In-memory store for sent alerts
 SENT_ALERTS = set()
