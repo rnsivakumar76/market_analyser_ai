@@ -15,7 +15,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from fastapi.middleware.cors import CORSMiddleware
-from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 app = FastAPI(
     title="Market Analyzer API",
@@ -36,12 +35,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Trust proxy headers (CloudFront -> API Gateway -> Lambda)
-app.add_middleware(ProxyHeadersMiddleware, trusted_proxies="*")
-
 # Required for Authlib OAuth state storage
 # Use same_site='none' for cross-site OAuth redirects to ensure session state is preserved.
-# This requires https_only=True, which we ensure in production.
+# This requires https_only=True, which is ensured by CloudFront/HTTPS.
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "super-secret-session-key")
 app.add_middleware(
     SessionMiddleware, 
@@ -50,6 +46,27 @@ app.add_middleware(
     same_site="none",
     https_only=True
 )
+
+@app.get("/")
+async def root():
+    return {"message": "Market Analyzer API", "status": "running"}
+
+@app.get("/api/health/config-check")
+async def config_check():
+    """Diagnostic endpoint to verify environment settings in production."""
+    frontend_url = os.environ.get("FRONTEND_URL", "NOT_SET")
+    env_name = os.environ.get("ENVIRONMENT", "NOT_SET")
+    
+    # Masking for security but revealing the domain
+    masked_url = frontend_url if len(frontend_url) < 10 else f"{frontend_url[:15]}...{frontend_url[-10:]}"
+    
+    return {
+        "environment": env_name,
+        "frontend_url_detected": masked_url,
+        "is_production": env_name == "production",
+        "redirect_uri_config": os.environ.get("GOOGLE_REDIRECT_URI", "AUTO_RESOLVED"),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
 
 # Include Auth routes at top level - these are fast enough
 app.include_router(auth_router, prefix="/api")
@@ -264,27 +281,6 @@ def analyze_instrument_lazy(
         intermarket_context=intermarket,
         session_context=session_ctx
     ), execution_data
-
-@app.get("/")
-async def root():
-    return {"message": "Market Analyzer API", "status": "running"}
-
-@app.get("/api/health/config-check")
-async def config_check():
-    """Diagnostic endpoint to verify environment settings in production."""
-    frontend_url = os.environ.get("FRONTEND_URL", "NOT_SET")
-    env_name = os.environ.get("ENVIRONMENT", "NOT_SET")
-    
-    # Masking for security but revealing the domain
-    masked_url = frontend_url if len(frontend_url) < 10 else f"{frontend_url[:15]}...{frontend_url[-10:]}"
-    
-    return {
-        "environment": env_name,
-        "frontend_url_detected": masked_url,
-        "is_production": env_name == "production",
-        "redirect_uri_config": os.environ.get("GOOGLE_REDIRECT_URI", "AUTO_RESOLVED"),
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
 
 # In-memory store for sent alerts
 SENT_ALERTS = set()
