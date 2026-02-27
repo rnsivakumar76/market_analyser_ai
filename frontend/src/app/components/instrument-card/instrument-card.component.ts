@@ -64,6 +64,23 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         </div>
       </div>
 
+      <!-- Strategy Context Banner -->
+      <div class="strategy-context-bar" [class]="analysis.strategy_mode">
+        <div class="sc-left">
+          <span class="sc-mode-label">
+            {{ analysis.strategy_mode === 'long_term' ? '📅 LONG-TERM MODE' : '⚡ SHORT-TERM MODE' }}
+          </span>
+          <span class="sc-timeframes">
+            {{ analysis.strategy_mode === 'long_term'
+              ? 'Monthly Trend · Weekly Structure · Daily Execution'
+              : 'Daily Bias · 4H Structure · 1H Execution' }}
+          </span>
+        </div>
+        <div class="sc-right">
+          <span class="sc-date">Analysis Date: {{ analysis.analysis_date }}</span>
+        </div>
+      </div>
+
       <div class="tabs-nav">
         <button class="tab-btn" (click)="setTab('plan')" [class.active]="selectedTab === 'plan'">
           <span class="tab-icon">🎯</span> Tactical Plan
@@ -72,8 +89,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           <span class="tab-icon">🧠</span> Insight & Data
         </button>
         <div class="strategy-mode-toggle">
-          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'short_term'" title="Short-Term">⚡ Short</button>
-          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'long_term'" title="Long-Term">📈 Long</button>
+          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'short_term'"
+            title="Short-Term (Daily/4H/1H)" (click)="switchMode('short_term')">⚡ Short</button>
+          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'long_term'"
+            title="Long-Term (Monthly/Weekly/Daily)" (click)="switchMode('long_term')">📈 Long</button>
         </div>
       </div>
 
@@ -480,6 +499,18 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .sm-btn { background: transparent; border: 1px solid #2a2a4a; color: #6c7086; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
     .sm-btn.active { background: rgba(137,180,250,0.1); border-color: #89b4fa; color: #89b4fa; }
 
+    /* Strategy Context Banner */
+    .strategy-context-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-radius: 8px; margin-bottom: 14px; border: 1px solid; transition: all 0.3s; }
+    .strategy-context-bar.long_term { background: rgba(137,180,250,0.06); border-color: rgba(137,180,250,0.2); }
+    .strategy-context-bar.short_term { background: rgba(249,226,175,0.06); border-color: rgba(249,226,175,0.2); }
+    .sc-left { display: flex; align-items: center; gap: 14px; }
+    .sc-mode-label { font-size: 0.7rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+    .long_term .sc-mode-label { color: #89b4fa; }
+    .short_term .sc-mode-label { color: #f9e2af; }
+    .sc-timeframes { font-size: 0.65rem; color: #6c7086; font-style: italic; }
+    .sc-right .sc-date { font-size: 0.62rem; color: #45475a; }
+
+
     /* Action Button Row */
     .action-btn-row { display: flex; gap: 8px; margin-bottom: 16px; }
     .btn-chart-link { flex: 1; padding: 12px; background: rgba(137,180,250,0.1); border: 1px solid rgba(137,180,250,0.2); color: #89b4fa; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; }
@@ -503,6 +534,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 export class InstrumentCardComponent implements OnChanges {
   @Input() analysis!: InstrumentAnalysis;
   @Output() refresh = new EventEmitter<string>();
+  @Output() modeChange = new EventEmitter<'long_term' | 'short_term'>();
 
   private marketAnalyzerService = inject(MarketAnalyzerService);
 
@@ -527,6 +559,11 @@ export class InstrumentCardComponent implements OnChanges {
 
   setTab(tab: 'plan' | 'insight') {
     this.selectedTab = tab;
+  }
+
+  switchMode(mode: 'long_term' | 'short_term') {
+    if (this.analysis.strategy_mode === mode) return; // already active, skip
+    this.modeChange.emit(mode);
   }
 
   toggleChart() {
