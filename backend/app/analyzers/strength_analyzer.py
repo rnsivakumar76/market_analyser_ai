@@ -21,15 +21,21 @@ def calculate_rsi(prices: pd.Series, period: int = 14) -> float:
 
 
 def calculate_volume_ratio(volume: pd.Series, ma_period: int = 20) -> float:
-    """Calculate current volume relative to moving average."""
-    volume_ma = volume.rolling(window=ma_period).mean()
+    """Calculate current volume relative to moving average.
+    Returns 0.0 for Forex/commodity pairs that have no real volume data."""
     current_volume = float(volume.iloc[-1])
+    
+    # If current volume is zero, this is a no-volume instrument (XAU, XAG, indices)
+    if current_volume == 0:
+        return 0.0
+    
+    volume_ma = volume.rolling(window=ma_period).mean()
     avg_volume = float(volume_ma.iloc[-1])
     
     if avg_volume == 0:
-        return 1.0
+        return 0.0
     
-    return current_volume / avg_volume
+    return round(current_volume / avg_volume, 2)
 
 
 def calculate_adx(data: pd.DataFrame, period: int = 14) -> float:

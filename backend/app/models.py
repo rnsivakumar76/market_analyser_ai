@@ -135,6 +135,16 @@ class TechnicalAnalysis(BaseModel):
     least_resistance_line: str  # 'up', 'down', 'flat'
     trend_breakout: str  # 'bullish_breakout', 'bearish_breakout', 'none'
     breakout_confidence: float  # 0 to 1
+    rsi_divergence: Optional[str] = None  # 'bullish', 'bearish', None
+    description: str
+
+
+class IntermarketContext(BaseModel):
+    dxy_direction: str  # 'up', 'down', 'flat'
+    dxy_change_pct: float
+    us10y_direction: str  # 'up', 'down', 'flat'
+    us10y_change_pct: float
+    gold_implication: str  # 'bullish', 'bearish', 'neutral'
     description: str
 
 
@@ -199,6 +209,7 @@ class InstrumentAnalysis(BaseModel):
     pullback_warning: Optional[PullbackWarningAnalysis] = None
     relative_strength: Optional[RelativeStrengthAnalysis] = None
     strategy_mode: StrategyMode = StrategyMode.LONG_TERM
+    intermarket_context: Optional['IntermarketContext'] = None
 
 
 class PerformanceSummary(BaseModel):

@@ -269,6 +269,22 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     </div>
 
                     <!-- Invalidation level -->
+                    
+                    <!-- Price Position Gauge -->
+                    <div class="price-gauge-wrap">
+                      <div class="gauge-labels">
+                        <span class="g-lab">S2</span>
+                        <span class="g-lab">S1</span>
+                        <span class="g-lab">PIVOT</span>
+                        <span class="g-lab">R1</span>
+                        <span class="g-lab">R2</span>
+                      </div>
+                      <div class="gauge-track">
+                        <div class="gauge-fill" [style.left.%]="getPricePositionPercent()"></div>
+                        <div class="gauge-marker pivot" style="left: 50%"></div>
+                      </div>
+                      <div class="gauge-footer">Current: <strong>\${{ analysis.current_price.toFixed(2) }}</strong></div>
+                    </div>
                     <div class="invalidation-row">
                       <span class="inv-label">⛔ TRADE INVALIDATION</span>
                       <span class="inv-price bearish">\${{ getInvalidationLevel() }}</span>
@@ -293,6 +309,32 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
 
                   <!-- 4. TRUSTWORTHY SIGNALS -->
+
+                  <!-- 5. INTERMARKET CONTEXT (DXY / YIELDS) -->
+                  @if (analysis.intermarket_context) {
+                    <div class="section-card data-card intermarket-card">
+                      <div class="data-header"><span class="icon">🔗</span> INTERMARKET CORRELATION</div>
+                      <div class="im-grid">
+                        <div class="im-box">
+                          <span class="im-label">DXY (Dollar)</span>
+                          <span class="im-val" [class.bullish]="analysis.intermarket_context.dxy_direction === 'up'" 
+                                            [class.bearish]="analysis.intermarket_context.dxy_direction === 'down'">
+                            {{ analysis.intermarket_context.dxy_direction | uppercase }}
+                          </span>
+                        </div>
+                        <div class="im-box">
+                          <span class="im-label">US10Y Yield</span>
+                          <span class="im-val" [class.bullish]="analysis.intermarket_context.us10y_direction === 'up'" 
+                                            [class.bearish]="analysis.intermarket_context.us10y_direction === 'down'">
+                            {{ analysis.intermarket_context.us10y_direction | uppercase }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="im-implication" [class]="analysis.intermarket_context.gold_implication">
+                        {{ analysis.intermarket_context.description }}
+                      </div>
+                    </div>
+                  }
                   <div class="section-card data-card trust-signals-card">
                     <div class="data-header">Trustworthy Signals</div>
                     <ul class="trust-list">
@@ -656,6 +698,31 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .ptc-verdict.caution { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
     .ptc-verdict.no-go { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
 
+    
+    /* Price Position Gauge */
+    .price-gauge-wrap { margin-bottom: 20px; padding: 0 4px; }
+    .gauge-labels { display: flex; justify-content: space-between; font-size: 0.55rem; color: #45475a; font-weight: 800; margin-bottom: 6px; padding: 0 4px; }
+    .gauge-track { height: 6px; background: #1a1a2a; border-radius: 3px; position: relative; border: 1px solid #1f1f3a; }
+    .gauge-fill { width: 12px; height: 12px; background: #89b4fa; border: 2px solid #11111b; border-radius: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); filter: drop-shadow(0 0 4px rgba(137, 180, 250, 0.4)); transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2; }
+    .gauge-marker.pivot { height: 10px; width: 1px; background: rgba(108, 112, 134, 0.5); position: absolute; top: -2px; z-index: 1; }
+    .gauge-footer { font-size: 0.6rem; color: #6c7086; text-align: center; margin-top: 8px; }
+    .gauge-footer strong { color: #cdd6f4; }
+
+    /* Divergence Alert */
+    .divergence-alert { grid-column: span 2; padding: 6px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 800; text-align: center; margin-bottom: 10px; animation: pulse 2s infinite; }
+    .divergence-alert.bullish { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; border: 1px solid rgba(166, 227, 161, 0.3); }
+    .divergence-alert.bearish { background: rgba(243, 139, 168, 0.1); color: #f38ba8; border: 1px solid rgba(243, 139, 168, 0.3); }
+    @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
+
+    /* Intermarket Context */
+    .intermarket-card { background: rgba(30, 30, 46, 0.3) !important; border-style: dashed !important; }
+    .im-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .im-box { background: #0b0b15; border: 1px solid #1f1f3a; padding: 8px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .im-label { font-size: 0.55rem; color: #6c7086; text-transform: uppercase; font-weight: 800; }
+    .im-val { font-size: 0.8rem; font-weight: 900; }
+    .im-implication { font-size: 0.65rem; color: #9399b2; padding: 10px; border-radius: 6px; background: #0b0b15; line-height: 1.4; border-left: 3px solid #45475a; }
+    .im-implication.bullish { border-left-color: #a6e3a1; color: #a6e3a1; background: rgba(166, 227, 161, 0.05); }
+    .im-implication.bearish { border-left-color: #f38ba8; color: #f38ba8; background: rgba(243, 139, 168, 0.05); }
     @media (max-width: 900px) { .tactical-grid { grid-template-columns: 1fr; } }
 
   `]
@@ -798,6 +865,23 @@ export class InstrumentCardComponent implements OnChanges {
   // ── Trade Execution Level Helpers ─────────────────────────────────────────
   private get isBullish(): boolean {
     return this.analysis.trade_signal.recommendation !== 'bearish';
+  }
+
+  getPricePositionPercent(): number {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 50;
+    const price = this.analysis.current_price;
+    const range = pp.r2 - pp.s2;
+    if (range === 0) return 50;
+    const percent = ((price - pp.s2) / range) * 100;
+    return Math.max(0, Math.min(100, percent));
+  }
+
+  getRSIDivergenceLabel(): string {
+    const div = this.analysis.technical_indicators?.rsi_divergence;
+    if (div === 'bullish') return '🐂 Bullish Divergence';
+    if (div === 'bearish') return '🐻 Bearish Divergence';
+    return '';
   }
 
   getEntryZone(): string {

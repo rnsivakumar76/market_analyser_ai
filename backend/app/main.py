@@ -58,7 +58,9 @@ def analyze_instrument_lazy(
     benchmark_data_df: Any = None,
     pre_macro_df: Any = None,
     pre_pullback_df: Any = None,
-    pre_execution_df: Any = None
+    pre_execution_df: Any = None,
+    dxy_df: Any = None,
+    us10y_df: Any = None
 ) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
     from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price
@@ -66,10 +68,11 @@ def analyze_instrument_lazy(
         analyze_monthly_trend, analyze_weekly_pullback, analyze_daily_strength,
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
         get_backtest_results, detect_candle_patterns, analyze_technical_indicators,
-        analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength
+        analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength,
+        analyze_intermarket_context
     )
     from .signal_generator import generate_trade_signal
-    from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode
+    from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode, IntermarketContext
     
     # Default to Long Term if not specified
     if mode is None:
@@ -144,6 +147,9 @@ def analyze_instrument_lazy(
     
     tech_indicators = analyze_technical_indicators(execution_data)
     news_sentiment = analyze_news_sentiment(symbol)
+    
+    # NEW: Intermarket Context (DXY / Yields)
+    intermarket = analyze_intermarket_context(symbol, dxy_df, us10y_df)
     
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value)
     fundamentals = analyze_fundamentals(symbol)
@@ -245,7 +251,8 @@ def analyze_instrument_lazy(
         news_sentiment=news_sentiment,
         pullback_warning=pullback_warning,
         relative_strength=rs_analysis,
-        strategy_mode=mode
+        strategy_mode=mode,
+        intermarket_context=intermarket
     ), execution_data
 
 @app.get("/")
@@ -332,7 +339,9 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             executor.submit(fetch_historical_data, "SPX", days=1000, interval=bench_interval): "SPX_macro",
             executor.submit(fetch_historical_data, "BTC", days=1000, interval=bench_interval): "BTC_macro",
             executor.submit(fetch_historical_data, "SPX", days=exec_days, interval=exec_interval): "SPX_exec",
-            executor.submit(fetch_historical_data, "BTC", days=exec_days, interval=exec_interval): "BTC_exec"
+            executor.submit(fetch_historical_data, "BTC", days=exec_days, interval=exec_interval): "BTC_exec",
+            executor.submit(fetch_historical_data, "DX-Y.NYB", days=30, interval="1d"): "DXY",
+            executor.submit(fetch_historical_data, "TNX", days=30, interval="1d"): "US10Y"
         }
         for future in as_completed(futures):
             sym = futures[future]
@@ -376,7 +385,9 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 benchmark_data_df=bench_exec_df,
                 pre_macro_df=macro_batch.get(sym),
                 pre_pullback_df=pullback_batch.get(sym),
-                pre_execution_df=exec_batch.get(sym)
+                pre_execution_df=exec_batch.get(sym),
+                dxy_df=benchmarks_data.get("DXY"),
+                us10y_df=benchmarks_data.get("US10Y")
             )
             return sym, analysis, hist_data
         except Exception as e:
@@ -523,12 +534,23 @@ async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(g
         if inst['symbol'].upper() == symbol.upper():
             name = inst['name']
             break
-            
-    # Benchmark status
-    spy_df = fetch_historical_data("SPX", days=1000, interval=("1mo" if mode == StrategyMode.LONG_TERM else "1d"))
+
+    # Fetch Benchmarks in parallel
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        f_spy = executor.submit(fetch_historical_data, "SPX", days=1000, interval=("1mo" if mode == StrategyMode.LONG_TERM else "1d"))
+        f_dxy = executor.submit(fetch_historical_data, "DX-Y.NYB", days=30, interval="1d")
+        f_tnx = executor.submit(fetch_historical_data, "TNX", days=30, interval="1d")
+        
+        spy_df = f_spy.result()
+        dxy_df = f_dxy.result()
+        tnx_df = f_tnx.result()
+    
     spy_bench_info = analyze_monthly_trend(spy_df, params.get('monthly', {}))
     
-    analysis, _ = analyze_instrument_lazy(symbol.upper(), name, params, spy_bench_info.direction, strategy_settings, mode=mode)
+    analysis, _ = analyze_instrument_lazy(
+        symbol.upper(), name, params, spy_bench_info.direction, strategy_settings, 
+        mode=mode, dxy_df=dxy_df, us10y_df=tnx_df
+    )
     return analysis
 
 @app.get("/api/instruments")
