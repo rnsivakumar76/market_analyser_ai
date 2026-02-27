@@ -48,6 +48,11 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 🔄 {{ analysis.strategy_mode === 'long_term' ? 'To Short' : 'To Long' }}
               </button>
             </div>
+            <div class="th-state-hud">
+              <span class="state-label" [class]="getTrendClass()">{{ macroLabel }}</span>
+              <span class="state-label" [class]="analysis.weekly_pullback.detected ? 'bullish' : 'neutral'">{{ pullbackLabel }}</span>
+              <span class="state-label" [class]="getStrengthClass()">{{ executionLabel }}</span>
+            </div>
           </div>
 
           <div class="th-right">
@@ -97,7 +102,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
             <!-- Price Gauge Integrated -->
             <div class="terminal-gauge">
-               <div class="tg-labels"><span>S2</span><span>S1</span><span>PIVOT</span><span>R1</span><span>R2</span></div>
+               <div class="tg-labels"><span>S3</span><span>S1</span><span>PIVOT</span><span>R1</span><span>R3</span></div>
                <div class="tg-track">
                   @if (analysis.technical_indicators?.std_dev_1) {
                     <div class="tg-sigma s1" [style.left.%]="getSigmaPosition(-1)" [style.right.%]="100 - getSigmaPosition(1)"></div>
@@ -439,6 +444,12 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .th-clock.transition { color: #585b70; border-color: #585b70; }
     .th-clock.event.impact { color: #f38ba8; border-color: #f38ba8; animation: blink 1s infinite; }
     @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+    .th-state-hud { display: flex; gap: 8px; margin-top: 10px; }
+    .state-label { font-size: 0.55rem; font-weight: 800; padding: 2px 8px; border-radius: 100px; background: rgba(49, 50, 68, 0.4); border: 1px solid #1f1f3a; color: #9399b2; text-transform: uppercase; }
+    .state-label.bullish { color: #a6e3a1; border-color: rgba(166, 227, 161, 0.3); background: rgba(166, 227, 161, 0.05); }
+    .state-label.bearish { color: #f38ba8; border-color: rgba(243, 139, 168, 0.3); background: rgba(243, 139, 168, 0.05); }
+    .state-label.neutral { color: #f9e2af; border-color: rgba(249, 226, 175, 0.3); background: rgba(249, 226, 175, 0.05); }
 
     /* POSITION CALCULATOR */
     .position-calculator { background: #11111b; border: 1px solid #1f1f3a; border-radius: 8px; padding: 12px; margin-bottom: 24px; }
