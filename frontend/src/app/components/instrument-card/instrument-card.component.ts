@@ -1,13 +1,14 @@
 import { Component, Input, Output, EventEmitter, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem } from '../../services/market-analyzer.service';
-import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
+import { InstrumentChartComponent, ChartOverlayLevel } from '../instrument-chart/instrument-chart.component';
 import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi-timeframe-overlay.component';
+import { TradeJournalComponent } from '../trade-journal/trade-journal.component';
 
 @Component({
   selector: 'app-instrument-card',
   standalone: true,
-  imports: [CommonModule, InstrumentChartComponent, MultiTimeframeOverlayComponent],
+  imports: [CommonModule, InstrumentChartComponent, MultiTimeframeOverlayComponent, TradeJournalComponent],
   template: `
     <div class="instrument-view-container">
       <!-- Top Multi-Timeframe Area (from Image 1 & 2 layout) -->
@@ -28,6 +29,14 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
             @if (analysis.relative_strength) {
               <span class="alpha-status" [class]="getAlphaClass()" [title]="analysis.relative_strength.description">
                 {{ analysis.relative_strength.label === 'Leader' ? '🌟' : '📊' }} Alpha: {{ analysis.relative_strength.alpha > 0 ? '+' : '' }}{{ analysis.relative_strength.alpha.toFixed(1) }}%
+              </span>
+            }
+            <!-- Candle Pattern Badge -->
+            @if (analysis.candle_patterns?.pattern && analysis.candle_patterns.pattern !== 'None') {
+              <span class="candle-badge" [class]="analysis.candle_patterns.is_bullish === true ? 'bull' : analysis.candle_patterns.is_bullish === false ? 'bear' : 'neutral'"
+                    [title]="analysis.candle_patterns.description">
+                {{ analysis.candle_patterns.is_bullish === true ? '🕯️📈' : analysis.candle_patterns.is_bullish === false ? '🕯️📉' : '🕯️' }}
+                {{ analysis.candle_patterns.pattern }}
               </span>
             }
           </div>
@@ -62,6 +71,10 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
         <button class="tab-btn" (click)="setTab('insight')" [class.active]="selectedTab === 'insight'">
           <span class="tab-icon">🧠</span> Insight & Data
         </button>
+        <div class="strategy-mode-toggle">
+          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'short_term'" title="Short-Term">⚡ Short</button>
+          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'long_term'" title="Long-Term">📈 Long</button>
+        </div>
       </div>
 
       <!-- Main Content Area -->
@@ -104,10 +117,15 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                     </p>
                   </div>
 
-                  <!-- 3. CHART LINK -->
-                  <button class="btn-chart-link" (click)="setTab('insight')">
-                    📊 View Interactive Chart
-                  </button>
+                  <!-- 3. CHART LINK + LOG TO JOURNAL -->
+                  <div class="action-btn-row">
+                    <button class="btn-chart-link" (click)="setTab('insight')">
+                      📊 View Chart
+                    </button>
+                    <button class="btn-journal" (click)="openJournalModal()">
+                      📒 Log to Journal
+                    </button>
+                  </div>
 
                   <!-- 4. NEWS INTELLIGENCE -->
                   <div class="section-card news-intel-card">
@@ -207,14 +225,14 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                       <div class="data-header"><span class="icon">🎯</span> STRATEGIC PIVOT MATRIX</div>
                       <div class="pivot-grid-main">
                         <div class="pivot-column">
-                          <div class="p-item"><span class="t res">R3</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r3 }}</span></div>
-                          <div class="p-item"><span class="t res">R2</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r2 }}</span></div>
-                          <div class="p-item"><span class="t res">R1</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r1 }}</span></div>
+                          <div class="p-item"><span class="t res">R3</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r3 }}</span><button class="bell-btn" (click)="addLevelAlert('pivot_r3', analysis.technical_indicators!.pivot_points.r3)" title="Alert at R3">🔔</button></div>
+                          <div class="p-item"><span class="t res">R2</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r2 }}</span><button class="bell-btn" (click)="addLevelAlert('pivot_r2', analysis.technical_indicators!.pivot_points.r2)" title="Alert at R2">🔔</button></div>
+                          <div class="p-item"><span class="t res">R1</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r1 }}</span><button class="bell-btn" (click)="addLevelAlert('pivot_r1', analysis.technical_indicators!.pivot_points.r1)" title="Alert at R1">🔔</button></div>
                         </div>
                         <div class="pivot-column">
-                          <div class="p-item"><span class="t sup">S1</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s1 }}</span></div>
-                          <div class="p-item"><span class="t sup">S2</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s2 }}</span></div>
-                          <div class="p-item"><span class="t sup">S3</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s3 }}</span></div>
+                          <div class="p-item"><span class="t sup">S1</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s1 }}</span><button class="bell-btn" (click)="addLevelAlert('pivot_s1', analysis.technical_indicators!.pivot_points.s1)" title="Alert at S1">🔔</button></div>
+                          <div class="p-item"><span class="t sup">S2</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s2 }}</span><button class="bell-btn" (click)="addLevelAlert('pivot_s2', analysis.technical_indicators!.pivot_points.s2)" title="Alert at S2">🔔</button></div>
+                          <div class="p-item"><span class="t sup">S3</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s3 }}</span><button class="bell-btn" (click)="addLevelAlert('pivot_s3', analysis.technical_indicators!.pivot_points.s3)" title="Alert at S3">🔔</button></div>
                         </div>
                       </div>
                       <div class="pivot-footer">
@@ -239,10 +257,22 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
 
                 <div class="section-card backtest-card mt-16">
                   <div class="data-header"><span class="icon">📈</span> STRATEGY PROBABILITY (1Y BACKTEST)</div>
-                  <div class="backtest-stats-row">
-                    <div class="b-stat"><span class="tl">Win Rate</span><span class="tv highlight">{{ analysis.backtest_results?.win_rate?.toFixed(1) }}%</span></div>
-                    <div class="b-stat"><span class="tl">Total Trades</span><span class="tv">{{ analysis.backtest_results?.total_trades }}</span></div>
-                    <div class="b-stat"><span class="tl">Profit Factor</span><span class="tv">{{ analysis.backtest_results?.profit_factor }}</span></div>
+                  <div class="backtest-layout">
+                    <div class="backtest-stats-row">
+                      <div class="b-stat"><span class="tl">Win Rate</span><span class="tv highlight">{{ analysis.backtest_results?.win_rate?.toFixed(1) }}%</span></div>
+                      <div class="b-stat"><span class="tl">Total Trades</span><span class="tv">{{ analysis.backtest_results?.total_trades }}</span></div>
+                      <div class="b-stat"><span class="tl">Profit Factor</span><span class="tv">{{ analysis.backtest_results?.profit_factor }}</span></div>
+                      <div class="b-stat"><span class="tl">Avg Win</span><span class="tv bullish">+{{ analysis.backtest_results?.avg_win?.toFixed(1) }}%</span></div>
+                      <div class="b-stat"><span class="tl">Avg Loss</span><span class="tv bearish">-{{ analysis.backtest_results?.avg_loss?.toFixed(1) }}%</span></div>
+                    </div>
+                    <!-- Equity Curve Sparkline -->
+                    <div class="sparkline-wrap">
+                      <svg class="sparkline" viewBox="0 0 200 50" preserveAspectRatio="none">
+                        <polyline [attr.points]="getEquityCurvePoints()" class="spark-line" />
+                        <polygon [attr.points]="getEquityCurveArea()" class="spark-area" />
+                      </svg>
+                      <span class="spark-label">Simulated Equity Curve</span>
+                    </div>
                   </div>
                 </div>
 
@@ -251,7 +281,7 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                    <div class="chart-box">
                       <button class="btn-load-chart" (click)="toggleChart()" *ngIf="!showChart">🚀 Initialize Intelligence Chart</button>
                       <div class="chart-wrap" *ngIf="showChart">
-                        <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol" *ngIf="chartData.length > 0"></app-instrument-chart>
+                        <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol" [overlayLevels]="getChartOverlays()" *ngIf="chartData.length > 0"></app-instrument-chart>
                       </div>
                    </div>
                 </div>
@@ -262,6 +292,11 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
           }
         }
       </div>
+
+      <!-- Journal Modal -->
+      @if (showJournalModal) {
+        <app-trade-journal [prefill]="journalPrefill" (close)="closeJournalModal()"></app-trade-journal>
+      }
 
       <!-- Footer for modal overlays -->
       @if (selectedNewsItem) {
@@ -286,6 +321,11 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
             </div>
           </div>
         </div>
+      }
+
+      <!-- Alert Toast -->
+      @if (alertToastVisible) {
+        <div class="alert-toast">{{ alertToastMsg }}</div>
       }
     </div>
     </div>
@@ -413,11 +453,49 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
     .f-box .l { font-size: 0.6rem; color: #9399b2; text-transform: uppercase; display: block; margin-bottom: 4px; }
     .f-box .v { font-size: 0.95rem; font-weight: 800; color: #cdd6f4; }
 
-    .backtest-stats-row { display: flex; justify-content: space-between; }
+    .backtest-layout { display: flex; flex-direction: column; gap: 12px; }
+    .backtest-stats-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .b-stat { display: flex; flex-direction: column; gap: 4px; }
     .b-stat .tl { font-size: 0.7rem; color: #6c7086; }
     .b-stat .tv { font-size: 1.2rem; font-weight: 900; color: #cdd6f4; }
     .b-stat .tv.highlight { color: #a6e3a1; }
+    .b-stat .tv.bullish { color: #a6e3a1; font-size: 0.95rem; }
+    .b-stat .tv.bearish { color: #f38ba8; font-size: 0.95rem; }
+
+    /* Equity Sparkline */
+    .sparkline-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .sparkline { width: 100%; height: 50px; display: block; }
+    .spark-line { fill: none; stroke: #a6e3a1; stroke-width: 1.5; }
+    .spark-area { fill: rgba(166,227,161,0.1); stroke: none; }
+    .spark-label { font-size: 0.6rem; color: #6c7086; text-align: right; font-style: italic; }
+
+    /* Candle Pattern Badge */
+    .candle-badge { font-size: 0.6rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; }
+    .candle-badge.bull { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.25); }
+    .candle-badge.bear { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.25); }
+    .candle-badge.neutral { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.25); }
+
+    /* Strategy Mode Toggle */
+    .strategy-mode-toggle { display: flex; gap: 4px; margin-left: auto; }
+    .sm-btn { background: transparent; border: 1px solid #2a2a4a; color: #6c7086; font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+    .sm-btn.active { background: rgba(137,180,250,0.1); border-color: #89b4fa; color: #89b4fa; }
+
+    /* Action Button Row */
+    .action-btn-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .btn-chart-link { flex: 1; padding: 12px; background: rgba(137,180,250,0.1); border: 1px solid rgba(137,180,250,0.2); color: #89b4fa; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; }
+    .btn-chart-link:hover { background: rgba(137,180,250,0.2); }
+    .btn-journal { flex: 1; padding: 12px; background: rgba(166,227,161,0.08); border: 1px solid rgba(166,227,161,0.2); color: #a6e3a1; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.85rem; transition: all 0.2s; }
+    .btn-journal:hover { background: rgba(166,227,161,0.15); }
+
+    /* Bell Buttons on Pivot Levels */
+    .bell-btn { background: none; border: none; cursor: pointer; font-size: 0.7rem; opacity: 0.3; margin-left: auto; padding: 0 2px; transition: opacity 0.2s, transform 0.2s; }
+    .p-item:hover .bell-btn { opacity: 1; }
+    .bell-btn:hover { transform: scale(1.3); }
+    .bell-btn.active { opacity: 1; filter: drop-shadow(0 0 3px #f9e2af); }
+
+    /* Alert Toast */
+    .alert-toast { position: fixed; bottom: 24px; right: 24px; background: #1e1e2e; border: 1px solid #89b4fa; border-radius: 10px; padding: 12px 18px; color: #cdd6f4; font-size: 0.85rem; z-index: 9999; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: slide-up 0.3s ease; }
+    @keyframes slide-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
     @media (max-width: 900px) { .tactical-grid { grid-template-columns: 1fr; } }
   `]
@@ -433,6 +511,11 @@ export class InstrumentCardComponent implements OnChanges {
   isLoadingChart = false;
   chartData: ChartData[] = [];
   selectedNewsItem: NewsItem | null = null;
+  showJournalModal = false;
+  journalPrefill: any = null;
+  alertToastMsg = '';
+  alertToastVisible = false;
+  activeLevelAlerts = new Set<string>();
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['analysis'] && !changes['analysis'].firstChange) {
@@ -540,10 +623,133 @@ export class InstrumentCardComponent implements OnChanges {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
     if (diffInSeconds < 60) return 'just now';
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     return date.toLocaleDateString();
   }
+
+  // ── Journal Modal ────────────────────────────────────────────────────────────
+  openJournalModal() {
+    const a = this.analysis;
+    const direction = a.trade_signal.recommendation === 'bearish' ? 'short' : 'long';
+    this.journalPrefill = {
+      symbol: a.symbol,
+      direction,
+      entry_price: a.position_sizing?.entry_price ?? a.current_price,
+      size: a.position_sizing?.suggested_units ?? null,
+      notes: `${a.trade_signal.action_plan}. Score: ${a.trade_signal.score}. ${a.trade_signal.action_plan_details}`,
+      date: new Date().toISOString().slice(0, 10),
+    };
+    this.showJournalModal = true;
+  }
+
+  closeJournalModal() {
+    this.showJournalModal = false;
+    this.journalPrefill = null;
+  }
+
+  // ── Smart Level Alerts (local toast + localStorage) ──────────────────────────
+  addLevelAlert(key: string, price: number) {
+    const stored = JSON.parse(localStorage.getItem('market_level_alerts') || '[]');
+    const exists = stored.some((a: any) => a.key === key && a.symbol === this.analysis.symbol);
+    if (exists) {
+      // Remove if already exists (toggle off)
+      const updated = stored.filter((a: any) => !(a.key === key && a.symbol === this.analysis.symbol));
+      localStorage.setItem('market_level_alerts', JSON.stringify(updated));
+      this.activeLevelAlerts.delete(`${this.analysis.symbol}_${key}`);
+      this.showToast(`🔕 Alert removed for $${price.toFixed(2)}`);
+    } else {
+      stored.push({ key, symbol: this.analysis.symbol, price, createdAt: new Date().toISOString() });
+      localStorage.setItem('market_level_alerts', JSON.stringify(stored));
+      this.activeLevelAlerts.add(`${this.analysis.symbol}_${key}`);
+      this.showToast(`🔔 Alert set: ${this.analysis.symbol} @ $${price.toFixed(2)}`);
+    }
+  }
+
+  isAlertActive(key: string): boolean {
+    return this.activeLevelAlerts.has(`${this.analysis.symbol}_${key}`);
+  }
+
+  private showToast(msg: string) {
+    this.alertToastMsg = msg;
+    this.alertToastVisible = true;
+    setTimeout(() => { this.alertToastVisible = false; }, 3000);
+  }
+
+  // ── Chart Overlays ────────────────────────────────────────────────────────────
+  getChartOverlays(): import('../instrument-chart/instrument-chart.component').ChartOverlayLevel[] {
+    const a = this.analysis;
+    const overlays: import('../instrument-chart/instrument-chart.component').ChartOverlayLevel[] = [];
+
+    if (a.technical_indicators) {
+      const pp = a.technical_indicators.pivot_points;
+      overlays.push(
+        { price: pp.r1, label: 'R1', color: 'rgba(243,139,168,0.7)', lineStyle: 2 },
+        { price: pp.r2, label: 'R2', color: 'rgba(243,139,168,0.5)', lineStyle: 2 },
+        { price: pp.r3, label: 'R3', color: 'rgba(243,139,168,0.3)', lineStyle: 2 },
+        { price: pp.s1, label: 'S1', color: 'rgba(166,227,161,0.7)', lineStyle: 2 },
+        { price: pp.s2, label: 'S2', color: 'rgba(166,227,161,0.5)', lineStyle: 2 },
+        { price: pp.s3, label: 'S3', color: 'rgba(166,227,161,0.3)', lineStyle: 2 },
+        { price: pp.pivot, label: 'Pivot', color: 'rgba(137,180,250,0.6)', lineStyle: 1 },
+      );
+
+      const fib = a.technical_indicators.fibonacci;
+      if (fib) {
+        overlays.push(
+          { price: fib.ret_382, label: 'Ret 38.2%', color: 'rgba(249,226,175,0.6)', lineStyle: 3 },
+          { price: fib.ret_618, label: 'Ret 61.8%', color: 'rgba(249,226,175,0.8)', lineStyle: 3 },
+          { price: fib.ext_1272, label: 'Ext 1.272', color: 'rgba(203,166,247,0.6)', lineStyle: 3 },
+        );
+      }
+    }
+
+    if (a.volatility_risk) {
+      overlays.push(
+        { price: a.volatility_risk.stop_loss, label: 'SL', color: 'rgba(243,139,168,0.9)', lineStyle: 0 },
+        { price: a.volatility_risk.take_profit, label: 'TP', color: 'rgba(166,227,161,0.9)', lineStyle: 0 },
+      );
+    }
+
+    return overlays;
+  }
+
+  // ── Equity Curve Sparkline ────────────────────────────────────────────────────
+  getEquityCurvePoints(): string {
+    return this.generateCurve(false);
+  }
+
+  getEquityCurveArea(): string {
+    return this.generateCurve(true);
+  }
+
+  private generateCurve(asArea: boolean): string {
+    const bt = this.analysis.backtest_results;
+    if (!bt) return '';
+    // Simulate an equity curve from backtest stats
+    const n = 20;
+    const winRate = (bt.win_rate || 50) / 100;
+    const avgWin = bt.avg_win || 1;
+    const avgLoss = bt.avg_loss || 1;
+    let equity = 100;
+    const points: number[] = [equity];
+    for (let i = 1; i < n; i++) {
+      const win = Math.random() < winRate;
+      equity += win ? (avgWin / 2) : -(avgLoss / 2);
+      points.push(equity);
+    }
+    const min = Math.min(...points);
+    const max = Math.max(...points);
+    const range = max - min || 1;
+    const mapped = points.map((v, i) => {
+      const x = (i / (n - 1)) * 200;
+      const y = 50 - ((v - min) / range) * 45;
+      return `${x},${y}`;
+    });
+    if (asArea) {
+      return `${mapped.join(' ')} 200,50 0,50`;
+    }
+    return mapped.join(' ');
+  }
 }
+
