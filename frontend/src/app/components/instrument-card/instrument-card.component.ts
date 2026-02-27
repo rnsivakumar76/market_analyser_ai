@@ -26,6 +26,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <div class="th-clocks">
                 <span class="th-clock session" [class]="getCurrentSession().toLowerCase().replace(' ', '-')">{{ getCurrentSession() }}</span>
                 <span class="th-clock event" [class.impact]="analysis.fundamentals?.has_high_impact_events">{{ getNextEvent() }}</span>
+                <div class="th-regime" [class]="analysis.monthly_trend.direction">
+                  <span class="regime-label">REGIME |</span>
+                  <span class="regime-value">{{ getMarketRegime() }}</span>
+                </div>
               </div>
             </div>
             <div class="th-badges">
@@ -118,6 +122,22 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   <div class="pcr-item"><span>RISK $</span><strong>{{ getRiskAmount() }}</strong></div>
                </div>
             </div>
+
+            <!-- Percentage Scaling Plan -->
+            <div class="scaling-plan">
+              <div class="sp-header">⚖️ PERCENTAGE SCALING PLAN (50 / 30 / 20)</div>
+              <div class="sp-grid">
+                @for (step of getScalingStrategy(); track step.stage) {
+                  <div class="sp-step">
+                    <span class="sps-p">{{ step.percent }}%</span>
+                    <div class="sps-details">
+                      <span class="sps-l">{{ step.stage }}</span>
+                      <strong class="sps-v">{{ step.target }}</strong>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
             <div class="tile-actions">
               <button class="btn-primary" (click)="openJournalModal()">📒 Log Trade</button>
               <button class="btn-secondary" (click)="toggleChart()">📊 {{ showChart ? 'Hide Chart' : 'View Intelligence Chart' }}</button>
@@ -139,6 +159,14 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 <div class="divergence-banner" [class]="analysis.technical_indicators?.rsi_divergence">
                   {{ getRSIDivergenceLabel() }}
                 </div>
+            }
+
+            @if (getPullbackReasons().length > 0) {
+              <div class="pullback-alerts">
+                @for (reason of getPullbackReasons(); track reason) {
+                  <div class="pa-item">📌 {{ reason }}</div>
+                }
+              </div>
             }
                           @if (analysis.position_sizing?.correlation_penalty && analysis.position_sizing!.correlation_penalty > 1.0) {
                 <div class="correlation-warning">
@@ -208,13 +236,19 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 </div>
               </div>
               <div class="deep-card pivots">
-                 <div class="dc-header">PIVOT MATRIX</div>
+                 <div class="dc-header">PIVOT MATRIX / EXTENSIONS</div>
                  <div class="pm-grid">
+                    <div class="pm-v res">R3: \${{ analysis.technical_indicators?.pivot_points?.r3 }}</div>
                     <div class="pm-v res">R2: \${{ analysis.technical_indicators?.pivot_points?.r2 }}</div>
                     <div class="pm-v res">R1: \${{ analysis.technical_indicators?.pivot_points?.r1 }}</div>
                     <div class="pm-v center">P: \${{ analysis.technical_indicators?.pivot_points?.pivot }}</div>
                     <div class="pm-v sup">S1: \${{ analysis.technical_indicators?.pivot_points?.s1 }}</div>
                     <div class="pm-v sup">S2: \${{ analysis.technical_indicators?.pivot_points?.s2 }}</div>
+                    <div class="pm-v sup">S3: \${{ analysis.technical_indicators?.pivot_points?.s3 }}</div>
+                 </div>
+                 <div class="fib-ext-belt">
+                    <div class="feb-item"><span>1.272 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1272 }}</strong></div>
+                    <div class="feb-item"><span>1.618 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1618 }}</strong></div>
                  </div>
               </div>
            </div>
@@ -419,6 +453,31 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     .correlation-warning { font-size: 0.65rem; color: #f9e2af; background: rgba(249, 226, 175, 0.05); padding: 8px; border-radius: 4px; border: 1px dashed rgba(249, 226, 175, 0.3); margin-bottom: 12px; }
 
+    /* TH REGIME */
+    .th-regime { display: flex; align-items: center; gap: 4px; font-size: 0.55rem; font-weight: 800; color: #6c7086; margin-left: 12px; }
+    .th-regime.bullish .regime-value { color: #a6e3a1; }
+    .th-regime.bearish .regime-value { color: #f38ba8; }
+
+    /* SCALING PLAN */
+    .scaling-plan { background: rgba(137, 180, 250, 0.05); border: 1px dashed rgba(137, 180, 250, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 24px; }
+    .sp-header { font-size: 0.55rem; color: #89b4fa; font-weight: 950; margin-bottom: 10px; }
+    .sp-grid { display: flex; flex-direction: column; gap: 8px; }
+    .sp-step { display: flex; align-items: center; gap: 12px; }
+    .sps-p { font-size: 0.8rem; font-weight: 950; color: #89b4fa; min-width: 35px; }
+    .sps-details { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+    .sps-l { font-size: 0.6rem; color: #9399b2; font-weight: 700; }
+    .sps-v { font-size: 0.75rem; color: #cdd6f4; font-weight: 900; }
+
+    /* PULLBACK ALERTS */
+    .pullback-alerts { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+    .pa-item { font-size: 0.65rem; color: #fab387; background: rgba(250, 179, 135, 0.05); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(250, 179, 135, 0.2); }
+
+    /* FIB EXT */
+    .fib-ext-belt { display: flex; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1f1f3a; }
+    .feb-item { flex: 1; display: flex; flex-direction: column; }
+    .feb-item span { font-size: 0.5rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
+    .feb-item strong { font-size: 0.75rem; color: #cba6f7; font-weight: 950; }
+
     /* RESPONSIVE */
     @media (max-width: 1100px) {
       .terminal-grid { grid-template-columns: 1fr 1fr; }
@@ -444,7 +503,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 })
 export class InstrumentCardComponent implements OnChanges {
   riskMultiplier = 1.0;
-  
+
   getCalculatedLotSize(): string {
     if (!this.analysis.position_sizing) return 'N/A';
     // Base units from backend are for 1% risk. Adjust locally.
@@ -468,9 +527,35 @@ export class InstrumentCardComponent implements OnChanges {
 
   getNextEvent(): string {
     if (this.analysis.fundamentals?.has_high_impact_events) {
-       return this.analysis.fundamentals.events[0] || 'High Impact Event';
+      return this.analysis.fundamentals.events[0] || 'High Impact Event';
     }
     return 'Clean Calendar';
+  }
+
+  getPullbackReasons(): string[] {
+    return this.analysis.pullback_warning?.reasons || [];
+  }
+
+  getScalingStrategy(): { stage: string, percent: number, target: string }[] {
+    const vr = this.analysis.volatility_risk;
+    if (!vr) return [];
+
+    // Fallback logic for targets
+    const tp1 = vr.take_profit_level1 ? `\$${vr.take_profit_level1.toFixed(2)}` : 'ATR 1.0x';
+    const tp2 = vr.take_profit_level2 ? `\$${vr.take_profit_level2.toFixed(2)}` : 'ATR 2.0x';
+    const tp3 = vr.take_profit ? `\$${vr.take_profit.toFixed(2)}` : 'Runner';
+
+    return [
+      { stage: 'Tactical De-risk', percent: 50, target: tp1 },
+      { stage: 'Core Profit', percent: 30, target: tp2 },
+      { stage: 'Infinite Runner', percent: 20, target: tp3 }
+    ];
+  }
+
+  getMarketRegime(): string {
+    const phase = this.analysis.market_phase.phase.toUpperCase();
+    const trend = this.analysis.monthly_trend.direction.toUpperCase();
+    return `${trend} | ${phase}`;
   }
 
   @Input() analysis!: InstrumentAnalysis;
@@ -636,10 +721,10 @@ export class InstrumentCardComponent implements OnChanges {
     const pp = this.analysis.technical_indicators?.pivot_points;
     const s1 = this.analysis.technical_indicators?.std_dev_1 || 0;
     if (!pp || s1 === 0) return 50;
-    
+
     const range = (pp.r2 - pp.s2);
     if (range === 0) return 50;
-    
+
     // Position of Pivot + (sigma * std_dev_1) relative to S2-R2 range
     const val = pp.pivot + (sigma * s1);
     const percent = ((val - pp.s2) / range) * 100;
