@@ -136,6 +136,46 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     </p>
                   </div>
 
+                  <!-- PRE-TRADE CHECKLIST -->
+                  <div class="pretrade-checklist">
+                    <div class="ptc-header">✅ PRE-TRADE GO/NO-GO</div>
+                    <div class="ptc-grid">
+                      <div class="ptc-item" [class]="getTrendCheck()">
+                        <span class="ptc-icon">{{ getTrendCheck() === 'pass' ? '✅' : getTrendCheck() === 'warn' ? '⚠️' : '❌' }}</span>
+                        <span class="ptc-text">Trend aligned</span>
+                        <span class="ptc-val">{{ analysis.monthly_trend.direction | uppercase }}</span>
+                      </div>
+                      <div class="ptc-item" [class]="getMomentumCheck()">
+                        <span class="ptc-icon">{{ getMomentumCheck() === 'pass' ? '✅' : getMomentumCheck() === 'warn' ? '⚠️' : '❌' }}</span>
+                        <span class="ptc-text">Momentum (ADX)</span>
+                        <span class="ptc-val">{{ analysis.daily_strength.adx.toFixed(1) }}</span>
+                      </div>
+                      <div class="ptc-item" [class]="getVolumeCheck()">
+                        <span class="ptc-icon">{{ getVolumeCheck() === 'pass' ? '✅' : getVolumeCheck() === 'warn' ? '⚠️' : '❌' }}</span>
+                        <span class="ptc-text">Volume confirm</span>
+                        <span class="ptc-val">{{ analysis.daily_strength.volume_ratio.toFixed(2) }}x</span>
+                      </div>
+                      <div class="ptc-item" [class]="getRSICheck()">
+                        <span class="ptc-icon">{{ getRSICheck() === 'pass' ? '✅' : getRSICheck() === 'warn' ? '⚠️' : '❌' }}</span>
+                        <span class="ptc-text">RSI not extreme</span>
+                        <span class="ptc-val">{{ analysis.daily_strength.rsi.toFixed(1) }}</span>
+                      </div>
+                      <div class="ptc-item" [class]="getBetaCheck()">
+                        <span class="ptc-icon">{{ getBetaCheck() === 'pass' ? '✅' : getBetaCheck() === 'warn' ? '⚠️' : '❌' }}</span>
+                        <span class="ptc-text">Market beta</span>
+                        <span class="ptc-val">{{ analysis.benchmark_direction | uppercase }}</span>
+                      </div>
+                      <div class="ptc-item" [class]="getPullbackCheck()">
+                        <span class="ptc-icon">{{ getPullbackCheck() === 'pass' ? '✅' : getPullbackCheck() === 'warn' ? '⚠️' : '❌' }}</span>
+                        <span class="ptc-text">No overextension</span>
+                        <span class="ptc-val">{{ analysis.pullback_warning?.warning_score ?? 0 }}/8</span>
+                      </div>
+                    </div>
+                    <div class="ptc-verdict" [class]="getOverallCheckClass()">
+                      {{ getTradeVerdict() }}
+                    </div>
+                  </div>
+
                   <!-- 3. CHART LINK + LOG TO JOURNAL -->
                   <div class="action-btn-row">
                     <button class="btn-chart-link" (click)="setTab('insight')">
@@ -185,14 +225,55 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
                   <!-- 2. RISK & VOLATILITY MANAGEMENT -->
                   <div class="section-card data-card volatility-card">
-                    <div class="data-header"><span class="icon">🛡️</span> RISK & VOLATILITY MANAGEMENT</div>
-                    <div class="data-row-grid">
-                      <div class="data-col"><span class="label">ATR (14D)</span><span class="value">{{ analysis.volatility_risk.atr.toFixed(3) }}</span></div>
-                      <div class="data-col"><span class="label">Stop Loss</span><span class="value bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
-                      <div class="data-col"><span class="label">Take Profit</span><span class="value bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
-                      <div class="data-col"><span class="label">RR Ratio</span><span class="value">{{ analysis.volatility_risk.risk_reward_ratio.toFixed(2) }}</span></div>
+                    <div class="data-header"><span class="icon">🛡️</span> TRADE EXECUTION LEVELS</div>
+
+                    <!-- Entry + SL row -->
+                    <div class="exec-level-row">
+                      <div class="exec-level entry">
+                        <span class="el-label">ENTRY ZONE</span>
+                        <span class="el-value">\${{ getEntryZone() }}</span>
+                        <span class="el-sub">{{ getEntryType() }}</span>
+                      </div>
+                      <div class="exec-level sl">
+                        <span class="el-label">STOP LOSS</span>
+                        <span class="el-value bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
+                        <span class="el-sub">ATR {{ analysis.volatility_risk.atr.toFixed(2) }} × 1.5</span>
+                      </div>
+                      <div class="exec-level be">
+                        <span class="el-label">BREAK-EVEN AT</span>
+                        <span class="el-value neutral">\${{ getBreakEvenLevel() }}</span>
+                        <span class="el-sub">Trail stop here</span>
+                      </div>
                     </div>
-                    <div class="sizing-footer">Neutral market. ATR is {{ analysis.volatility_risk.atr.toFixed(2) }}. Expect daily swings.</div>
+
+                    <!-- Multi-TP ladder -->
+                    <div class="tp-ladder">
+                      <div class="tp-header">Take Profit Ladder <span class="rr-badge">RR {{ analysis.volatility_risk.risk_reward_ratio.toFixed(1) }}:1</span></div>
+                      <div class="tp-row">
+                        <div class="tp-item" [class.active]="analysis.volatility_risk.take_profit_level1">
+                          <span class="tp-label">TP1 <em>(50%)</em></span>
+                          <span class="tp-price bullish">\${{ (analysis.volatility_risk.take_profit_level1 ?? getTP1Fallback()).toFixed(2) }}</span>
+                          <span class="tp-note">Scale out half</span>
+                        </div>
+                        <div class="tp-item" [class.active]="analysis.volatility_risk.take_profit_level2">
+                          <span class="tp-label">TP2 <em>(30%)</em></span>
+                          <span class="tp-price bullish">\${{ (analysis.volatility_risk.take_profit_level2 ?? getTP2Fallback()).toFixed(2) }}</span>
+                          <span class="tp-note">Trail remainder</span>
+                        </div>
+                        <div class="tp-item final">
+                          <span class="tp-label">TP3 <em>(20%)</em></span>
+                          <span class="tp-price bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
+                          <span class="tp-note">Full target</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Invalidation level -->
+                    <div class="invalidation-row">
+                      <span class="inv-label">⛔ TRADE INVALIDATION</span>
+                      <span class="inv-price bearish">\${{ getInvalidationLevel() }}</span>
+                      <span class="inv-desc">{{ getInvalidationReason() }}</span>
+                    </div>
                   </div>
 
                   <!-- 3. FUNDAMENTAL CONTEXT (ECONOMIC DATA) -->
@@ -528,7 +609,55 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .alert-toast { position: fixed; bottom: 24px; right: 24px; background: #1e1e2e; border: 1px solid #89b4fa; border-radius: 10px; padding: 12px 18px; color: #cdd6f4; font-size: 0.85rem; z-index: 9999; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); animation: slide-up 0.3s ease; }
     @keyframes slide-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* Trade Execution Levels */
+    .exec-level-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .exec-level { background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 3px; }
+    .exec-level.entry { border-left: 3px solid #89b4fa; }
+    .exec-level.sl { border-left: 3px solid #f38ba8; }
+    .exec-level.be { border-left: 3px solid #f9e2af; }
+    .el-label { font-size: 0.55rem; font-weight: 900; letter-spacing: 1px; color: #6c7086; text-transform: uppercase; }
+    .el-value { font-size: 1rem; font-weight: 800; color: #cdd6f4; }
+    .el-value.bearish { color: #f38ba8; }
+    .el-value.neutral { color: #f9e2af; }
+    .el-sub { font-size: 0.58rem; color: #45475a; font-style: italic; }
+
+    /* TP Ladder */
+    .tp-ladder { background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    .tp-header { font-size: 0.65rem; font-weight: 800; color: #6c7086; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .rr-badge { background: rgba(166,227,161,0.1); border: 1px solid rgba(166,227,161,0.25); color: #a6e3a1; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; }
+    .tp-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .tp-item { display: flex; flex-direction: column; gap: 2px; padding: 8px; background: rgba(166,227,161,0.04); border: 1px dashed rgba(166,227,161,0.1); border-radius: 6px; }
+    .tp-item.final { background: rgba(166,227,161,0.08); border-color: rgba(166,227,161,0.2); }
+    .tp-label { font-size: 0.6rem; font-weight: 700; color: #6c7086; }
+    .tp-label em { font-style: normal; color: #45475a; }
+    .tp-price { font-size: 0.9rem; font-weight: 800; }
+    .tp-price.bullish { color: #a6e3a1; }
+    .tp-note { font-size: 0.55rem; color: #45475a; font-style: italic; }
+
+    /* Trade Invalidation */
+    .invalidation-row { display: flex; align-items: center; gap: 10px; background: rgba(243,139,168,0.05); border: 1px solid rgba(243,139,168,0.15); border-radius: 8px; padding: 8px 12px; }
+    .inv-label { font-size: 0.62rem; font-weight: 900; color: #f38ba8; text-transform: uppercase; white-space: nowrap; }
+    .inv-price { font-size: 0.95rem; font-weight: 900; color: #f38ba8; }
+    .inv-desc { font-size: 0.6rem; color: #6c7086; font-style: italic; margin-left: auto; text-align: right; }
+
+    /* Pre-Trade Checklist */
+    .pretrade-checklist { background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .ptc-header { font-size: 0.65rem; font-weight: 900; color: #6c7086; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .ptc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+    .ptc-item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 6px; border: 1px solid #1f1f3a; font-size: 0.7rem; transition: all 0.2s; }
+    .ptc-item.pass { background: rgba(166,227,161,0.06); border-color: rgba(166,227,161,0.2); }
+    .ptc-item.warn { background: rgba(249,226,175,0.06); border-color: rgba(249,226,175,0.2); }
+    .ptc-item.fail { background: rgba(243,139,168,0.06); border-color: rgba(243,139,168,0.2); }
+    .ptc-icon { font-size: 0.75rem; }
+    .ptc-text { color: #9399b2; flex: 1; }
+    .ptc-val { font-weight: 700; color: #cdd6f4; font-size: 0.68rem; }
+    .ptc-verdict { text-align: center; padding: 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 900; letter-spacing: 0.5px; }
+    .ptc-verdict.go { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .ptc-verdict.caution { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+    .ptc-verdict.no-go { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+
     @media (max-width: 900px) { .tactical-grid { grid-template-columns: 1fr; } }
+
   `]
 })
 export class InstrumentCardComponent implements OnChanges {
@@ -666,7 +795,147 @@ export class InstrumentCardComponent implements OnChanges {
     return date.toLocaleDateString();
   }
 
-  // ── Journal Modal ────────────────────────────────────────────────────────────
+  // ── Trade Execution Level Helpers ─────────────────────────────────────────
+  private get isBullish(): boolean {
+    return this.analysis.trade_signal.recommendation !== 'bearish';
+  }
+
+  getEntryZone(): string {
+    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
+    const s1 = this.analysis.technical_indicators?.pivot_points?.s1;
+    const ret382 = this.analysis.technical_indicators?.fibonacci?.ret_382;
+    if (this.isBullish && s1 && ret382) {
+      const low = Math.min(s1, ret382);
+      const high = Math.max(s1, ret382);
+      return `${low.toFixed(2)} – ${high.toFixed(2)}`;
+    }
+    return entry.toFixed(2);
+  }
+
+  getEntryType(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    const price = this.analysis.current_price;
+    if (!pp) return 'Limit order';
+    const s1 = pp.s1;
+    if (this.isBullish) {
+      return price > s1 ? 'Wait — above entry zone' : 'Limit at pullback';
+    }
+    return price < pp.r1 ? 'Wait — below entry zone' : 'Limit at pullback';
+  }
+
+  getBreakEvenLevel(): string {
+    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
+    const atr = this.analysis.volatility_risk.atr;
+    const be = this.isBullish ? entry + atr : entry - atr;
+    return be.toFixed(2);
+  }
+
+  getTP1Fallback(): number {
+    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
+    const atr = this.analysis.volatility_risk.atr;
+    return this.isBullish ? entry + atr * 1.5 : entry - atr * 1.5;
+  }
+
+  getTP2Fallback(): number {
+    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
+    const atr = this.analysis.volatility_risk.atr;
+    return this.isBullish ? entry + atr * 2.5 : entry - atr * 2.5;
+  }
+
+  getInvalidationLevel(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    const sl = this.analysis.volatility_risk.stop_loss;
+    if (pp) {
+      // Invalidation = beyond S2 for longs, beyond R2 for shorts
+      const level = this.isBullish ? Math.min(pp.s2, sl) : Math.max(pp.r2, sl);
+      return level.toFixed(2);
+    }
+    return sl.toFixed(2);
+  }
+
+  getInvalidationReason(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (pp) {
+      return this.isBullish
+        ? 'Close below S2 invalidates bullish structure'
+        : 'Close above R2 invalidates bearish structure';
+    }
+    return 'Trade thesis failed — exit immediately';
+  }
+
+  // ── Pre-Trade Checklist ───────────────────────────────────────────────────
+  getTrendCheck(): 'pass' | 'warn' | 'fail' {
+    const dir = this.analysis.monthly_trend.direction;
+    const rec = this.analysis.trade_signal.recommendation;
+    if (dir === rec) return 'pass';
+    if (dir === 'neutral' || rec === 'neutral') return 'warn';
+    return 'fail'; // trend conflicts with signal
+  }
+
+  getMomentumCheck(): 'pass' | 'warn' | 'fail' {
+    const adx = this.analysis.daily_strength.adx;
+    if (adx >= 25) return 'pass';
+    if (adx >= 15) return 'warn';
+    return 'fail';
+  }
+
+  getVolumeCheck(): 'pass' | 'warn' | 'fail' {
+    const vol = this.analysis.daily_strength.volume_ratio;
+    if (vol >= 1.0) return 'pass';
+    if (vol >= 0.5) return 'warn';
+    return 'fail';
+  }
+
+  getRSICheck(): 'pass' | 'warn' | 'fail' {
+    const rsi = this.analysis.daily_strength.rsi;
+    const isBull = this.isBullish;
+    if (isBull) {
+      if (rsi > 75) return 'fail'; // overbought
+      if (rsi > 65) return 'warn';
+      return 'pass';
+    } else {
+      if (rsi < 25) return 'fail'; // oversold
+      if (rsi < 35) return 'warn';
+      return 'pass';
+    }
+  }
+
+  getBetaCheck(): 'pass' | 'warn' | 'fail' {
+    const beta = this.analysis.benchmark_direction;
+    const rec = this.analysis.trade_signal.recommendation;
+    if (beta === rec) return 'pass';
+    if (beta === 'neutral') return 'warn';
+    return 'fail';
+  }
+
+  getPullbackCheck(): 'pass' | 'warn' | 'fail' {
+    const score = this.analysis.pullback_warning?.warning_score ?? 0;
+    if (score <= 2) return 'pass';
+    if (score <= 4) return 'warn';
+    return 'fail';
+  }
+
+  getOverallCheckClass(): string {
+    const checks = [
+      this.getTrendCheck(), this.getMomentumCheck(), this.getVolumeCheck(),
+      this.getRSICheck(), this.getBetaCheck(), this.getPullbackCheck()
+    ];
+    const fails = checks.filter(c => c === 'fail').length;
+    const warns = checks.filter(c => c === 'warn').length;
+    if (fails >= 2) return 'no-go';
+    if (fails >= 1 || warns >= 3) return 'caution';
+    return 'go';
+  }
+
+  getTradeVerdict(): string {
+    const cls = this.getOverallCheckClass();
+    const score = this.analysis.trade_signal.score;
+    if (cls === 'go') return `🟢 GO — All conditions met. Score ${score}. Execute at entry zone.`;
+    if (cls === 'caution') return `⚠️ CAUTION — Mixed signals. Reduce size 50%. Score ${score}.`;
+    return `🔴 NO-GO — Conditions not met. Wait for alignment. Score ${score}.`;
+  }
+
+
   openJournalModal() {
     const a = this.analysis;
     const direction = a.trade_signal.recommendation === 'bearish' ? 'short' : 'long';
