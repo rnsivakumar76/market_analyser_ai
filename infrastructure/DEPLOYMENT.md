@@ -1,10 +1,9 @@
 # 🚀 Deployment Guide — Market Analyser on AWS Lambda
 
 ### ⚡ Current Migration Status
-- **Backend**: AWS Lambda + API Gateway -> **Live**
-- **Frontend**: S3 Website hosting -> **Live**
-- **API URL**: `https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api`
-- **Web App**: `http://market-analyser-frontend-614686365382.s3-website-ap-southeast-1.amazonaws.com`
+- **Backend (Lambda)**: `https://u50e9kfngd.execute-api.ap-southeast-1.amazonaws.com/api`
+- **Frontend (CloudFront)**: `https://d114jnk74mrdln.cloudfront.net`
+- **S3 Website (Backup)**: `http://market-analyser-frontend-dev-614686365382.s3-website-ap-southeast-1.amazonaws.com`
 
 ---
 
