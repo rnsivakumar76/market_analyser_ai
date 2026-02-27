@@ -3,19 +3,19 @@ import { CommonModule } from '@angular/common';
 import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
 interface TimeframeSignal {
-    label: string;
-    direction: string;
-    score: number;
-    phase: string;
-    pullback: boolean;
-    strength: string;
+  label: string;
+  direction: string;
+  score: number;
+  phase: string;
+  pullback: boolean;
+  strength: string;
 }
 
 @Component({
-    selector: 'app-multi-timeframe-overlay',
-    standalone: true,
-    imports: [CommonModule],
-    template: `
+  selector: 'app-multi-timeframe-overlay',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
     <div class="mtf-container">
       <div class="mtf-header">
         <span class="mtf-title">MULTI-TIMEFRAME ALIGNMENT</span>
@@ -49,7 +49,7 @@ interface TimeframeSignal {
       <p class="mtf-description">{{ getDescription() }}</p>
     </div>
   `,
-    styles: [`
+  styles: [`
     .mtf-container {
       background: #1e1e2e;
       border: 1px solid #313244;
@@ -246,81 +246,89 @@ interface TimeframeSignal {
   `]
 })
 export class MultiTimeframeOverlayComponent {
-    @Input({ required: true }) analysis!: InstrumentAnalysis;
+  @Input({ required: true }) analysis!: InstrumentAnalysis;
 
-    get timeframes(): TimeframeSignal[] {
-        const a = this.analysis;
-        const isLongTerm = a.strategy_mode === 'long_term';
+  get timeframes(): TimeframeSignal[] {
+    const a = this.analysis;
+    const isLongTerm = a.strategy_mode === 'long_term';
 
-        return [
-            {
-                label: isLongTerm ? 'MONTHLY' : 'DAILY',
-                direction: a.monthly_trend.direction,
-                score: a.trade_signal.score,
-                phase: a.market_phase.phase,
-                pullback: false,
-                strength: a.monthly_trend.direction
-            },
-            {
-                label: isLongTerm ? 'WEEKLY' : '4-HOUR',
-                direction: a.weekly_pullback.detected ? 'bullish' : (a.monthly_trend.direction === 'bullish' ? 'neutral' : a.monthly_trend.direction),
-                score: 0,
-                phase: a.weekly_pullback.detected ? 'pullback' : 'extended',
-                pullback: a.weekly_pullback.detected,
-                strength: a.weekly_pullback.detected ? 'bullish' : 'neutral'
-            },
-            {
-                label: isLongTerm ? 'DAILY' : '1-HOUR',
-                direction: a.daily_strength.signal,
-                score: 0,
-                phase: a.candle_patterns.pattern !== 'none' ? a.candle_patterns.pattern : 'execution',
-                pullback: false,
-                strength: a.daily_strength.signal
-            }
-        ];
+    return [
+      {
+        label: `PRIMARY TREND (${isLongTerm ? 'MONTHLY' : 'DAILY'})`,
+        direction: a.monthly_trend.direction,
+        score: a.trade_signal.score,
+        phase: 'Institutional',
+        pullback: false,
+        strength: a.monthly_trend.direction
+      },
+      {
+        label: 'STRUCTURE PHASE',
+        direction: a.market_phase.phase === 'markup' ? 'bullish' : (a.market_phase.phase === 'markdown' || a.market_phase.phase === 'liquidation' ? 'bearish' : 'neutral'),
+        score: a.market_phase.score,
+        phase: a.market_phase.phase.toUpperCase(),
+        pullback: false,
+        strength: 'neutral'
+      },
+      {
+        label: `INTERMEDIATE STATE (${isLongTerm ? 'WEEKLY' : '4-HOUR'})`,
+        direction: a.weekly_pullback.detected ? 'bullish' : (a.monthly_trend.direction === 'bullish' ? 'neutral' : a.monthly_trend.direction),
+        score: 0,
+        phase: a.weekly_pullback.detected ? 'Pullback' : 'Extended',
+        pullback: a.weekly_pullback.detected,
+        strength: a.weekly_pullback.detected ? 'bullish' : 'neutral'
+      },
+      {
+        label: `TACTICAL MOMENTUM (${isLongTerm ? 'DAILY' : '1-HOUR'})`,
+        direction: a.daily_strength.signal,
+        score: 0,
+        phase: a.candle_patterns.pattern !== 'none' ? a.candle_patterns.pattern : 'Execution',
+        pullback: false,
+        strength: a.daily_strength.signal
+      }
+    ];
+  }
+
+  getNodeClass(tf: TimeframeSignal): string {
+    if (tf.direction === 'bullish') return 'bullish-node';
+    if (tf.direction === 'bearish') return 'bearish-node';
+    return 'neutral-node';
+  }
+
+  getConnectorClass(index: number): string {
+    const tfs = this.timeframes;
+    if (index + 1 >= tfs.length) return '';
+    const current = tfs[index].direction;
+    const next = tfs[index + 1].direction;
+    if (current === next) return 'aligned';
+    if ((current === 'bullish' && next === 'bearish') || (current === 'bearish' && next === 'bullish')) return 'conflicting';
+    return '';
+  }
+
+  getAlignmentClass(): string {
+    const tfs = this.timeframes;
+    const directions = tfs.map(t => t.direction);
+    const allSame = directions.every(d => d === directions[0]);
+    if (allSame) return 'aligned';
+    const hasConflict = directions.includes('bullish') && directions.includes('bearish');
+    return hasConflict ? 'conflicting' : 'partial';
+  }
+
+  getAlignmentLabel(): string {
+    const cls = this.getAlignmentClass();
+    if (cls === 'aligned') return '✓ Fully Aligned';
+    if (cls === 'conflicting') return '✗ Conflicting';
+    return '~ Partial';
+  }
+
+  getDescription(): string {
+    const cls = this.getAlignmentClass();
+    const tfs = this.timeframes;
+    if (cls === 'aligned') {
+      return `All timeframes agree on ${tfs[0].direction} — high-confidence directional environment.`;
     }
-
-    getNodeClass(tf: TimeframeSignal): string {
-        if (tf.direction === 'bullish') return 'bullish-node';
-        if (tf.direction === 'bearish') return 'bearish-node';
-        return 'neutral-node';
+    if (cls === 'conflicting') {
+      return 'Macro and micro timeframes are in conflict — avoid aggressive positioning until alignment improves.';
     }
-
-    getConnectorClass(index: number): string {
-        const tfs = this.timeframes;
-        if (index + 1 >= tfs.length) return '';
-        const current = tfs[index].direction;
-        const next = tfs[index + 1].direction;
-        if (current === next) return 'aligned';
-        if ((current === 'bullish' && next === 'bearish') || (current === 'bearish' && next === 'bullish')) return 'conflicting';
-        return '';
-    }
-
-    getAlignmentClass(): string {
-        const tfs = this.timeframes;
-        const directions = tfs.map(t => t.direction);
-        const allSame = directions.every(d => d === directions[0]);
-        if (allSame) return 'aligned';
-        const hasConflict = directions.includes('bullish') && directions.includes('bearish');
-        return hasConflict ? 'conflicting' : 'partial';
-    }
-
-    getAlignmentLabel(): string {
-        const cls = this.getAlignmentClass();
-        if (cls === 'aligned') return '✓ Fully Aligned';
-        if (cls === 'conflicting') return '✗ Conflicting';
-        return '~ Partial';
-    }
-
-    getDescription(): string {
-        const cls = this.getAlignmentClass();
-        const tfs = this.timeframes;
-        if (cls === 'aligned') {
-            return `All timeframes agree on ${tfs[0].direction} — high-confidence directional environment.`;
-        }
-        if (cls === 'conflicting') {
-            return 'Macro and micro timeframes are in conflict — avoid aggressive positioning until alignment improves.';
-        }
-        return 'Timeframes show partial alignment — exercise selectivity and manage position size carefully.';
-    }
+    return 'Timeframes show partial alignment — exercise selectivity and manage position size carefully.';
+  }
 }

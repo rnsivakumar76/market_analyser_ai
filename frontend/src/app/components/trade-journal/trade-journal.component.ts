@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, OnInit, inject } from '@angular/core';
+import { Component, Output, EventEmitter, OnInit, inject, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MarketAnalyzerService } from '../../services/market-analyzer.service';
@@ -465,6 +465,7 @@ import { MarketAnalyzerService } from '../../services/market-analyzer.service';
 })
 export class TradeJournalComponent implements OnInit {
   @Output() close = new EventEmitter<void>();
+  @Input() prefill: any = null;
   private service = inject(MarketAnalyzerService);
 
   trades: any[] = [];
@@ -475,6 +476,10 @@ export class TradeJournalComponent implements OnInit {
   newTrade: any = { symbol: '', direction: 'long', entry_price: null, exit_price: null, size: null, date: '', notes: '' };
 
   ngOnInit() {
+    if (this.prefill) {
+      this.newTrade = { ...this.newTrade, ...this.prefill };
+      this.showAddForm = true;
+    }
     this.service.getJournal().subscribe({
       next: (data) => { this.trades = data.reverse(); this.loading = false; },
       error: (err) => { this.loading = false; console.error('Journal load error:', err); }

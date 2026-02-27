@@ -76,3 +76,8 @@ output "cost_estimate" {
     total        = "~$0/mo (100% Free Tier Serverless Architecture!)"
   }
 }
+
+output "custom_domain_url" {
+  description = "Custom Domain URL (if configured)"
+  value       = var.domain_name != "" ? "https://${var.domain_name}" : "Not configured"
+}
