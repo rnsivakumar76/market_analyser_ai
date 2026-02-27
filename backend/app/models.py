@@ -95,6 +95,8 @@ class StrengthAnalysis(BaseModel):
     rsi: float
     volume_ratio: float
     adx: float
+    vwap: Optional[float] = None
+    vwap_dist_pct: Optional[float] = None
     price_change_percent: float
     description: str
 
@@ -136,6 +138,16 @@ class TechnicalAnalysis(BaseModel):
     trend_breakout: str  # 'bullish_breakout', 'bearish_breakout', 'none'
     breakout_confidence: float  # 0 to 1
     rsi_divergence: Optional[str] = None  # 'bullish', 'bearish', None
+    std_dev_1: Optional[float] = None  # 1 sigma
+    std_dev_2: Optional[float] = None  # 2 sigma
+    description: str
+
+
+class SessionContext(BaseModel):
+    pdh: float  # Previous Day High
+    pdl: float  # Previous Day Low
+    london_open: Optional[float] = None
+    current_session_range_pct: float
     description: str
 
 
@@ -210,6 +222,7 @@ class InstrumentAnalysis(BaseModel):
     relative_strength: Optional[RelativeStrengthAnalysis] = None
     strategy_mode: StrategyMode = StrategyMode.LONG_TERM
     intermarket_context: Optional['IntermarketContext'] = None
+    session_context: Optional[SessionContext] = None
 
 
 class PerformanceSummary(BaseModel):
