@@ -122,10 +122,15 @@ export class App implements OnInit, OnDestroy {
 
   toggleStrategyMode() {
     const newMode = this.strategyMode() === 'long_term' ? 'short_term' : 'long_term';
-    this.strategyMode.set(newMode);
-    this.savePreference('strategy_mode', newMode);
-    this.runAnalysis();
-    this.secondsRemaining = this.REFRESH_INTERVAL_SEC; // Reset countdown on manual toggle
+    this.switchStrategyMode(newMode);
+  }
+
+  switchStrategyMode(mode: 'long_term' | 'short_term') {
+    if (this.strategyMode() === mode) return; // already in this mode
+    this.strategyMode.set(mode);
+    this.savePreference('strategy_mode', mode);
+    this.runAnalysis(); // triggers full refetch with new mode
+    this.secondsRemaining = this.REFRESH_INTERVAL_SEC; // reset countdown
   }
 
   refreshAnalysis() {

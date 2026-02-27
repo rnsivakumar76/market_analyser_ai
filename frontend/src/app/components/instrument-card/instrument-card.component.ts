@@ -72,8 +72,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           <span class="tab-icon">🧠</span> Insight & Data
         </button>
         <div class="strategy-mode-toggle">
-          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'short_term'" title="Short-Term">⚡ Short</button>
-          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'long_term'" title="Long-Term">📈 Long</button>
+          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'short_term'"
+            title="Short-Term (Daily/4H/1H)" (click)="switchMode('short_term')">⚡ Short</button>
+          <button class="sm-btn" [class.active]="analysis.strategy_mode === 'long_term'"
+            title="Long-Term (Monthly/Weekly/Daily)" (click)="switchMode('long_term')">📈 Long</button>
         </div>
       </div>
 
@@ -503,6 +505,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 export class InstrumentCardComponent implements OnChanges {
   @Input() analysis!: InstrumentAnalysis;
   @Output() refresh = new EventEmitter<string>();
+  @Output() modeChange = new EventEmitter<'long_term' | 'short_term'>();
 
   private marketAnalyzerService = inject(MarketAnalyzerService);
 
@@ -527,6 +530,11 @@ export class InstrumentCardComponent implements OnChanges {
 
   setTab(tab: 'plan' | 'insight') {
     this.selectedTab = tab;
+  }
+
+  switchMode(mode: 'long_term' | 'short_term') {
+    if (this.analysis.strategy_mode === mode) return; // already active, skip
+    this.modeChange.emit(mode);
   }
 
   toggleChart() {

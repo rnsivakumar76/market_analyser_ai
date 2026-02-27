@@ -155,7 +155,9 @@
       @if (selectedInstrument()) {
       <div class="detail-view-inner">
         <app-instrument-card [analysis]="selectedInstrument()!"
-          (refresh)="refreshInstrument($event)"></app-instrument-card>
+          (refresh)="refreshInstrument($event)"
+          (modeChange)="switchStrategyMode($event)">
+        </app-instrument-card>
       </div>
       } @else if (instruments().length > 0) {
       <div class="empty-state">
