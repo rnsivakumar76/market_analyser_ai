@@ -34,15 +34,23 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
           <span class="name">{{ analysis.name }}</span>
         </div>
         <div class="header-actions-right">
-          <div class="price-info">
-            <span class="price" title="Current or Last Daily Close Price">\${{ analysis.current_price.toFixed(2) }}</span>
-            <span class="change" [class]="getPriceChangeClass()">
-              {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}%
-            </span>
+          <!-- Move Signal Score Badge to Header -->
+          <div class="signal-score-badge header-badge" [class]="getSignalClass()">
+            <span class="s-label">{{ analysis.trade_signal.recommendation.toUpperCase() }}</span>
+            <span class="s-score">Score: <strong>{{ analysis.trade_signal.score }}</strong></span>
           </div>
-          <div class="last-updated-row">
-            <span class="last-updated-text">Updated: {{ getTimeAgo(analysis.last_updated) }}</span>
-            <button class="btn-refresh-local" (click)="onRefresh()" title="Refresh Instrument">🔄</button>
+
+          <div class="price-info-block">
+            <div class="price-info">
+              <span class="price" title="Current or Last Daily Close Price">\${{ analysis.current_price.toFixed(2) }}</span>
+              <span class="change" [class]="getPriceChangeClass()">
+                {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}%
+              </span>
+            </div>
+            <div class="last-updated-row">
+              <span class="last-updated-text">Updated: {{ getTimeAgo(analysis.last_updated) }}</span>
+              <button class="btn-refresh-local" (click)="onRefresh()" title="Refresh Instrument">🔄</button>
+            </div>
           </div>
         </div>
       </div>
@@ -126,11 +134,6 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
 
                 <!-- RIGHT COLUMN: DATA & RISK -->
                 <div class="tactical-right">
-                  <div class="signal-score-badge" [class]="getSignalClass()">
-                    <span class="s-label">{{ analysis.trade_signal.recommendation.toUpperCase() }}</span>
-                    <span class="s-score">Score: <strong>{{ analysis.trade_signal.score }}</strong></span>
-                  </div>
-
                   <!-- 1. RISK-ADJUSTED SIZING -->
                   <div class="section-card data-card sizing-card">
                     <div class="data-header"><span class="icon">⚖️</span> RISK-ADJUSTED SIZING</div>
@@ -203,15 +206,15 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                     <div class="section-card data-card pivot-card">
                       <div class="data-header"><span class="icon">🎯</span> STRATEGIC PIVOT MATRIX</div>
                       <div class="pivot-grid-main">
-                        <div class="pivot-row">
-                          <div class="p-item"><span class="t res">R3</span> \${{ analysis.technical_indicators.pivot_points.r3 }}</div>
-                          <div class="p-item"><span class="t res">R2</span> \${{ analysis.technical_indicators.pivot_points.r2 }}</div>
-                          <div class="p-item"><span class="t res">R1</span> \${{ analysis.technical_indicators.pivot_points.r1 }}</div>
+                        <div class="pivot-column">
+                          <div class="p-item"><span class="t res">R3</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r3 }}</span></div>
+                          <div class="p-item"><span class="t res">R2</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r2 }}</span></div>
+                          <div class="p-item"><span class="t res">R1</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.r1 }}</span></div>
                         </div>
-                        <div class="pivot-row">
-                          <div class="p-item"><span class="t sup">S1</span> \${{ analysis.technical_indicators.pivot_points.s1 }}</div>
-                          <div class="p-item"><span class="t sup">S2</span> \${{ analysis.technical_indicators.pivot_points.s2 }}</div>
-                          <div class="p-item"><span class="t sup">S3</span> \${{ analysis.technical_indicators.pivot_points.s3 }}</div>
+                        <div class="pivot-column">
+                          <div class="p-item"><span class="t sup">S1</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s1 }}</span></div>
+                          <div class="p-item"><span class="t sup">S2</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s2 }}</span></div>
+                          <div class="p-item"><span class="t sup">S3</span> <span class="v">\${{ analysis.technical_indicators.pivot_points.s3 }}</span></div>
                         </div>
                       </div>
                       <div class="pivot-footer">
@@ -223,12 +226,12 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
                     <div class="section-card data-card fib-card">
                       <div class="data-header"><span class="icon">📊</span> SWING FIBONACCI RANGES</div>
                       <div class="fib-grid-main">
-                        <div class="f-box"><span class="l">Ext 1.618</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ext_1618?.toFixed(2) }}</span></div>
-                        <div class="f-box"><span class="l">Ext 1.272</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ext_1272?.toFixed(2) }}</span></div>
-                        <div class="f-box"><span class="l">Swing High</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.swing_high?.toFixed(2) }}</span></div>
-                        <div class="f-box"><span class="l">Ret 38.2%</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ret_382?.toFixed(2) }}</span></div>
-                        <div class="f-box"><span class="l">Ret 61.8%</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ret_618?.toFixed(2) }}</span></div>
-                        <div class="f-box"><span class="l">Swing Low</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.swing_low?.toFixed(2) }}</span></div>
+                        <div class="f-box ext"><span class="l">Ext 1.618</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ext_1618?.toFixed(2) }}</span></div>
+                        <div class="f-box ext"><span class="l">Ext 1.272</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ext_1272?.toFixed(2) }}</span></div>
+                        <div class="f-box high"><span class="l">Swing High</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.swing_high?.toFixed(2) }}</span></div>
+                        <div class="f-box ret"><span class="l">Ret 38.2%</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ret_382?.toFixed(2) }}</span></div>
+                        <div class="f-box ret"><span class="l">Ret 61.8%</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.ret_618?.toFixed(2) }}</span></div>
+                        <div class="f-box low"><span class="l">Swing Low</span><span class="v">\${{ analysis.technical_indicators.fibonacci?.swing_low?.toFixed(2) }}</span></div>
                       </div>
                     </div>
                   }
@@ -306,7 +309,8 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
     .alpha-status.leader { background: rgba(137, 180, 250, 0.1); color: #89b4fa; border: 1px solid rgba(137, 180, 250, 0.2); }
     .alpha-status.laggard { background: rgba(250, 179, 135, 0.1); color: #fab387; border: 1px solid rgba(250, 179, 135, 0.2); }
 
-    .header-actions-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .header-actions-right { display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+    .price-info-block { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
     .price-info { display: flex; align-items: baseline; gap: 12px; }
     .price { font-size: 2rem; font-weight: 900; color: #cdd6f4; line-height: 1; }
     .change { font-size: 1.1rem; font-weight: 800; }
@@ -346,7 +350,8 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
     .btn-chart-link:hover { background: rgba(137, 180, 250, 0.2); border-color: #89b4fa; }
 
     /* Right Column Badges */
-    .signal-score-badge { display: flex; justify-content: space-between; align-items: center; background: #1a1a2e; border: 1px solid #2a2a4a; padding: 14px 20px; border-radius: 40px; margin-bottom: 20px; }
+    .signal-score-badge { display: flex; justify-content: space-between; align-items: center; background: #1a1a2e; border: 1px solid #2a2a4a; padding: 14px 20px; border-radius: 40px; margin-bottom: 20px; gap: 16px; min-width: 140px; }
+    .signal-score-badge.header-badge { margin-bottom: 0px; padding: 10px 20px; }
     .signal-score-badge.bullish { border-color: #a6e3a1; color: #a6e3a1; }
     .signal-score-badge.bearish { border-color: #f38ba8; color: #f38ba8; }
     .s-label { font-weight: 900; font-size: 1.2rem; }
@@ -391,17 +396,22 @@ import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi
 
     /* Insight Layout */
     .insight-top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .pivot-grid-main { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; }
-    .p-item { font-size: 0.85rem; color: #cdd6f4; display: flex; gap: 8px; align-items: center; }
-    .p-item .t { font-size: 0.6rem; padding: 2px 4px; border-radius: 4px; width: 22px; text-align: center; }
+    .pivot-grid-main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-bottom: 12px; }
+    .pivot-column { display: flex; flex-direction: column; gap: 8px; }
+    .p-item { font-size: 1.05rem; font-weight: 700; color: #cdd6f4; display: flex; gap: 12px; align-items: center; }
+    .p-item .t { font-size: 0.75rem; font-weight: 800; padding: 4px 6px; border-radius: 4px; width: 28px; text-align: center; }
     .p-item .t.res { background: rgba(243, 139, 168, 0.15); color: #f38ba8; }
     .p-item .t.sup { background: rgba(166, 227, 161, 0.15); color: #a6e3a1; }
     .pivot-footer { border-top: 1px solid #1f1f3a; padding-top: 8px; display: flex; justify-content: space-between; font-size: 0.7rem; color: #6c7086; }
 
     .fib-grid-main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .f-box { background: #0b0b15; border: 1px solid #1a1a2a; padding: 8px; border-radius: 6px; text-align: center; }
-    .f-box .l { font-size: 0.55rem; color: #6c7086; display: block; }
-    .f-box .v { font-size: 0.8rem; font-weight: 700; color: #cdd6f4; }
+    .f-box { background: #0b0b15; border: 1px solid #1a1a2a; padding: 10px; border-radius: 6px; text-align: center; border-bottom: 3px solid #1a1a2a; transition: all 0.2s; }
+    .f-box.ext { border-bottom-color: #cba6f7; }
+    .f-box.ret { border-bottom-color: #f9e2af; }
+    .f-box.high { border-bottom-color: #f38ba8; }
+    .f-box.low { border-bottom-color: #a6e3a1; }
+    .f-box .l { font-size: 0.6rem; color: #9399b2; text-transform: uppercase; display: block; margin-bottom: 4px; }
+    .f-box .v { font-size: 0.95rem; font-weight: 800; color: #cdd6f4; }
 
     .backtest-stats-row { display: flex; justify-content: space-between; }
     .b-stat { display: flex; flex-direction: column; gap: 4px; }
