@@ -54,7 +54,13 @@ async def login(request: Request):
         url = f"{base}/api/auth/callback"
         
     logger.info(f"Initiating Google login. Redirect URI: {url}")
-    return await oauth.google.authorize_redirect(request, url)
+    try:
+        if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+            raise ValueError("Google Client ID or Secret is not configured in environment variables.")
+        return await oauth.google.authorize_redirect(request, url)
+    except Exception as e:
+        logger.error(f"Failed to initiate Google login: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Authentication Configuration Error: {str(e)}")
 
 from fastapi.responses import RedirectResponse
 import json
