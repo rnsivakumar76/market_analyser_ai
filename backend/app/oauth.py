@@ -41,21 +41,23 @@ oauth.register(
 
 @router.get('/login')
 async def login(request: Request):
-    # Determine the redirect URI. 
-    # 1. Check for explicit override in environment
+    # Determine the redirect URI dynamically
+    # 1. Check for explicit override
     explicit_redirect = os.environ.get("GOOGLE_REDIRECT_URI")
     if explicit_redirect:
         url = explicit_redirect
-    # 2. If localhost/127.0.0.1, use the current request's URL for the callback
+    # 2. Localhost fallback
     elif "localhost" in str(request.base_url) or "127.0.0.1" in str(request.base_url):
         url = str(request.url_for('auth_callback'))
-    # 3. In production, use the FRONTEND_URL (which should be the CloudFront/Custom domain)
+    # 3. Dynamic Discovery - Use the Host header to build the redirect
     else:
-        # We ensure it goes through the public gateway (CloudFront)
-        base = FRONTEND_URL.rstrip('/')
-        url = f"{base}/api/auth/callback"
+        # Use whatever host the user is currently on (CloudFront or APIGW)
+        # This prevents mismatch if they hit the direct URL
+        host = request.headers.get("host")
+        proto = request.headers.get("x-forwarded-proto", "https")
+        url = f"{proto}://{host}/api/auth/callback"
         
-    logger.info(f"Initiating Google login. Redirect URI: {url}")
+    logger.info(f"Initiating Google login. Final Redirect URI: {url}")
     try:
         if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
             raise ValueError("Google Client ID or Secret is not configured in environment variables.")

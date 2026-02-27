@@ -14,6 +14,29 @@ from .oauth import router as auth_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Add a catch-all exception handler to surface errors in production
+from fastapi.responses import JSONResponse
+import traceback
+
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        err_type = type(e).__name__
+        err_msg = str(e)
+        stack = traceback.format_exc()
+        logger.error(f"Global Crash: {err_type}: {err_msg}\n{stack}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Unhandled Backend Exception",
+                "type": err_type,
+                "message": err_msg,
+                "stack": stack if os.environ.get("DEBUG") == "true" or True else "Redacted"
+            }
+        )
+
 # Primary DB abstraction
 from . import db as nexus_db
 
