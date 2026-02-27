@@ -14,10 +14,20 @@ from .oauth import router as auth_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Add a catch-all exception handler to surface errors in production
+# Primary DB abstraction
+from . import db as nexus_db
+
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import traceback
 
+app = FastAPI(
+    title="Market Analyzer API",
+    description="Analyze instruments for trading opportunities",
+    version="1.0.0"
+)
+
+# Add a catch-all exception handler to surface errors in production
 @app.middleware("http")
 async def catch_exceptions_middleware(request: Request, call_next):
     try:
@@ -36,17 +46,6 @@ async def catch_exceptions_middleware(request: Request, call_next):
                 "stack": stack if os.environ.get("DEBUG") == "true" or True else "Redacted"
             }
         )
-
-# Primary DB abstraction
-from . import db as nexus_db
-
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI(
-    title="Market Analyzer API",
-    description="Analyze instruments for trading opportunities",
-    version="1.0.0"
-)
 
 # CORS Middleware - Refined for security + credentials
 # IMPORTANT: When allow_credentials is True, allow_origins MUST be a specific list (not "*").
