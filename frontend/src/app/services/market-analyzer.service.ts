@@ -62,6 +62,16 @@ export interface TechnicalAnalysis {
   least_resistance_line: 'up' | 'down' | 'flat';
   trend_breakout: 'bullish_breakout' | 'bearish_breakout' | 'none';
   breakout_confidence: number;
+  rsi_divergence: 'bullish' | 'bearish' | null;
+  description: string;
+}
+
+export interface IntermarketContext {
+  dxy_direction: 'up' | 'down' | 'flat';
+  dxy_change_pct: number;
+  us10y_direction: 'up' | 'down' | 'flat';
+  us10y_change_pct: number;
+  gold_implication: 'bullish' | 'bearish' | 'neutral';
   description: string;
 }
 
@@ -193,6 +203,7 @@ export interface InstrumentAnalysis {
   pullback_warning?: PullbackWarningAnalysis;
   relative_strength?: RelativeStrengthAnalysis;
   strategy_mode: StrategyMode;
+  intermarket_context?: IntermarketContext;
 }
 
 export interface WeeklyPerformance {
