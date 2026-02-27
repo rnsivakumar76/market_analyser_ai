@@ -14,6 +14,9 @@ from .oauth import router as auth_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Primary DB abstraction
+from . import db as nexus_db
+
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(

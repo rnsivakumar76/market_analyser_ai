@@ -9,6 +9,8 @@ from .auth import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
+
 # Replace with your actual Google Client ID and Secret
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
@@ -65,8 +67,6 @@ async def login(request: Request):
 from fastapi.responses import RedirectResponse
 import json
 import urllib.parse
-
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
 
 @router.get('/callback', name='auth_callback')
 async def auth_callback(request: Request):
