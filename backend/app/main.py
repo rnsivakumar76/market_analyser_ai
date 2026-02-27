@@ -10,6 +10,10 @@ import os
 from .auth import get_current_user
 from .oauth import router as auth_router
 
+# Base logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Primary DB abstraction
 from . import db as nexus_db
 from fastapi.middleware.cors import CORSMiddleware
@@ -395,15 +399,37 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     if benchmarks_data.get("BTC_macro") is not None and not benchmarks_data["BTC_macro"].empty:
         btc_bench = analyze_monthly_trend(benchmarks_data["BTC_macro"], params.get('monthly', {})).direction
             
-    # BATCH FETCH for all instruments to solve 30s Gateway Timeout
+    # 5. BATCH FETCH for all instruments in PARALLEL to beat 30s Lambda Timeout
     from .twelvedata_fetcher import TwelveDataFetcher
-    fetcher = TwelveDataFetcher()
     sym_list = [inst['symbol'] for inst in instruments]
+    logger.info(f"Triggering Batch Parallel Fetches for {len(sym_list)} instruments...")
     
-    logger.info(f"Triggering Batch Fetches for {len(sym_list)} instruments...")
-    macro_batch = fetcher.fetch_batch_data(sym_list, interval=("1month" if mode == StrategyMode.LONG_TERM else "1day"), days=1000 if mode == StrategyMode.LONG_TERM else 500)
-    pullback_batch = fetcher.fetch_batch_data(sym_list, interval=("1week" if mode == StrategyMode.LONG_TERM else "4h"), days=250 if mode == StrategyMode.LONG_TERM else 120)
-    exec_batch = fetcher.fetch_batch_data(sym_list, interval=("1day" if mode == StrategyMode.LONG_TERM else "1h"), days=500 if mode == StrategyMode.LONG_TERM else 300)
+    # We use ThreadPoolExecutor to run the 3 separate batch net-calls at once
+    # This reduces ~45s of sequential network wait to ~15s total
+    with ThreadPoolExecutor(max_workers=3) as batch_executor:
+        f_macro = batch_executor.submit(
+            TwelveDataFetcher().fetch_batch_data, 
+            sym_list, 
+            interval=("1month" if mode == StrategyMode.LONG_TERM else "1day"), 
+            days=1000 if mode == StrategyMode.LONG_TERM else 500
+        )
+        f_pullback = batch_executor.submit(
+            TwelveDataFetcher().fetch_batch_data, 
+            sym_list, 
+            interval=("1week" if mode == StrategyMode.LONG_TERM else "4h"), 
+            days=250 if mode == StrategyMode.LONG_TERM else 120
+        )
+        f_exec = batch_executor.submit(
+            TwelveDataFetcher().fetch_batch_data, 
+            sym_list, 
+            interval=("1day" if mode == StrategyMode.LONG_TERM else "1h"), 
+            days=500 if mode == StrategyMode.LONG_TERM else 300
+        )
+        
+        # Collect results
+        macro_batch = f_macro.result()
+        pullback_batch = f_pullback.result()
+        exec_batch = f_exec.result()
 
     results = []
     data_map = {}
