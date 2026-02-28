@@ -220,6 +220,7 @@ class InstrumentAnalysis(BaseModel):
     news_sentiment: Optional[NewsSentiment] = None
     pullback_warning: Optional[PullbackWarningAnalysis] = None
     relative_strength: Optional[RelativeStrengthAnalysis] = None
+    expert_trade_plan: Optional[Dict[str, Any]] = None 
     strategy_mode: StrategyMode = StrategyMode.LONG_TERM
     intermarket_context: Optional['IntermarketContext'] = None
     session_context: Optional[SessionContext] = None

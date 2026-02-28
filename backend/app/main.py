@@ -91,6 +91,7 @@ def analyze_instrument_lazy(
     pre_macro_df: Any = None,
     pre_pullback_df: Any = None,
     pre_execution_df: Any = None,
+    pre_expert_df: Any = None,
     dxy_df: Any = None,
     us10y_df: Any = None
 ) -> Any:
@@ -101,7 +102,8 @@ def analyze_instrument_lazy(
         analyze_market_phase, analyze_volatility_and_risk, analyze_fundamentals,
         get_backtest_results, detect_candle_patterns, analyze_technical_indicators,
         analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength,
-        analyze_intermarket_context, analyze_session_context
+        analyze_intermarket_context, analyze_session_context,
+        detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode, IntermarketContext
@@ -180,6 +182,23 @@ def analyze_instrument_lazy(
     tech_indicators = analyze_technical_indicators(execution_data)
     news_sentiment = analyze_news_sentiment(symbol)
     session_ctx = analyze_session_context(execution_data)
+
+    # NEW: Expert Day Trader Logic (15m/short-term specific)
+    expert_plan = None
+    if mode == StrategyMode.SHORT_TERM and pre_expert_df is not None and not pre_expert_df.empty:
+        or_data = detect_opening_range(pre_expert_df)
+        rvol = calculate_rvol(pre_expert_df)
+        
+        # Intermarket nuances
+        dxy_chg = 0.0
+        yield_chg = 0.0
+        if dxy_df is not None and len(dxy_df) >= 2:
+            dxy_chg = float((dxy_df['Close'].iloc[-1] - dxy_df['Close'].iloc[-2]) / dxy_df['Close'].iloc[-2] * 100)
+        if us10y_df is not None and len(us10y_df) >= 2:
+            yield_chg = float((us10y_df['Close'].iloc[-1] - us10y_df['Close'].iloc[-2]) / us10y_df['Close'].iloc[-2] * 100)
+            
+        advice = analyze_commodity_specifics(symbol, dxy_chg, yield_chg)
+        expert_plan = generate_expert_trade_plan(symbol, current_price, or_data, rvol, tech_indicators, advice)
     
     # NEW: Intermarket Context (DXY / Yields)
     intermarket = analyze_intermarket_context(symbol, dxy_df, us10y_df)
@@ -285,6 +304,7 @@ def analyze_instrument_lazy(
         technical_indicators=tech_indicators,
         news_sentiment=news_sentiment,
         relative_strength=rs_analysis,
+        expert_trade_plan=expert_plan,
         strategy_mode=mode,
         intermarket_context=intermarket,
         session_context=session_ctx
@@ -426,10 +446,21 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             days=500 if mode == StrategyMode.LONG_TERM else 300
         )
         
+        # Optional: 15-minute high-res data for Expert Day Trading (Short-Term only)
+        f_expert = None
+        if mode == StrategyMode.SHORT_TERM:
+            f_expert = batch_executor.submit(
+                TwelveDataFetcher().fetch_batch_data,
+                sym_list,
+                interval="15min",
+                days=10
+            )
+
         # Collect results
         macro_batch = f_macro.result()
         pullback_batch = f_pullback.result()
         exec_batch = f_exec.result()
+        expert_batch = f_expert.result() if f_expert else {}
 
     results = []
     data_map = {}
@@ -449,6 +480,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 pre_macro_df=macro_batch.get(sym),
                 pre_pullback_df=pullback_batch.get(sym),
                 pre_execution_df=exec_batch.get(sym),
+                pre_expert_df=expert_batch.get(sym),
                 dxy_df=benchmarks_data.get("DXY"),
                 us10y_df=benchmarks_data.get("US10Y")
             )
