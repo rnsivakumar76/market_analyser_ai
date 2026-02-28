@@ -137,6 +137,14 @@ export class GeopoliticalAnalysisComponent implements OnInit {
     };
   }
   
+  getSectorList(): string[] {
+    const data = this.geopoliticalData();
+    if (!data || !data.affected_sectors) {
+      return [];
+    }
+    return Object.keys(data.affected_sectors);
+  }
+
   getCrisisAlerts() {
     const data = this.geopoliticalData();
     if (!data) return [];
