@@ -77,6 +77,25 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         <!-- 3. DECISION TILES (GRID) -->
         <div class="terminal-grid">
           
+          <!-- NEW: EXPERT BATTLE TILE (Session Context) -->
+          @if (analysis.expert_trade_plan) {
+            <section class="t-tile expert-tile" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
+              <div class="tile-header">🎖️ EXPERT BATTLE PLAN</div>
+              <div class="expert-main">
+                <div class="expert-plan-text">{{ analysis.expert_trade_plan.battle_plan }}</div>
+                <div class="expert-badges">
+                  <div class="expert-badge rvol">
+                    <span class="eb-label">RVOL</span>
+                    <span class="eb-value">{{ analysis.expert_trade_plan.rvol }}x</span>
+                  </div>
+                  @if (analysis.expert_trade_plan.is_high_intent) {
+                    <div class="expert-badge intent pulse">🔥 HIGH INTENT</div>
+                  }
+                </div>
+              </div>
+            </section>
+          }
+          
           <!-- TILE 1: ACTION & LEVELS -->
           <section class="t-tile decision-tile">
             <div class="tile-header">🎯 STRATEGIC ACTION</div>

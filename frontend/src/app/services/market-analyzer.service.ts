@@ -191,6 +191,12 @@ export interface RelativeStrengthAnalysis {
   description: string;
 }
 
+export interface ExpertTradePlan {
+  battle_plan: string;
+  rvol: number;
+  is_high_intent: boolean;
+}
+
 export type StrategyMode = 'long_term' | 'short_term';
 
 export interface InstrumentAnalysis {
@@ -214,6 +220,7 @@ export interface InstrumentAnalysis {
   news_sentiment?: NewsSentiment;
   pullback_warning?: PullbackWarningAnalysis;
   relative_strength?: RelativeStrengthAnalysis;
+  expert_trade_plan?: ExpertTradePlan;
   strategy_mode: StrategyMode;
   intermarket_context?: IntermarketContext;
   session_context?: SessionContext;
