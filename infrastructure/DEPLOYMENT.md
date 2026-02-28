@@ -2,7 +2,7 @@
 
 ### ⚡ Current Migration Status
 - **Backend (Lambda)**: `https://u50e9kfngd.execute-api.ap-southeast-1.amazonaws.com/api`
-- **Frontend (CloudFront)**: `terraform output cloudfront_url` (dynamic)
+- **Frontend (CloudFront)**: `https://d114jnk74mrdln.cloudfront.net`
 - **S3 Website (Backup)**: `http://market-analyser-frontend-dev-614686365382.s3-website-ap-southeast-1.amazonaws.com`
 
 ---
