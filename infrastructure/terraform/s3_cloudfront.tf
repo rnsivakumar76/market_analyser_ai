@@ -8,6 +8,7 @@ locals {
 
 resource "aws_s3_bucket" "frontend" {
   bucket = "${var.app_name}-frontend-new${local.env_suffix}-${var.aws_account_id}"
+  force_destroy = true
 
   tags = {
     Name        = "${var.app_name}-frontend-${var.environment}"
