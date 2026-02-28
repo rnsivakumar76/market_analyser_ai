@@ -80,6 +80,8 @@ resource "aws_cloudfront_distribution" "frontend_new" {
     create_before_destroy = true
   }
   
+  depends_on = [aws_cloudfront_origin_access_identity.origin]
+  
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3WebsiteOrigin"
