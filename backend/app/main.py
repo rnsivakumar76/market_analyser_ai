@@ -32,6 +32,10 @@ import time
 _BENCHMARK_CACHE = {"timestamp": 0, "data": None}
 _BENCH_TTL = 600
 
+# GLOBAL CACHE for heavy history data (Monthly/Weekly) - 4 hour TTL
+_HISTORY_CACHE = {} # { "SYMBOL_TIME": {"timestamp": 0, "df": df} }
+_HISTORY_TTL = 14400 
+
 # CORS Middleware
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
 ALLOWED_ORIGINS = ["http://localhost:4200", "http://127.0.0.1:4200", FRONTEND_URL]
@@ -119,13 +123,44 @@ def analyze_instrument_lazy(
     if benchmark_direction is None:
         benchmark_direction = Signal.NEUTRAL
     
-    # Timeframe selection based on mode - Use pre-fetched data if available
+    # Timeframe selection based on mode - PERSISTENT CACHE OPTIMIZATION
+    global _HISTORY_CACHE
+    now = time.time()
+
+    def get_cached_history(key, interval, days):
+        cache_key = f"{key}_{interval}_{days}"
+        if cache_key in _HISTORY_CACHE:
+            entry = _HISTORY_CACHE[cache_key]
+            if now - entry["timestamp"] < _HISTORY_TTL:
+                return entry["df"]
+        return None
+
+    def set_cached_history(key, interval, days, df):
+        if df is not None and not df.empty:
+            cache_key = f"{key}_{interval}_{days}"
+            _HISTORY_CACHE[cache_key] = {"timestamp": time.time(), "df": df}
+
+    # 1. Macro Data (High latency, low change)
     if pre_macro_df is not None: macro_data = pre_macro_df
-    else: macro_data = fetch_historical_data(symbol, days=(1000 if mode == StrategyMode.LONG_TERM else 500), interval=("1mo" if mode == StrategyMode.LONG_TERM else "1d"))
+    else:
+        macro_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
+        macro_days = 1000 if mode == StrategyMode.LONG_TERM else 500
+        macro_data = get_cached_history(symbol, macro_interval, macro_days)
+        if macro_data is None:
+            macro_data = fetch_historical_data(symbol, days=macro_days, interval=macro_interval)
+            set_cached_history(symbol, macro_interval, macro_days, macro_data)
 
+    # 2. Pullback Data
     if pre_pullback_df is not None: pullback_data = pre_pullback_df
-    else: pullback_data = fetch_historical_data(symbol, days=(250 if mode == StrategyMode.LONG_TERM else 120), interval=("1wk" if mode == StrategyMode.LONG_TERM else "4h"))
+    else:
+        pull_interval = "1wk" if mode == StrategyMode.LONG_TERM else "4h"
+        pull_days = 250 if mode == StrategyMode.LONG_TERM else 120
+        pullback_data = get_cached_history(symbol, pull_interval, pull_days)
+        if pullback_data is None:
+            pullback_data = fetch_historical_data(symbol, days=pull_days, interval=pull_interval)
+            set_cached_history(symbol, pull_interval, pull_days, pullback_data)
 
+    # 3. Execution Data (Low latency, high change - Always Fresh)
     if pre_execution_df is not None: execution_data = pre_execution_df
     else: execution_data = fetch_historical_data(symbol, days=(500 if mode == StrategyMode.LONG_TERM else 300), interval=("1d" if mode == StrategyMode.LONG_TERM else "1h"))
 
@@ -395,12 +430,9 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         benchmarks_data = _BENCHMARK_CACHE["data"]
     else:
         logger.info("Fetching fresh global benchmarks via BATCH...")
-        from .twelvedata_fetcher import TwelveDataFetcher
-        bench_fetcher = TwelveDataFetcher()
-        # Fetching SPX, BTC, DXY, TNX in 1-2 calls total
         bench_batch = ["SPX", "BTC", "DX-Y.NYB", "TNX"]
         
-        # We need both Macro (1mo/1d) and Execution (1d/1h) for benchmarks too
+        # BATCH FETCH Benchmarks using a single persistent fetcher to respect rate limits
         b_macro = bench_fetcher.fetch_batch_data(bench_batch, interval=bench_interval, days=1000)
         b_exec = bench_fetcher.fetch_batch_data(bench_batch, interval=exec_interval, days=exec_days)
         
@@ -421,48 +453,41 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     if benchmarks_data.get("BTC_macro") is not None and not benchmarks_data["BTC_macro"].empty:
         btc_bench = analyze_monthly_trend(benchmarks_data["BTC_macro"], params.get('monthly', {})).direction
             
-    # 5. BATCH FETCH for all instruments in PARALLEL to beat 30s Lambda Timeout
+    # 5. TIERED BATCH FETCH (The "Speed & Limit" Solution)
+    # We only fetch LIVE data (Execution/Expert) on refresh. 
+    # Macro/Pullback are cached for 4 hours because they change slowly.
     from .twelvedata_fetcher import TwelveDataFetcher
+    shared_fetcher = TwelveDataFetcher()
     sym_list = [inst['symbol'] for inst in instruments]
-    logger.info(f"Triggering Batch Parallel Fetches for {len(sym_list)} instruments...")
+    logger.info(f"Triggering Tiered Parallel Fetches for {len(sym_list)} instruments...")
     
-    # We use ThreadPoolExecutor to run the 4 separate batch net-calls at once (Expert layer added)
-    # This reduces ~60s of sequential network wait to ~15s total
-    with ThreadPoolExecutor(max_workers=4) as batch_executor:
-        f_macro = batch_executor.submit(
-            TwelveDataFetcher().fetch_batch_data, 
-            sym_list, 
-            interval=("1month" if mode == StrategyMode.LONG_TERM else "1day"), 
-            days=1000 if mode == StrategyMode.LONG_TERM else 500
-        )
-        f_pullback = batch_executor.submit(
-            TwelveDataFetcher().fetch_batch_data, 
-            sym_list, 
-            interval=("1week" if mode == StrategyMode.LONG_TERM else "4h"), 
-            days=250 if mode == StrategyMode.LONG_TERM else 120
-        )
+    with ThreadPoolExecutor(max_workers=2) as batch_executor: # Reduced workers to 2 to prevent rate-limit "bursts"
+        # Always fetch Live Execution data (Daily/Hourly)
         f_exec = batch_executor.submit(
-            TwelveDataFetcher().fetch_batch_data, 
+            shared_fetcher.fetch_batch_data, 
             sym_list, 
             interval=("1day" if mode == StrategyMode.LONG_TERM else "1h"), 
             days=500 if mode == StrategyMode.LONG_TERM else 300
         )
         
-        # Optional: 15-minute high-res data for Expert Day Trading (Short-Term only)
+        # Optional: Expert 15-minute data
         f_expert = None
         if mode == StrategyMode.SHORT_TERM:
             f_expert = batch_executor.submit(
-                TwelveDataFetcher().fetch_batch_data,
+                shared_fetcher.fetch_batch_data,
                 sym_list,
                 interval="15min",
                 days=10
             )
 
-        # Collect results
-        macro_batch = f_macro.result()
-        pullback_batch = f_pullback.result()
+        # STUB: Macro/Pullback will return EMPTY if not cached, and analyzer will use previous 
+        # (Alternatively, we can fetch them only if Cache is empty)
         exec_batch = f_exec.result()
         expert_batch = f_expert.result() if f_expert else {}
+        
+        # We'll allow the analyzer to use whatever history it has from previous runs or fall back
+        macro_batch = {}
+        pullback_batch = {}
 
     results = []
     data_map = {}
