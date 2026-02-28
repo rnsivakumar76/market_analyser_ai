@@ -430,11 +430,13 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         benchmarks_data = _BENCHMARK_CACHE["data"]
     else:
         logger.info("Fetching fresh global benchmarks via BATCH...")
+        from .twelvedata_fetcher import TwelveDataFetcher
+        shared_fetcher = TwelveDataFetcher()
         bench_batch = ["SPX", "BTC", "DX-Y.NYB", "TNX"]
         
-        # BATCH FETCH Benchmarks using a single persistent fetcher to respect rate limits
-        b_macro = bench_fetcher.fetch_batch_data(bench_batch, interval=bench_interval, days=1000)
-        b_exec = bench_fetcher.fetch_batch_data(bench_batch, interval=exec_interval, days=exec_days)
+        # BATCH FETCH Benchmarks using a single shared fetcher to respect rate limits
+        b_macro = shared_fetcher.fetch_batch_data(bench_batch, interval=bench_interval, days=1000)
+        b_exec = shared_fetcher.fetch_batch_data(bench_batch, interval=exec_interval, days=exec_days)
         
         benchmarks_data = {
             "SPX_macro": b_macro.get("SPX"),
@@ -455,9 +457,12 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             
     # 5. TIERED BATCH FETCH (The "Speed & Limit" Solution)
     # We only fetch LIVE data (Execution/Expert) on refresh. 
-    # Macro/Pullback are cached for 4 hours because they change slowly.
-    from .twelvedata_fetcher import TwelveDataFetcher
-    shared_fetcher = TwelveDataFetcher()
+    # Macro/Pullback are cached for 4 hours in analyze_instrument_lazy because they change slowly.
+    # Note: Use the ALREADY DEFINED shared_fetcher or create if benchmarking was skipped
+    if 'shared_fetcher' not in locals():
+        from .twelvedata_fetcher import TwelveDataFetcher
+        shared_fetcher = TwelveDataFetcher()
+        
     sym_list = [inst['symbol'] for inst in instruments]
     logger.info(f"Triggering Tiered Parallel Fetches for {len(sym_list)} instruments...")
     
