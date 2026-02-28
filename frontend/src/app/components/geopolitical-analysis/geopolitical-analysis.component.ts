@@ -1,53 +1,6 @@
 import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService } from '../../services/market-analyzer.service';
-
-interface GeopoliticalEvent {
-  title: string;
-  description: string;
-  source: string;
-  published: string;
-  sentiment_score: number;
-  affected_regions: string[];
-  affected_sectors: string[];
-  conflict_keywords: string[];
-}
-
-interface TradingRecommendation {
-  asset: string;
-  action: string;
-  reason: string;
-  confidence: number;
-  time_horizon: string;
-  volatility_expectation: string;
-}
-
-interface GeopoliticalData {
-  timestamp: string;
-  overall_sentiment: {
-    overall_score: number;
-    trend: string;
-    volatility_risk: number;
-    event_count: number;
-    critical_count: number;
-  };
-  critical_events: GeopoliticalEvent[];
-  high_impact_events: GeopoliticalEvent[];
-  trading_recommendations: {
-    energy_markets: TradingRecommendation[];
-    commodities: TradingRecommendation[];
-    equities: any[];
-    currencies: any[];
-  };
-  affected_sectors: Record<string, number>;
-  risk_assessment: {
-    overall_risk_level: string;
-    critical_event_count: number;
-    high_impact_count: number;
-    volatility_expectation: string;
-    recommended_position_sizing: string;
-  };
-}
+import { MarketAnalyzerService, GeopoliticalData, GeopoliticalEvent, TradingRecommendation } from '../../services/market-analyzer.service';
 
 @Component({
   selector: 'app-geopolitical-analysis',
@@ -167,7 +120,7 @@ export class GeopoliticalAnalysisComponent implements OnInit {
     return {
       recommendations: data.trading_recommendations.energy_markets,
       sentiment: data.overall_sentiment.overall_score,
-      outlook: data.affected_sectors.energy || 0
+      outlook: data.affected_sectors['energy'] || 0
     };
   }
   
@@ -178,7 +131,7 @@ export class GeopoliticalAnalysisComponent implements OnInit {
     return {
       recommendations: data.trading_recommendations.commodities,
       sentiment: data.overall_sentiment.overall_score,
-      outlook: data.affected_sectors.commodities || 0
+      outlook: data.affected_sectors['commodities'] || 0
     };
   }
   
