@@ -62,7 +62,90 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
         <!-- 3. DECISION TILES (BALANCED PRO GRID) -->
         <div class="terminal-grid">
-          ... (previous logic for Expert, Action, Validation tiles) ...
+          
+          <!-- EXPERT BATTLE PLAN -->
+          @if (analysis.expert_trade_plan) {
+            <section class="t-tile expert-tile" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
+              <div class="tile-header">🎖️ EXPERT BATTLE PLAN</div>
+              <div class="expert-main">
+                <div class="expert-plan-text">{{ analysis.expert_trade_plan.battle_plan }}</div>
+                <div class="expert-badges">
+                  <div class="expert-badge rvol">
+                    <span class="eb-v">{{ analysis.expert_trade_plan.rvol }}x</span>
+                    <span class="eb-l">VOL</span>
+                  </div>
+                  @if (analysis.expert_trade_plan.is_high_intent) {
+                    <div class="expert-badge intent pulse">🔥 HIGH INTENT</div>
+                  }
+                </div>
+              </div>
+            </section>
+          }
+          
+          <!-- CORE STRATEGIC ACTION -->
+          <section class="t-tile action-tile">
+            <div class="tile-header">🎯 STRATEGIC ACTION</div>
+            <div class="action-hero">
+               <div class="aph-text">{{ analysis.trade_signal.action_plan }}</div>
+               <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
+            </div>
+            
+            <div class="levels-stack">
+              <div class="lvl-box entry">
+                <span class="ll">ENTRY ZONE</span>
+                <span class="lv">\${{ getEntryZone() }}</span>
+              </div>
+              <div class="lvl-box sl">
+                <span class="ll">STOP LOSS</span>
+                <span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
+              </div>
+              <div class="lvl-box tp">
+                <span class="ll">TAKE PROFIT</span>
+                <span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
+              </div>
+            </div>
+
+            <!-- Position Calculator -->
+            <div class="position-calculator">
+               <div class="pc-header">🧮 RISK CALCULATOR</div>
+               <div class="pc-result">
+                  <div class="pcr-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
+                  <div class="pcr-item"><span>RISK $</span><strong>{{ getRiskAmount() }}</strong></div>
+               </div>
+            </div>
+
+            <div class="tile-actions">
+              <button class="btn-primary" (click)="openJournalModal()">📒 Log Trade</button>
+              <button class="btn-secondary" (click)="toggleChart()">📊 View Chart</button>
+            </div>
+          </section>
+
+          <!-- VALIDATION & CONTEXT (CORRELATION INTELLIGENCE) -->
+          <section class="t-tile status-tile">
+            <div class="tile-header">🛡️ VALIDATION & REASONING</div>
+            <div class="checklist-compact-full">
+              <div class="ch-item" [class]="getTrendCheck()">
+                 <div class="ch-left-data"><span class="ch-i">Trend</span><span class="ch-v">{{ analysis.monthly_trend.direction | uppercase }}</span></div>
+                 <div class="ch-correlation">{{ getTrendCorrelation() }}</div>
+              </div>
+              <div class="ch-item" [class]="getMomentumCheck()">
+                 <div class="ch-left-data"><span class="ch-i">Momentum</span><span class="ch-v">{{ analysis.daily_strength.adx.toFixed(0) }}</span></div>
+                 <div class="ch-correlation">{{ getMomentumCorrelation() }}</div>
+              </div>
+              <div class="ch-item" [class]="getVolumeCheck()">
+                 <div class="ch-left-data"><span class="ch-i">Volume</span><span class="ch-v">{{ analysis.daily_strength.volume_ratio.toFixed(1) }}x</span></div>
+                 <div class="ch-correlation">{{ getVolumeCorrelation() }}</div>
+              </div>
+              <div class="ch-item" [class]="getPullbackCheck()">
+                 <div class="ch-left-data"><span class="ch-i">Risk Score</span><span class="ch-v">{{ analysis.pullback_warning?.warning_score || 0 }}/8</span></div>
+                 <div class="ch-correlation">{{ getRiskCorrelation() }}</div>
+              </div>
+            </div>
+
+            <div class="verdict-banner-pro" [class]="getOverallCheckClass()">
+                {{ getTradeVerdict() }}
+            </div>
+          </section>
         </div>
 
         <!-- 4. STRATEGIC INTELLIGENCE (INTELLIGENCE CENTER - ALWAYS VISIBLE BUT COLLAPSIBLE) -->
@@ -419,14 +502,22 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .btn-primary { flex: 1.2; padding: 14px; background: #89b4fa; border: none; border-radius: 8px; color: #11111b; font-weight: 900; font-size: 0.9rem; cursor: pointer; position: relative; overflow: hidden; }
     .btn-secondary { flex: 1; padding: 14px; background: transparent; border: 1px solid #313244; border-radius: 8px; color: #89b4fa; font-weight: 900; font-size: 0.9rem; cursor: pointer; }
 
-    /* VALIDATION PANEL RESTORED */
-    .checklist-compact-full { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 20px; }
-    .ch-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #121220; border-radius: 6px; border: 1px solid #1f1f3a; transition: transform 0.2s; }
-    .ch-item.pass { border-left: 3px solid #a6e3a1; }
-    .ch-item.warn { border-left: 3px solid #f9e2af; }
-    .ch-item.fail { border-left: 3px solid #f38ba8; }
-    .ch-i { font-size: 0.65rem; font-weight: 800; color: #585b70; text-transform: uppercase; }
-    .ch-v { font-size: 0.8rem; font-weight: 950; color: #cdd6f4; }
+    /* VALIDATION PANEL (CORRELATION UPGRADE) */
+    .checklist-compact-full { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .ch-item { display: flex; flex-direction: column; gap: 6px; padding: 14px; background: #121220; border-radius: 8px; border: 1px solid #1f1f3a; transition: all 0.2s; }
+    .ch-item:hover { border-color: #313244; background: #1a1a2a; }
+    .ch-item.pass { border-left: 4px solid #a6e3a1; }
+    .ch-item.warn { border-left: 4px solid #f9e2af; }
+    .ch-item.fail { border-left: 4px solid #f38ba8; }
+    
+    .ch-left-data { display: flex; justify-content: space-between; align-items: center; }
+    .ch-i { font-size: 0.6rem; font-weight: 800; color: #585b70; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ch-v { font-size: 0.9rem; font-weight: 950; color: #cdd6f4; }
+    
+    .ch-correlation { font-size: 0.75rem; color: #9399b2; line-height: 1.3; font-weight: 500; font-style: italic; }
+    .ch-item.pass .ch-correlation { color: #a6e3a1; }
+    .ch-item.fail .ch-correlation { color: #f38ba8; }
+    .ch-item.warn .ch-correlation { color: #f9e2af; }
 
     .verdict-banner-pro { width: 100%; padding: 16px; border-radius: 8px; text-align: center; font-size: 0.9rem; font-weight: 950; margin-bottom: 24px; }
     .verdict-banner-pro.go { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; border: 1px solid #a6e3a1; }
@@ -893,6 +984,52 @@ export class InstrumentCardComponent implements OnChanges {
     if (beta === rec) return 'pass';
     if (beta === 'neutral') return 'warn';
     return 'fail';
+  }
+
+  getTrendCorrelation(): string {
+    const dir = this.analysis.monthly_trend.direction;
+    const isAbove = this.analysis.monthly_trend.price_above_slow_ma;
+    if (dir === 'bullish') return isAbove ? 'Macro trend confirms strong institutional accumulation.' : 'Bullish intent but struggling below long-term MA.';
+    if (dir === 'bearish') return !isAbove ? 'Bearish structure confirmed. Market is in heavy distribution.' : 'Bearish trend with potential relief rally above MA.';
+    return 'Consolidation phase. Wait for macro structural breakout.';
+  }
+
+  getMomentumCorrelation(): string {
+    const adx = this.analysis.daily_strength.adx;
+    if (adx >= 35) return 'Ultra-Strong Trend: Momentum is locked - do not fight this move.';
+    if (adx >= 25) return 'Established Momentum: Trend is healthy and gaining traction.';
+    if (adx >= 15) return 'Weak Momentum: Price is ranging - expect chop and fakeouts.';
+    return 'Dead State: Trendless market. Low probability area.';
+  }
+
+  getVolumeCorrelation(): string {
+    const vol = this.analysis.daily_strength.volume_ratio;
+    if (vol >= 2.0) return 'Institutional Spike: Heavy participation confirms the move.';
+    if (vol >= 1.0) return 'Healthy Liquidity: Buying/Selling interest is professionally backed.';
+    if (vol >= 0.5) return 'Retail Participation: Average volume - lacks big money intent.';
+    return 'Trap Alert: Move is deceptive with zero institutional support.';
+  }
+
+  getRSICorrelation(): string {
+    const rsi = this.analysis.daily_strength.rsi;
+    if (rsi > 70) return 'Climax State: Price is overheated. High risk of mean-reversion.';
+    if (rsi < 30) return 'Exhaustion State: Sellers are depleted. Potential reversal area.';
+    return 'Room to Run: Neutral heat levels suggest further expansion room.';
+  }
+
+  getBetaCorrelation(): string {
+    const beta = this.analysis.benchmark_direction;
+    const rec = this.analysis.trade_signal.recommendation;
+    if (beta === rec) return `Market Synergy: ${beta.toUpperCase()} benchmark is pulling this symbol with it.`;
+    if (beta === 'neutral') return 'Market Independence: Decoupled from benchmark - symbol leads.';
+    return 'Market Friction: Benchmark is fighting this direction. High risk.';
+  }
+
+  getRiskCorrelation(): string {
+    const score = this.analysis.pullback_warning?.warning_score ?? 0;
+    if (score >= 6) return 'Danger Zone: Multiple traps detected (Divergence, Over-extension).';
+    if (score >= 3) return 'Moderate Friction: Some technical headwinds present. Reduce size.';
+    return 'Clean Window: Low internal resistance. Path is structurally clear.';
   }
 
   getPullbackCheck(): 'pass' | 'warn' | 'fail' {
