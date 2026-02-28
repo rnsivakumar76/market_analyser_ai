@@ -5,6 +5,8 @@ from datetime import datetime, date, timezone
 from typing import List, Dict, Any
 import logging
 import os
+import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 # Import auth dependencies - these are light
 from .auth import get_current_user
@@ -424,9 +426,9 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     sym_list = [inst['symbol'] for inst in instruments]
     logger.info(f"Triggering Batch Parallel Fetches for {len(sym_list)} instruments...")
     
-    # We use ThreadPoolExecutor to run the 3 separate batch net-calls at once
-    # This reduces ~45s of sequential network wait to ~15s total
-    with ThreadPoolExecutor(max_workers=3) as batch_executor:
+    # We use ThreadPoolExecutor to run the 4 separate batch net-calls at once (Expert layer added)
+    # This reduces ~60s of sequential network wait to ~15s total
+    with ThreadPoolExecutor(max_workers=4) as batch_executor:
         f_macro = batch_executor.submit(
             TwelveDataFetcher().fetch_batch_data, 
             sym_list, 
