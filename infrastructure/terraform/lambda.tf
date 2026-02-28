@@ -23,8 +23,8 @@ resource "aws_lambda_function" "api" {
       SESSION_SECRET       = var.session_secret
       TWELVEDATA_API_KEY   = var.twelvedata_api_key
       FMP_API_KEY          = var.fmp_api_key
-      FRONTEND_URL          = var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend_v2.domain_name}"
-      GOOGLE_REDIRECT_URI   = var.domain_name != "" ? "https://${var.domain_name}/api/auth/callback" : "https://${aws_cloudfront_distribution.frontend_v2.domain_name}/api/auth/callback"
+      FRONTEND_URL          = var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend.domain_name}"
+      GOOGLE_REDIRECT_URI   = var.domain_name != "" ? "https://${var.domain_name}/api/auth/callback" : "https://${aws_cloudfront_distribution.frontend.domain_name}/api/auth/callback"
       LOG_LEVEL             = "INFO"
     }
   }
