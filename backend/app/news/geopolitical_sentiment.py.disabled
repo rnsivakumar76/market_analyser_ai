@@ -3,7 +3,6 @@ Geopolitical News Sentiment Analyzer
 Specialized for crisis scenarios like Iran-US tensions, wars, conflicts
 """
 
-import requests
 import feedparser
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -90,14 +89,24 @@ class GeopoliticalSentimentAnalyzer:
     def _fetch_news_source(self, rss_url: str) -> List[Dict]:
         """Fetch news from RSS feed"""
         try:
-            response = requests.get(rss_url, timeout=10)
-            if response.status_code == 200:
-                feed = feedparser.parse(response.content)
-                
-                events = []
-                for entry in feed.entries[:20]:  # Limit to recent 20 items
-                    event = {
-                        'title': entry.title,
+            # Disabled for Lambda compatibility - requests not available
+            logger.warning("RSS feed fetching disabled for Lambda compatibility")
+            return []
+            # Original code (disabled):
+            # response = requests.get(rss_url, timeout=10)
+            # response.raise_for_status()
+            # feed = feedparser.parse(response.content)
+            # events = []
+            # for entry in feed.entries[:20]:  # Limit to recent 20 items
+            #     event = {
+            #         'title': entry.title,
+            #         'description': entry.get('description', ''),
+            #         'source': feed.feed.get('title', 'Unknown'),
+            #         'published': datetime(*entry.published_parsed[:6]) if hasattr(entry, 'published_parsed') else datetime.now(),
+            #         'link': entry.get('link', '')
+            #     }
+            #     events.append(event)
+            # return events
                         'description': entry.get('description', ''),
                         'source': feed.feed.get('title', 'Unknown'),
                         'published': datetime(*entry.published_parsed[:6]) if hasattr(entry, 'published_parsed') else datetime.now(),

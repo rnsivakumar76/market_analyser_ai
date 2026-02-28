@@ -3,13 +3,14 @@ Real-Time Geopolitical News Sentiment Analyzer
 Integrates with NewsAPI.org for live geopolitical intelligence
 """
 
-import requests
 import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Note: requests not available in Lambda - this file is for reference only
 
 class RealTimeGeopoliticalAnalyzer:
     def __init__(self):
