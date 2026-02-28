@@ -87,7 +87,7 @@ resource "aws_cloudfront_distribution" "frontend_new" {
     origin_id   = "S3WebsiteOrigin"
 
     s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.origin.iam_arn
+      origin_access_identity = aws_cloudfront_origin_access_identity.origin.cloudfront_access_identity_path
     }
   }
 
