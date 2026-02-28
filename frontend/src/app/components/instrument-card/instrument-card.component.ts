@@ -35,7 +35,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               </span>
               <div class="th-clocks">
                 <span class="th-clock session" [class]="getCurrentSession().toLowerCase().replace(' ', '-')">{{ getCurrentSession() }}</span>
-                <span class="th-clock event" [class.impact]="analysis.fundamentals?.has_high_impact_events">{{ getNextEvent() }}</span>
+                <span class="th-clock event" [class.impact]="analysis.fundamentals.has_high_impact_events">{{ getNextEvent() }}</span>
               </div>
             </div>
           </div>
@@ -55,7 +55,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
            <p class="synthesis-text">{{ analysis.trade_signal.executive_summary }}</p>
            <div class="synthesis-tags">
               @for (reason of analysis.trade_signal.reasons; track reason) {
-                <span class="syn-tag"># {{ reason }}</span>
+                <span class="syn-tag" [class]="getReasonImpactClass(reason)"># {{ reason }}</span>
               }
            </div>
         </div>
@@ -123,26 +123,65 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                  <div class="ch-left-data"><span class="ch-i">Momentum (ADX)</span><span class="ch-v">{{ analysis.daily_strength.adx.toFixed(0) }}</span></div>
                  <div class="ch-correlation">{{ getMomentumCorrelation() }}</div>
               </div>
+              
+              <!-- Additional Risk Factors -->
+              <div class="ch-item" [class]="getVolatilityCheck()">
+                 <div class="ch-left-data"><span class="ch-i">Volatility Risk</span><span class="ch-v">{{ getVolatilityLevel() }}</span></div>
+                 <div class="ch-correlation">{{ getVolatilityCorrelation() }}</div>
+              </div>
+              
+              <div class="ch-item" [class]="getVolumeCheck()">
+                 <div class="ch-left-data"><span class="ch-i">Volume Analysis</span><span class="ch-v">{{ getVolumeStatus() }}</span></div>
+                 <div class="ch-correlation">{{ getVolumeCorrelation() }}</div>
+              </div>
+              
+              <div class="ch-item" [class]="getSupportResistanceCheck()">
+                 <div class="ch-left-data"><span class="ch-i">Key Levels</span><span class="ch-v">{{ getLevelStatus() }}</span></div>
+                 <div class="ch-correlation">{{ getLevelCorrelation() }}</div>
+              </div>
+              
+              <div class="ch-item" [class]="getCorrelationRiskCheck()">
+                 <div class="ch-left-data"><span class="ch-i">Market Correlation</span><span class="ch-v">{{ getCorrelationStatus() }}</span></div>
+                 <div class="ch-correlation">{{ getCorrelationRisk() }}</div>
+              </div>
             </div>
 
             <!-- PULLBACK WARNING SECTION -->
             <div class="pullback-intel-card" [class]="getPullbackCheck()">
                 <div class="pic-header">⚠️ PULLBACK & TRAP ANALYSIS</div>
                 <p class="pic-desc">{{ analysis.pullback_warning?.description }}</p>
-                @if (analysis.pullback_warning?.is_warning) {
-                   <div class="pic-reasons">
-                      @for (reason of analysis.pullback_warning?.reasons; track reason) {
-                        <div class="pic-reason-tag">◈ {{ reason }}</div>
-                      }
-                   </div>
+                
+                <!-- Always show reasoning details -->
+                <div class="pic-reasons">
+                    @for (reason of analysis.pullback_warning?.reasons; track reason) {
+                        <div class="pic-reason-tag" [class]="getPullbackReasonClass(reason)">◈ {{ reason }}</div>
+                    }
+                </div>
+                
+                <!-- Additional pullback metrics -->
+                @if (analysis.pullback_warning) {
+                    <div class="pic-metrics">
+                        <div class="pic-metric">
+                            <span class="pic-metric-label">Risk Level</span>
+                            <span class="pic-metric-value" [class]="getPullbackRiskClass()">{{ getPullbackRiskLevel() }}</span>
+                        </div>
+                        <div class="pic-metric">
+                            <span class="pic-metric-label">Current Position</span>
+                            <span class="pic-metric-value">{{ getPullbackPosition() }}</span>
+                        </div>
+                        <div class="pic-metric">
+                            <span class="pic-metric-label">Recommended Action</span>
+                            <span class="pic-metric-value">{{ getPullbackAction() }}</span>
+                        </div>
+                    </div>
                 }
             </div>
 
             <div class="probability-box-v2">
               <div class="pb2-header">PROBABILITY DEPTH (BACKTEST)</div>
               <div class="pb2-grid">
-                <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results?.win_rate?.toFixed(1) }}%</strong></div>
-                <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results?.profit_factor }}</strong></div>
+                <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
+                <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results.profit_factor }}</strong></div>
               </div>
               <div class="bt-spark-v2">
                 <svg viewBox="0 0 200 40" preserveAspectRatio="none"><polyline [attr.points]="getEquityCurvePoints()" class="spark-line" /></svg>
@@ -185,9 +224,34 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 <!-- TECHNICAL MICRO HEAT -->
                 <div class="intel-block">
                     <div class="tile-header">📊 TECHNICAL HEAT</div>
+                    <div class="heat-context">
+                        <p class="heat-intro">Current trade technical strength indicators:</p>
+                    </div>
                     <div class="heat-bars">
-                        <div class="hb-item"><span>ADX Strength</span><div class="hb-track"><div class="hb-fill adx" [style.width.%]="analysis.daily_strength.adx * 2"></div></div></div>
-                        <div class="hb-item"><span>RSI Power</span><div class="hb-track"><div class="hb-fill rsi" [style.left.%]="analysis.daily_strength.rsi"></div></div></div>
+                        <div class="hb-item">
+                            <span>ADX Strength</span>
+                            <div class="hb-track">
+                                <div class="hb-fill adx" [style.width.%]="analysis.daily_strength.adx * 2"></div>
+                            </div>
+                            <span class="hb-interpretation">{{ getADXInterpretation() }}</span>
+                        </div>
+                        <div class="hb-item">
+                            <span>RSI Power</span>
+                            <div class="hb-track">
+                                <div class="hb-fill rsi" [style.left.%]="analysis.daily_strength.rsi"></div>
+                            </div>
+                            <span class="hb-interpretation">{{ getRSIInterpretation() }}</span>
+                        </div>
+                    </div>
+                    <div class="heat-implications">
+                        <div class="heat-impact">
+                            <span class="heat-label">Trade Impact:</span>
+                            <span class="heat-value" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</span>
+                        </div>
+                        <div class="heat-recommendation">
+                            <span class="heat-label">Recommendation:</span>
+                            <span class="heat-value">{{ getTechnicalRecommendation() }}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -195,13 +259,13 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 <div class="intel-block">
                     <div class="tile-header">📅 ECONOMIC DATA</div>
                     <div class="events-mini-list">
-                        @for (event of analysis.fundamentals?.events?.slice(0, 2); track event) {
+                        @for (event of analysis.fundamentals.events.slice(0, 2); track event) {
                             <div class="em-list-item" [class.high]="analysis.fundamentals.has_high_impact_events">
                                 <span>{{ event }}</span>
                                 <strong>{{ analysis.fundamentals.has_high_impact_events ? '!!!' : '!!' }}</strong>
                             </div>
                         }
-                        @if (!analysis.fundamentals?.events?.length) {
+                        @if (!analysis.fundamentals.events.length) {
                            <div class="no-events-sm">No critical data expected.</div>
                         }
                     </div>
@@ -318,6 +382,20 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .terminal-body.bullish { border-left: 3px solid #a6e3a1; }
     .terminal-body.bearish { border-left: 3px solid #f38ba8; }
 
+    /* AI EXECUTIVE SUMMARY */
+    .ai-executive-synthesis { padding: 24px; background: rgba(30, 30, 46, 0.3); border-bottom: 1px solid #1f1f3a; }
+    .ai-executive-synthesis.bullish { background: rgba(166, 227, 161, 0.05); }
+    .ai-executive-synthesis.bearish { background: rgba(243, 139, 168, 0.05); }
+    .synthesis-header { font-size: 0.65rem; font-weight: 950; color: #89b4fa; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
+    .synthesis-text { font-size: 1.1rem; color: #cdd6f4; line-height: 1.4; margin-bottom: 16px; font-weight: 500; }
+    .synthesis-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .syn-tag { font-size: 0.65rem; padding: 4px 10px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; color: #9399b2; font-weight: 600; }
+    .syn-tag.positive { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; border-color: rgba(166, 227, 161, 0.3); }
+    .syn-tag.negative { background: rgba(243, 139, 168, 0.1); color: #f38ba8; border-color: rgba(243, 139, 168, 0.3); }
+    .syn-tag.neutral { background: rgba(249, 226, 175, 0.1); color: #f9e2af; border-color: rgba(249, 226, 175, 0.3); }
+    .syn-tag.warning { background: rgba(250, 179, 135, 0.1); color: #fab387; border-color: rgba(250, 179, 135, 0.3); }
+    .syn-tag.info { background: rgba(137, 180, 250, 0.1); color: #89b4fa; border-color: rgba(137, 180, 250, 0.3); }
+
     /* HUD UPGRADE (ZERO WASTE) */
     .terminal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: #0b0b15; border-bottom: 1px solid #1f1f3a; }
     .th-symbol-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
@@ -358,8 +436,18 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .pullback-intel-card.fail { border-left-color: #f38ba8; background: rgba(243, 139, 168, 0.05); }
     .pic-header { font-size: 0.6rem; font-weight: 950; color: #89b4fa; margin-bottom: 12px; }
     .pic-desc { font-size: 0.85rem; color: #cdd6f4; line-height: 1.4; margin-bottom: 16px; }
-    .pic-reasons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pic-reasons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
     .pic-reason-tag { font-size: 0.65rem; padding: 4px 10px; background: #11111b; border-radius: 4px; color: #f38ba8; border: 1px solid rgba(243, 139, 168, 0.2); }
+    .pic-reason-tag.high-risk { background: rgba(243, 139, 168, 0.1); color: #f38ba8; border-color: rgba(243, 139, 168, 0.3); }
+    .pic-reason-tag.medium-risk { background: rgba(250, 179, 135, 0.1); color: #fab387; border-color: rgba(250, 179, 135, 0.3); }
+    .pic-reason-tag.low-risk { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; border-color: rgba(166, 227, 161, 0.3); }
+    .pic-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #313244; }
+    .pic-metric { display: flex; flex-direction: column; gap: 4px; }
+    .pic-metric-label { font-size: 0.5rem; color: #585b70; font-weight: 900; text-transform: uppercase; }
+    .pic-metric-value { font-size: 0.8rem; font-weight: 950; color: #cdd6f4; }
+    .pic-metric-value.high { color: #f38ba8; }
+    .pic-metric-value.moderate { color: #fab387; }
+    .pic-metric-value.low { color: #a6e3a1; }
     .probability-box-v2 { padding: 20px; background: #11111b; border-radius: 8px; margin-bottom: 24px; border: 1px solid #1f1f3a; }
     .pb2-header { font-size: 0.55rem; color: #45475a; font-weight: 950; margin-bottom: 12px; }
     .pb2-grid { display: flex; gap: 20px; margin-bottom: 12px; }
@@ -387,6 +475,16 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .hb-fill { height: 100%; border-radius: 2px; }
     .hb-fill.adx { background: #fab387; }
     .hb-fill.rsi { width: 8px; height: 8px; background: #cba6f7; border-radius: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); }
+    .hb-interpretation { font-size: 0.6rem; color: #9399b2; margin-top: 4px; font-weight: 600; }
+    .heat-context { margin-bottom: 12px; }
+    .heat-intro { font-size: 0.75rem; color: #89b4fa; margin: 0; font-weight: 600; }
+    .heat-implications { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 12px; border-top: 1px solid #313244; }
+    .heat-impact, .heat-recommendation { display: flex; justify-content: space-between; align-items: center; }
+    .heat-label { font-size: 0.5rem; color: #585b70; font-weight: 900; text-transform: uppercase; }
+    .heat-value { font-size: 0.7rem; font-weight: 950; }
+    .heat-value.high { color: #f38ba8; }
+    .heat-value.medium { color: #fab387; }
+    .heat-value.low { color: #a6e3a1; }
     .events-mini-list { display: flex; flex-direction: column; gap: 6px; }
     .em-list-item { padding: 8px 12px; background: #0b0b15; border-radius: 4px; display: flex; justify-content: space-between; font-size: 0.75rem; color: #cdd6f4; }
     .em-list-item.high { border-left: 3px solid #f38ba8; }
@@ -758,6 +856,48 @@ export class InstrumentCardComponent implements OnChanges {
     return 'neutral';
   }
 
+  getReasonImpactClass(reason: string): string {
+    const lowerReason = reason.toLowerCase();
+    
+    // Positive indicators
+    if (lowerReason.includes('bullish') || lowerReason.includes('positive') || 
+        lowerReason.includes('strength') || lowerReason.includes('momentum') ||
+        lowerReason.includes('breakout') || lowerReason.includes('support') ||
+        lowerReason.includes('leader') || lowerReason.includes('buy') ||
+        lowerReason.includes('opportunity') || lowerReason.includes('boost')) {
+      return 'positive';
+    }
+    
+    // Negative indicators  
+    if (lowerReason.includes('bearish') || lowerReason.includes('negative') ||
+        lowerReason.includes('weak') || lowerReason.includes('resistance') ||
+        lowerReason.includes('extended') || lowerReason.includes('overbought') ||
+        lowerReason.includes('oversold') || lowerReason.includes('sell') ||
+        lowerReason.includes('risk') || lowerReason.includes('caution') ||
+        lowerReason.includes('warning') || lowerReason.includes('laggard')) {
+      return 'negative';
+    }
+    
+    // Warning/neutral indicators
+    if (lowerReason.includes('unclear') || lowerReason.includes('mixed') ||
+        lowerReason.includes('conflicting') || lowerReason.includes('wait') ||
+        lowerReason.includes('sideways') || lowerReason.includes('neutral') ||
+        lowerReason.includes('consolidation') || lowerReason.includes('range')) {
+      return 'neutral';
+    }
+    
+    // Informational indicators
+    if (lowerReason.includes('adx') || lowerReason.includes('rsi') ||
+        lowerReason.includes('volume') || lowerReason.includes('price') ||
+        lowerReason.includes('trend') || lowerReason.includes('news') ||
+        lowerReason.includes('sentiment') || lowerReason.includes('high')) {
+      return 'info';
+    }
+    
+    // Default to neutral for unknown reasons
+    return 'neutral';
+  }
+
   getPriceChangeClass(): string {
     return this.analysis.daily_strength.price_change_percent > 0 ? 'positive' : 'negative';
   }
@@ -788,6 +928,151 @@ export class InstrumentCardComponent implements OnChanges {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     return date.toLocaleDateString();
+  }
+
+  // ── Enhanced Pullback Analysis Methods ───────────────────────────────────────
+  getPullbackReasonClass(reason: string): string {
+    const lowerReason = reason.toLowerCase();
+    if (lowerReason.includes('extended') || lowerReason.includes('overbought')) return 'high-risk';
+    if (lowerReason.includes('warning') || lowerReason.includes('caution')) return 'medium-risk';
+    return 'low-risk';
+  }
+
+  getPullbackRiskLevel(): string {
+    if (!this.analysis.pullback_warning) return 'LOW';
+    if (this.analysis.pullback_warning.is_warning) return 'HIGH';
+    return 'MODERATE';
+  }
+
+  getPullbackRiskClass(): string {
+    const level = this.getPullbackRiskLevel();
+    return level.toLowerCase();
+  }
+
+  getPullbackPosition(): string {
+    const price = this.analysis.current_price;
+    const stop = this.analysis.volatility_risk?.stop_loss;
+    const target = this.analysis.volatility_risk?.take_profit;
+    
+    if (!stop || !target) return 'UNKNOWN';
+    
+    const totalRange = target - stop;
+    const currentPosition = ((price - stop) / totalRange) * 100;
+    
+    if (currentPosition < 25) return 'NEAR STOP';
+    if (currentPosition > 75) return 'NEAR TARGET';
+    return 'MID-RANGE';
+  }
+
+  getPullbackAction(): string {
+    if (!this.analysis.pullback_warning?.is_warning) return 'HOLD POSITION';
+    return 'WAIT FOR ENTRY';
+  }
+
+  // ── Technical Heat Analysis Methods ───────────────────────────────────────────
+  getADXInterpretation(): string {
+    const adx = this.analysis.daily_strength.adx;
+    if (adx > 50) return 'Strong Trend';
+    if (adx > 25) return 'Trending';
+    if (adx > 20) return 'Developing';
+    return 'Weak/Range';
+  }
+
+  getRSIInterpretation(): string {
+    const rsi = this.analysis.daily_strength.rsi;
+    if (rsi > 70) return 'Overbought';
+    if (rsi > 60) return 'Strong';
+    if (rsi < 30) return 'Oversold';
+    if (rsi < 40) return 'Weak';
+    return 'Neutral';
+  }
+
+  getTechnicalHeatImpact(): string {
+    const adx = this.analysis.daily_strength.adx;
+    const rsi = this.analysis.daily_strength.rsi;
+    
+    // High ADX + Extreme RSI = High impact
+    if (adx > 40 && (rsi > 70 || rsi < 30)) return 'HIGH';
+    // Strong trend + moderate RSI = Medium impact
+    if (adx > 25 && rsi > 40 && rsi < 60) return 'MEDIUM';
+    return 'LOW';
+  }
+
+  getTechnicalHeatClass(): string {
+    const impact = this.getTechnicalHeatImpact().toLowerCase();
+    return impact;
+  }
+
+  getTechnicalRecommendation(): string {
+    const adx = this.analysis.daily_strength.adx;
+    const rsi = this.analysis.daily_strength.rsi;
+    
+    if (adx > 50 && rsi > 60) return 'Trend Following';
+    if (adx > 50 && rsi < 40) return 'Potential Reversal';
+    if (rsi > 70) return 'Wait for Pullback';
+    if (rsi < 30) return 'Consider Entry';
+    return 'Monitor Closely';
+  }
+
+  // ── Enhanced Risk Intelligence Methods ───────────────────────────────────────────
+  getVolatilityLevel(): string {
+    const atr = this.analysis.volatility_risk?.atr;
+    if (!atr) return 'UNKNOWN';
+    if (atr > this.analysis.current_price * 0.05) return 'HIGH';
+    if (atr > this.analysis.current_price * 0.03) return 'MODERATE';
+    return 'LOW';
+  }
+
+  getVolatilityCheck(): string {
+    const level = this.getVolatilityLevel().toLowerCase();
+    return level === 'high' ? 'fail' : level === 'moderate' ? 'warn' : 'pass';
+  }
+
+  getVolatilityCorrelation(): string {
+    const level = this.getVolatilityLevel();
+    return `Volatility ${level.toLowerCase()} affects position sizing and risk management`;
+  }
+
+  getVolumeStatus(): string {
+    // This would need volume data from the analysis
+    return 'ANALYZING'; // Placeholder
+  }
+
+  getLevelStatus(): string {
+    const price = this.analysis.current_price;
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    
+    if (!pp) return 'UNKNOWN';
+    
+    const { pivot, s1, s2, r1, r2 } = pp;
+    if (price > r1) return 'ABOVE R1';
+    if (price > pivot) return 'ABOVE PIVOT';
+    if (price > s1) return 'ABOVE S1';
+    if (price > s2) return 'ABOVE S2';
+    return 'BELOW S2';
+  }
+
+  getSupportResistanceCheck(): string {
+    const status = this.getLevelStatus();
+    return status.includes('ABOVE') ? 'pass' : 'warn';
+  }
+
+  getLevelCorrelation(): string {
+    const status = this.getLevelStatus();
+    return `Price positioned ${status.toLowerCase()} - key levels identified`;
+  }
+
+  getCorrelationStatus(): string {
+    // This would need correlation data
+    return 'ANALYZING'; // Placeholder
+  }
+
+  getCorrelationRiskCheck(): string {
+    return 'warn'; // Placeholder
+  }
+
+  getCorrelationRisk(): string {
+    return 'Market correlation analysis in progress';
   }
 
   // ── Trade Execution Level Helpers ─────────────────────────────────────────

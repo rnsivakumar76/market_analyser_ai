@@ -2,8 +2,8 @@
 
 ### ⚡ Current Migration Status
 - **Backend (Lambda)**: `https://u50e9kfngd.execute-api.ap-southeast-1.amazonaws.com/api`
-- **Frontend (CloudFront)**: `https://d114jnk74mrdln.cloudfront.net`
-- **S3 Website (Backup)**: `http://market-analyser-frontend-dev-614686365382.s3-website-ap-southeast-1.amazonaws.com`
+- **Frontend (CloudFront)**: Creating new distribution (frontend_new) to fix CachedMethods issues
+- **S3 Website (Backup)**: `http://market-analyser-frontend-new-dev-614686365382.s3-website-ap-southeast-1.amazonaws.com`
 
 ---
 

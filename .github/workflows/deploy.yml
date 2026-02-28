@@ -230,9 +230,10 @@ jobs:
           S3_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('frontend_url', {}).get('value'))")
           API_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('api_gateway_url', {}).get('value'))")
           echo "### 🚀 Deployed to **${ENV}**!" >> $GITHUB_STEP_SUMMARY
-          echo "- **Primary App URL (CloudFront):** $CF_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- **Direct S3 URL (Backup):** $S3_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- **API Gateway URL:** $API_URL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **🌐 Primary App URL (CloudFront):** $CF_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- **� Direct S3 URL:** $S3_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- **🔗 API Gateway URL:** $API_URL" >> $GITHUB_STEP_SUMMARY
 
   # ─── End-to-End Testing (Playwright) ────────────────────────────────────────
   e2e-tests:
@@ -257,7 +258,7 @@ jobs:
           path: .
       - name: Run Playwright tests
         run: |
-          # Use CloudFront URL if available (HTTPS), otherwise fallback to S3 Website (HTTP)
+          # Use CloudFront URL for testing since it's now working
           APP_URL=$(cat tf_outputs.json | python3 -c "import sys,json; o=json.load(sys.stdin); print(o.get('cloudfront_url', {}).get('value') or o['frontend_url']['value'])")
           echo "Testing against: $APP_URL"
           BASE_URL=$APP_URL npm run test:e2e
