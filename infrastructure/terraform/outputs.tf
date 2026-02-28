@@ -15,12 +15,12 @@ output "frontend_s3_bucket" {
 
 output "cloudfront_url" {
   description = "CloudFront Distribution URL"
-  value       = "https://${aws_cloudfront_distribution.frontend.domain_name}"
+  value       = "https://${aws_cloudfront_distribution.frontend_new.domain_name}"
 }
 
 output "cloudfront_distribution_id" {
   description = "CloudFront Distribution ID for cache invalidation"
-  value       = aws_cloudfront_distribution.frontend.id
+  value       = aws_cloudfront_distribution.frontend_new.id
 }
 
 output "ecr_backend_url" {

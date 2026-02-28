@@ -7,7 +7,7 @@ locals {
 }
 
 resource "aws_s3_bucket" "frontend" {
-  bucket = "${var.app_name}-frontend${local.env_suffix}-${var.aws_account_id}"
+  bucket = "${var.app_name}-frontend-new${local.env_suffix}-${var.aws_account_id}"
 
   tags = {
     Name        = "${var.app_name}-frontend-${var.environment}"
@@ -75,7 +75,7 @@ resource "aws_cloudfront_origin_access_identity" "origin" {
   comment = "Origin access identity for CloudFront distribution"
 }
 
-resource "aws_cloudfront_distribution" "frontend" {
+resource "aws_cloudfront_distribution" "frontend_new" {
   lifecycle {
     create_before_destroy = true
   }
