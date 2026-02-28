@@ -38,7 +38,12 @@ _HISTORY_TTL = 14400
 
 # CORS Middleware
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
-ALLOWED_ORIGINS = ["http://localhost:4200", "http://127.0.0.1:4200", FRONTEND_URL]
+ALLOWED_ORIGINS = [
+    "http://localhost:4200", 
+    "http://127.0.0.1:4200", 
+    FRONTEND_URL,
+    "https://d3l5h8j5l8wq3.cloudfront.net"  # Current CloudFront URL
+]
 
 app.add_middleware(
     CORSMiddleware,
