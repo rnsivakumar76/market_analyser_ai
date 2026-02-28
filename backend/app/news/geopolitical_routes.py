@@ -5,7 +5,7 @@ Real-time analysis for crisis scenarios and trading opportunities
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 from datetime import datetime, timedelta
 import logging
 
@@ -38,8 +38,11 @@ class GeopoliticalResponse(BaseModel):
     high_impact_events: List[Dict]
     trading_recommendations: Dict[str, List[TradingRecommendation]]
     affected_sectors: Dict[str, float]
-    risk_assessment: Dict[str, Union[str, float, int]]
-    market_impact_forecast: Dict[str, Union[str, float, int]]
+    risk_assessment: Dict[str, Any]
+    market_impact_forecast: Dict[str, Any]
+    
+    class Config:
+        arbitrary_types_allowed = True
 
 @router.get("/sentiment", response_model=GeopoliticalResponse)
 def get_geopolitical_sentiment():
