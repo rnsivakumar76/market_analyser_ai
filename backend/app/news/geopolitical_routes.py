@@ -7,17 +7,16 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
-import asyncio
 import logging
 
-from .geopolitical_sentiment import GeopoliticalSentimentAnalyzer
+from .geopolitical_sentiment_basic import BasicGeopoliticalSentimentAnalyzer
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/geopolitical", tags=["geopolitical"])
 
 # Global analyzer instance
-geopolitical_analyzer = GeopoliticalSentimentAnalyzer()
+geopolitical_analyzer = BasicGeopoliticalSentimentAnalyzer()
 
 class GeopoliticalRequest(BaseModel):
     regions: Optional[List[str]] = None
@@ -43,13 +42,13 @@ class GeopoliticalResponse(BaseModel):
     market_impact_forecast: Dict[str, any]
 
 @router.get("/sentiment", response_model=GeopoliticalResponse)
-async def get_geopolitical_sentiment():
+def get_geopolitical_sentiment():
     """Get real-time geopolitical sentiment analysis"""
     try:
         logger.info("Starting geopolitical sentiment analysis...")
         
         # Run analysis
-        analysis_result = await geopolitical_analyzer.analyze_geopolitical_sentiment()
+        analysis_result = geopolitical_analyzer.analyze_geopolitical_sentiment()
         
         # Convert to response format
         response = GeopoliticalResponse(
@@ -88,10 +87,10 @@ async def get_geopolitical_sentiment():
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 @router.get("/crisis-alerts")
-async def get_crisis_alerts():
+def get_crisis_alerts():
     """Get immediate crisis alerts for trading"""
     try:
-        analysis_result = await geopolitical_analyzer.analyze_geopolitical_sentiment()
+        analysis_result = geopolitical_analyzer.analyze_geopolitical_sentiment()
         
         # Filter for critical and high-impact events
         alerts = []
@@ -132,10 +131,10 @@ async def get_crisis_alerts():
         raise HTTPException(status_code=500, detail=f"Alert generation failed: {str(e)}")
 
 @router.get("/energy-markets")
-async def get_energy_markets_analysis():
+def get_energy_markets_analysis():
     """Specific analysis for energy markets (crude oil, natural gas)"""
     try:
-        analysis_result = await geopolitical_analyzer.analyze_geopolitical_sentiment()
+        analysis_result = geopolitical_analyzer.analyze_geopolitical_sentiment()
         
         energy_recommendations = analysis_result['trading_recommendations'].get('energy_markets', [])
         energy_events = [e for e in analysis_result['critical_events'] + analysis_result['high_impact_events'] 
@@ -166,10 +165,10 @@ async def get_energy_markets_analysis():
         raise HTTPException(status_code=500, detail=f"Energy analysis failed: {str(e)}")
 
 @router.get("/safe-haven")
-async def get_safe_haven_analysis():
+def get_safe_haven_analysis():
     """Analysis for safe-haven assets (gold, USD, bonds)"""
     try:
-        analysis_result = await geopolitical_analyzer.analyze_geopolitical_sentiment()
+        analysis_result = geopolitical_analyzer.analyze_geopolitical_sentiment()
         
         commodity_recommendations = analysis_result['trading_recommendations'].get('commodities', [])
         safe_haven_events = [e for e in analysis_result['critical_events'] + analysis_result['high_impact_events'] 

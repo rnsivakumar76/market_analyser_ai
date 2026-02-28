@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, signal, inject, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MarketAnalyzerService, GeopoliticalData, GeopoliticalEvent, TradingRecommendation } from '../../services/market-analyzer.service';
 
@@ -11,6 +11,8 @@ import { MarketAnalyzerService, GeopoliticalData, GeopoliticalEvent, TradingReco
 })
 export class GeopoliticalAnalysisComponent implements OnInit {
   private analyzerService = inject(MarketAnalyzerService);
+  
+  @Output() close = new EventEmitter<void>();
   
   geopoliticalData = signal<GeopoliticalData | null>(null);
   loading = signal(false);

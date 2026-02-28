@@ -3,6 +3,9 @@
     <div class="header-content">
       <h2>🌍 Geopolitical Analysis</h2>
       <div class="header-actions">
+        <button class="close-btn" (click)="close.emit()" title="Close">
+          ✕
+        </button>
         <button class="refresh-btn" (click)="refreshData()" [disabled]="loading()">
           🔄 Refresh
         </button>

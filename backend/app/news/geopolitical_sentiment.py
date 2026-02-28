@@ -3,8 +3,7 @@ Geopolitical News Sentiment Analyzer
 Specialized for crisis scenarios like Iran-US tensions, wars, conflicts
 """
 
-import asyncio
-import aiohttp
+import requests
 import feedparser
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -54,18 +53,15 @@ class GeopoliticalSentimentAnalyzer:
             'finance': ['banks', 'insurance', 'risk management', 'volatility']
         }
     
-    async def analyze_geopolitical_sentiment(self) -> Dict[str, any]:
+    def analyze_geopolitical_sentiment(self) -> Dict[str, any]:
         """Analyze real-time geopolitical news sentiment"""
         logger.info("Starting geopolitical sentiment analysis...")
         
         # Fetch news from all sources
-        news_tasks = [self._fetch_news_source(source) for source in self.geopolitical_sources]
-        news_results = await asyncio.gather(*news_tasks, return_exceptions=True)
-        
         all_events = []
-        for result in news_results:
-            if isinstance(result, list):
-                all_events.extend(result)
+        for source in self.geopolitical_sources:
+            events = self._fetch_news_source(source)
+            all_events.extend(events)
         
         # Analyze sentiment and impact
         analyzed_events = []
@@ -91,27 +87,25 @@ class GeopoliticalSentimentAnalyzer:
             'risk_assessment': self._assess_market_risk(analyzed_events)
         }
     
-    async def _fetch_news_source(self, rss_url: str) -> List[Dict]:
+    def _fetch_news_source(self, rss_url: str) -> List[Dict]:
         """Fetch news from RSS feed"""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(rss_url, timeout=10) as response:
-                    if response.status == 200:
-                        content = await response.text()
-                        feed = feedparser.parse(content)
-                        
-                        events = []
-                        for entry in feed.entries[:20]:  # Limit to recent 20 items
-                            event = {
-                                'title': entry.title,
-                                'description': entry.get('description', ''),
-                                'source': feed.feed.get('title', 'Unknown'),
-                                'published': datetime(*entry.published_parsed[:6]) if hasattr(entry, 'published_parsed') else datetime.now(),
-                                'link': entry.get('link', '')
-                            }
-                            events.append(event)
-                        
-                        return events
+            response = requests.get(rss_url, timeout=10)
+            if response.status_code == 200:
+                feed = feedparser.parse(response.content)
+                
+                events = []
+                for entry in feed.entries[:20]:  # Limit to recent 20 items
+                    event = {
+                        'title': entry.title,
+                        'description': entry.get('description', ''),
+                        'source': feed.feed.get('title', 'Unknown'),
+                        'published': datetime(*entry.published_parsed[:6]) if hasattr(entry, 'published_parsed') else datetime.now(),
+                        'link': entry.get('link', '')
+                    }
+                    events.append(event)
+                
+                return events
         except Exception as e:
             logger.error(f"Error fetching from {rss_url}: {e}")
             return []
