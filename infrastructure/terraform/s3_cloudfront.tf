@@ -131,7 +131,13 @@ resource "aws_cloudfront_distribution" "frontend_new" {
     target_origin_id        = "APIGatewayOrigin"
     compress               = true
 
-    cache_policy_id = "d87847d2-4630-470f-90b1-a8b6496e322c" # Managed-NoCachePolicy
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Origin", "Referer", "X-Forwarded-Host", "X-Forwarded-Proto", "Content-Type", "Accept"]
+      cookies {
+        forward = "all"
+      }
+    }
 
     viewer_protocol_policy = "https-only"
     min_ttl                = 0
@@ -147,7 +153,13 @@ resource "aws_cloudfront_distribution" "frontend_new" {
     target_origin_id        = "APIGatewayOrigin"
     compress               = true
 
-    cache_policy_id = "d87847d2-4630-470f-90b1-a8b6496e322c" # Managed-NoCachePolicy
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Origin", "Referer", "X-Forwarded-Host", "X-Forwarded-Proto", "Content-Type", "Accept", "User-Agent", "Set-Cookie"]
+      cookies {
+        forward = "all"
+      }
+    }
 
     viewer_protocol_policy = "https-only"
     min_ttl                = 0
@@ -161,7 +173,12 @@ resource "aws_cloudfront_distribution" "frontend_new" {
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = "S3WebsiteOrigin"
 
-    cache_policy_id = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" # Managed-CachingOptimized
+    forwarded_values {
+      query_string = false
+      cookies {
+        forward = "none"
+      }
+    }
 
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0
