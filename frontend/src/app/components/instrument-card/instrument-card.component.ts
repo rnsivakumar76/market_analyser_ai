@@ -35,7 +35,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               </span>
               <div class="th-clocks">
                 <span class="th-clock session" [class]="getCurrentSession().toLowerCase().replace(' ', '-')">{{ getCurrentSession() }}</span>
-                <span class="th-clock event" [class.impact]="analysis.fundamentals?.has_high_impact_events">{{ getNextEvent() }}</span>
+                <span class="th-clock event" [class.impact]="analysis.fundamentals.has_high_impact_events">{{ getNextEvent() }}</span>
               </div>
             </div>
           </div>
@@ -180,8 +180,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             <div class="probability-box-v2">
               <div class="pb2-header">PROBABILITY DEPTH (BACKTEST)</div>
               <div class="pb2-grid">
-                <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results?.win_rate?.toFixed(1) }}%</strong></div>
-                <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results?.profit_factor }}</strong></div>
+                <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
+                <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results.profit_factor }}</strong></div>
               </div>
               <div class="bt-spark-v2">
                 <svg viewBox="0 0 200 40" preserveAspectRatio="none"><polyline [attr.points]="getEquityCurvePoints()" class="spark-line" /></svg>
@@ -259,13 +259,13 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 <div class="intel-block">
                     <div class="tile-header">📅 ECONOMIC DATA</div>
                     <div class="events-mini-list">
-                        @for (event of analysis.fundamentals?.events?.slice(0, 2); track event) {
+                        @for (event of analysis.fundamentals.events.slice(0, 2); track event) {
                             <div class="em-list-item" [class.high]="analysis.fundamentals.has_high_impact_events">
                                 <span>{{ event }}</span>
                                 <strong>{{ analysis.fundamentals.has_high_impact_events ? '!!!' : '!!' }}</strong>
                             </div>
                         }
-                        @if (!analysis.fundamentals?.events?.length) {
+                        @if (!analysis.fundamentals.events.length) {
                            <div class="no-events-sm">No critical data expected.</div>
                         }
                     </div>
@@ -1036,14 +1036,6 @@ export class InstrumentCardComponent implements OnChanges {
   getVolumeStatus(): string {
     // This would need volume data from the analysis
     return 'ANALYZING'; // Placeholder
-  }
-
-  getVolumeCheck(): string {
-    return 'warn'; // Placeholder
-  }
-
-  getVolumeCorrelation(): string {
-    return 'Volume analysis confirms price action strength';
   }
 
   getLevelStatus(): string {

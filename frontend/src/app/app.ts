@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
-import { PerformanceBannerComponent } from './components/performance-banner/performance-banner.component';
 import { StrategySettingsComponent } from './components/strategy-settings/strategy-settings.component';
 import { CorrelationModalComponent } from './components/correlation-modal/correlation-modal.component';
 import { UserManualComponent } from './components/user-manual/user-manual.component';
@@ -18,7 +17,7 @@ import { interval, Subscription, timer } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
