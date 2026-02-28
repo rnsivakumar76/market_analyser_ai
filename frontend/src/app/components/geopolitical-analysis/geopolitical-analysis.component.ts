@@ -158,6 +158,7 @@ export class GeopoliticalAnalysisComponent implements OnInit {
         description: event.description,
         source: event.source,
         published: event.published,
+        affected_regions: event.affected_regions,
         affected_sectors: event.affected_sectors,
         conflict_keywords: event.conflict_keywords
       })),
@@ -167,6 +168,7 @@ export class GeopoliticalAnalysisComponent implements OnInit {
         description: event.description,
         source: event.source,
         published: event.published,
+        affected_regions: event.affected_regions,
         affected_sectors: event.affected_sectors,
         conflict_keywords: event.conflict_keywords
       }))

@@ -90,10 +90,10 @@
                 <p class="alert-description">{{ alert.description }}</p>
                 <div class="alert-details">
                   <div class="affected-regions">
-                    <strong>Regions:</strong> {{ alert.affected_regions.join(', ') }}
+                    <strong>Regions:</strong> {{ alert.affected_regions?.join(', ') || 'Global' }}
                   </div>
                   <div class="affected-sectors">
-                    <strong>Sectors:</strong> {{ alert.affected_sectors.join(', ') }}
+                    <strong>Sectors:</strong> {{ alert.affected_sectors?.join(', ') || 'Various' }}
                   </div>
                 </div>
               </div>
