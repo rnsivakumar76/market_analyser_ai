@@ -55,7 +55,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
            <p class="synthesis-text">{{ analysis.trade_signal.executive_summary }}</p>
            <div class="synthesis-tags">
               @for (reason of analysis.trade_signal.reasons; track reason) {
-                <span class="syn-tag"># {{ reason }}</span>
+                <span class="syn-tag" [class]="getReasonImpactClass(reason)"># {{ reason }}</span>
               }
            </div>
         </div>
@@ -317,6 +317,20 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .terminal-body { padding: 0; }
     .terminal-body.bullish { border-left: 3px solid #a6e3a1; }
     .terminal-body.bearish { border-left: 3px solid #f38ba8; }
+
+    /* AI EXECUTIVE SUMMARY */
+    .ai-executive-synthesis { padding: 24px; background: rgba(30, 30, 46, 0.3); border-bottom: 1px solid #1f1f3a; }
+    .ai-executive-synthesis.bullish { background: rgba(166, 227, 161, 0.05); }
+    .ai-executive-synthesis.bearish { background: rgba(243, 139, 168, 0.05); }
+    .synthesis-header { font-size: 0.65rem; font-weight: 950; color: #89b4fa; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
+    .synthesis-text { font-size: 1.1rem; color: #cdd6f4; line-height: 1.4; margin-bottom: 16px; font-weight: 500; }
+    .synthesis-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .syn-tag { font-size: 0.65rem; padding: 4px 10px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; color: #9399b2; font-weight: 600; }
+    .syn-tag.positive { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; border-color: rgba(166, 227, 161, 0.3); }
+    .syn-tag.negative { background: rgba(243, 139, 168, 0.1); color: #f38ba8; border-color: rgba(243, 139, 168, 0.3); }
+    .syn-tag.neutral { background: rgba(249, 226, 175, 0.1); color: #f9e2af; border-color: rgba(249, 226, 175, 0.3); }
+    .syn-tag.warning { background: rgba(250, 179, 135, 0.1); color: #fab387; border-color: rgba(250, 179, 135, 0.3); }
+    .syn-tag.info { background: rgba(137, 180, 250, 0.1); color: #89b4fa; border-color: rgba(137, 180, 250, 0.3); }
 
     /* HUD UPGRADE (ZERO WASTE) */
     .terminal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: #0b0b15; border-bottom: 1px solid #1f1f3a; }
@@ -755,6 +769,48 @@ export class InstrumentCardComponent implements OnChanges {
     const score = this.analysis.trade_signal.score;
     if (score >= 7) return 'positive';
     if (score <= 4) return 'negative';
+    return 'neutral';
+  }
+
+  getReasonImpactClass(reason: string): string {
+    const lowerReason = reason.toLowerCase();
+    
+    // Positive indicators
+    if (lowerReason.includes('bullish') || lowerReason.includes('positive') || 
+        lowerReason.includes('strength') || lowerReason.includes('momentum') ||
+        lowerReason.includes('breakout') || lowerReason.includes('support') ||
+        lowerReason.includes('leader') || lowerReason.includes('buy') ||
+        lowerReason.includes('opportunity') || lowerReason.includes('boost')) {
+      return 'positive';
+    }
+    
+    // Negative indicators  
+    if (lowerReason.includes('bearish') || lowerReason.includes('negative') ||
+        lowerReason.includes('weak') || lowerReason.includes('resistance') ||
+        lowerReason.includes('extended') || lowerReason.includes('overbought') ||
+        lowerReason.includes('oversold') || lowerReason.includes('sell') ||
+        lowerReason.includes('risk') || lowerReason.includes('caution') ||
+        lowerReason.includes('warning') || lowerReason.includes('laggard')) {
+      return 'negative';
+    }
+    
+    // Warning/neutral indicators
+    if (lowerReason.includes('unclear') || lowerReason.includes('mixed') ||
+        lowerReason.includes('conflicting') || lowerReason.includes('wait') ||
+        lowerReason.includes('sideways') || lowerReason.includes('neutral') ||
+        lowerReason.includes('consolidation') || lowerReason.includes('range')) {
+      return 'neutral';
+    }
+    
+    // Informational indicators
+    if (lowerReason.includes('adx') || lowerReason.includes('rsi') ||
+        lowerReason.includes('volume') || lowerReason.includes('price') ||
+        lowerReason.includes('trend') || lowerReason.includes('news') ||
+        lowerReason.includes('sentiment') || lowerReason.includes('high')) {
+      return 'info';
+    }
+    
+    // Default to neutral for unknown reasons
     return 'neutral';
   }
 
