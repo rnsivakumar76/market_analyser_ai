@@ -68,9 +68,9 @@ resource "aws_s3_bucket_policy" "frontend_public" {
 
 
 # ------------------------------------------------------------------------------
-# CloudFront  HTTPS & Content Delivery
+# CloudFront  HTTPS & Content Delivery - Fixed CachedMethods issue
 # ------------------------------------------------------------------------------
-resource "aws_cloudfront_distribution" "frontend" {
+resource "aws_cloudfront_distribution" "frontend_v2" {
   origin {
     domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
     origin_id   = "S3WebsiteOrigin"
