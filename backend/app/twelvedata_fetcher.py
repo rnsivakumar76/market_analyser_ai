@@ -41,12 +41,12 @@ class TwelveDataFetcher:
         self.client = TDClient(apikey=api_key)
         
     def _rate_limit_wait(self):
-        """Ensures safe interval between calls."""
+        """Ensures safe interval between calls. For Lambda/Free-Tier, we use a 2.5s burst gap."""
         with self._lock:
             now = time.time()
             elapsed = now - TwelveDataFetcher._last_call_time
-            # 1.25s interval to safely stay under 55 requests/min
-            wait_time = 1.25 - elapsed
+            # 2.5s interval is safer for free keys while still beating 30s Lambda timeout
+            wait_time = 2.5 - elapsed
             if wait_time > 0:
                 time.sleep(wait_time)
             TwelveDataFetcher._last_call_time = time.time()
@@ -99,7 +99,7 @@ class TwelveDataFetcher:
                 
             if not requested_td_symbols: return
 
-            CHUNK_SIZE = 8 
+            CHUNK_SIZE = 20 # Increased from 8 to reduce total calls (Standard batch limit is 30)
             for i in range(0, len(requested_td_symbols), CHUNK_SIZE):
                 chunk = requested_td_symbols[i:i + CHUNK_SIZE]
                 try:
