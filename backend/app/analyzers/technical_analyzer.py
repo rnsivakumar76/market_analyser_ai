@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Tuple
-from ..models import TechnicalAnalysis, PivotPoints, Signal, FibonacciLevels
+from typing import Dict, Any, Tuple, Optional
+from ..models import TechnicalAnalysis, PivotPoints, Signal, FibonacciLevels, SessionContext
+from .strength_analyzer import calculate_rsi
 
 def calculate_pivot_points(df: pd.DataFrame) -> PivotPoints:
     """
@@ -129,12 +130,102 @@ def calculate_fibonacci_levels(df: pd.DataFrame) -> FibonacciLevels:
         ext_1618=round(float(ext_1618), 2)
     )
 
+
+def detect_rsi_divergence(df: pd.DataFrame, lookback: int = 20) -> Optional[str]:
+    """
+    Detect RSI divergence over the last `lookback` bars.
+    Returns: 'bullish' | 'bearish' | None
+    
+    Bullish divergence: price makes lower low, RSI makes higher low -> reversal up
+    Bearish divergence: price makes higher high, RSI makes lower high -> reversal down
+    """
+    if len(df) < lookback + 2:
+        return None
+    
+    recent = df.tail(lookback + 2).copy()
+    closes = recent['Close']
+    
+    # Calculate RSI series
+    delta = closes.diff()
+    gain = delta.where(delta > 0, 0.0).rolling(14).mean()
+    loss = (-delta).where(delta < 0, 0.0).rolling(14).mean()
+    rs = gain / loss.replace(0, float('inf'))
+    rsi_series = (100 - (100 / (1 + rs))).dropna()
+    
+    if len(rsi_series) < 4:
+        return None
+    
+    # Mid-point vs current
+    mid = len(closes) // 2
+    price_mid = float(closes.iloc[mid])
+    price_now = float(closes.iloc[-1])
+    rsi_mid = float(rsi_series.iloc[len(rsi_series) // 2])
+    rsi_now = float(rsi_series.iloc[-1])
+    
+    # Bearish divergence: price higher high, RSI lower high
+    if price_now > price_mid * 1.005 and rsi_now < rsi_mid - 3:
+        return 'bearish'
+    
+    # Bullish divergence: price lower low, RSI higher low
+    if price_now < price_mid * 0.995 and rsi_now > rsi_mid + 3:
+        return 'bullish'
+    
+    return None
+
+
+def calculate_std_dev_bands(df: pd.DataFrame, period: int = 20) -> tuple[float, float]:
+    """Calculate 1 and 2 standard deviation levels from the 20-period mean."""
+    if len(df) < period:
+        return 0.0, 0.0
+    
+    recent_closes = df['Close'].tail(period)
+    std = recent_closes.std()
+    return float(std), float(std * 2)
+
+
+def analyze_session_context(df: pd.DataFrame) -> SessionContext:
+    """Extract PDH, PDL and estimate London Open if intraday data available."""
+    # Previous complete session (assuming daily bars for default)
+    if len(df) < 2:
+        return SessionContext(pdh=0.0, pdl=0.0, current_session_range_pct=0.0, description="N/A")
+    
+    prev_bar = df.iloc[-2]
+    pdh = float(prev_bar['High'])
+    pdl = float(prev_bar['Low'])
+    
+    current_high = float(df['Close'].max())
+    current_low = float(df['Close'].min())
+    session_range = ((current_high - current_low) / current_low * 100) if current_low > 0 else 0.0
+    
+    london_open = None
+    # If the index is a DatetimeIndex and contains time (not just date)
+    if isinstance(df.index, pd.DatetimeIndex) and df.index[0].hour != df.index[1].hour:
+        # Simplistic: Find the first bar after 08:00 UTC
+        london_bars = df[df.index.hour == 8]
+        if not london_bars.empty:
+            london_open = float(london_bars.iloc[0]['Open'])
+
+    desc = f"Prev Day High: {pdh:.2f}, Low: {pdl:.2f}."
+    if london_open:
+        desc += f" London Open: {london_open:.2f}."
+
+    return SessionContext(
+        pdh=pdh,
+        pdl=pdl,
+        london_open=london_open,
+        current_session_range_pct=float(round(session_range, 2)),
+        description=desc
+    )
+
+
 def analyze_technical_indicators(df: pd.DataFrame) -> TechnicalAnalysis:
     """Main function to consolidate technical indicators."""
     pivots = calculate_pivot_points(df)
     fibs = calculate_fibonacci_levels(df)
     least_resistance = analyze_least_resistance_line(df)
     breakout_type, confidence = detect_trend_breakout(df)
+    rsi_divergence = detect_rsi_divergence(df)
+    std1, std2 = calculate_std_dev_bands(df)
     
     current_price = df['Close'].iloc[-1]
     
@@ -151,6 +242,12 @@ def analyze_technical_indicators(df: pd.DataFrame) -> TechnicalAnalysis:
     elif breakout_type == "bearish_breakout":
         breakout_desc = f" BEARISH BREAKOUT detected with {confidence*100:.0f}% vol confirmation."
     
+    divergence_desc = ""
+    if rsi_divergence == 'bullish':
+        divergence_desc = " RSI Bullish Divergence detected — potential reversal up."
+    elif rsi_divergence == 'bearish':
+        divergence_desc = " RSI Bearish Divergence detected — potential reversal down."
+    
     resistance_desc = f" Line of Least Resistance is {least_resistance.upper()}."
     
     return TechnicalAnalysis(
@@ -159,5 +256,8 @@ def analyze_technical_indicators(df: pd.DataFrame) -> TechnicalAnalysis:
         least_resistance_line=least_resistance,
         trend_breakout=breakout_type,
         breakout_confidence=float(confidence),
-        description=f"{pivot_desc}{resistance_desc}{breakout_desc}"
+        rsi_divergence=rsi_divergence,
+        std_dev_1=float(round(std1, 2)),
+        std_dev_2=float(round(std2, 2)),
+        description=f"{pivot_desc}{resistance_desc}{breakout_desc}{divergence_desc}"
     )

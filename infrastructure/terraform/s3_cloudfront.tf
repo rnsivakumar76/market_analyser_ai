@@ -124,7 +124,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
     forwarded_values {
       query_string = true
-      headers      = ["Authorization", "Origin", "Referer"]
+      headers      = ["Authorization", "Origin", "Referer", "X-Forwarded-Host", "X-Forwarded-Proto"]
       cookies {
         forward = "all"
       }
@@ -160,8 +160,13 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
+  aliases = var.domain_name != "" ? [var.domain_name] : []
+
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.acm_certificate_arn == "" ? true : null
+    acm_certificate_arn            = var.acm_certificate_arn != "" ? var.acm_certificate_arn : null
+    ssl_support_method             = var.acm_certificate_arn != "" ? "sni-only" : null
+    minimum_protocol_version       = var.acm_certificate_arn != "" ? "TLSv1.2_2021" : null
   }
 
   tags = {

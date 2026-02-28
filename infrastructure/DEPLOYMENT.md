@@ -1,10 +1,9 @@
 # 🚀 Deployment Guide — Market Analyser on AWS Lambda
 
 ### ⚡ Current Migration Status
-- **Backend**: AWS Lambda + API Gateway -> **Live**
-- **Frontend**: S3 Website hosting -> **Live**
-- **API URL**: `https://o9dgs1ujz1.execute-api.ap-southeast-1.amazonaws.com/api`
-- **Web App**: `http://market-analyser-frontend-614686365382.s3-website-ap-southeast-1.amazonaws.com`
+- **Backend (Lambda)**: `https://u50e9kfngd.execute-api.ap-southeast-1.amazonaws.com/api`
+- **Frontend (CloudFront)**: `https://d114jnk74mrdln.cloudfront.net`
+- **S3 Website (Backup)**: `http://market-analyser-frontend-dev-614686365382.s3-website-ap-southeast-1.amazonaws.com`
 
 ---
 
@@ -24,6 +23,23 @@ GitHub Actions (OIDC Authentication - ZERO AWS KEYS STORED!)
    ├── Plan  → Terraform (infra changes)
    └── Deploy → Lambda Code Update + S3 sync
 ```
+
+### Performance & Stability Constraints (CRITICAL)
+
+To ensure backend stability under AWS Lambda (30s timeout) and TwelveData Free Tier (8 req/min), follow these rules:
+
+1.  **Parallel Data Fetching:** All TwelveData batch calls MUST be executed in parallel using `ThreadPoolExecutor` within `main.py`. Sequential calls will cause a Gateway Timeout.
+2.  **Benchmark Caching:** Macro indicators (DXY, TNX, SPX, BTC) are cached globally for 10 minutes (`_BENCHMARK_CACHE`). Do not bypass this cache for individual instruments.
+3.  **JSON Safety:** Always wrap final API responses in `_scrub_nans()`. Pydantic models containing `NaN` or `Infinity` from technical analysis will cause the backend to crash during JSON serialization.
+4.  **CORS & Redirects:** `GOOGLE_REDIRECT_URI` is discovery-based. Ensure `FRONTEND_URL` in Lambda matches your CloudFront or custom domain.
+
+---
+
+## 🚀 Future Feature Workflow
+To prevent breaking the stable base:
+1.  **Draft:** Create features in separate files.
+2.  **Integration:** Hook them into `main.py` ensuring they don't add more than 500ms of latency.
+3.  **Validation:** Test against `api/health/config-check` before deployment.
 
 ## 💰 Estimated Monthly Cost (AWS Free Tier Aware)
 

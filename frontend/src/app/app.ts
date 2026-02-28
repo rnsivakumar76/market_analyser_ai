@@ -75,8 +75,7 @@ export class App implements OnInit, OnDestroy {
     }
 
     if (this.authService.isLoggedIn) {
-      this.loadPreferences();
-      this.runAnalysis(false); // Initial load: not silent, show loading screen
+      this.loadPreferences(); // runAnalysis is called inside, after mode is set
       this.startAutoRefresh();
     }
   }
@@ -109,10 +108,16 @@ export class App implements OnInit, OnDestroy {
     this.analyzerService.getPreferences().subscribe({
       next: (prefs) => {
         this.userPreferences.set(prefs);
+        // Set mode FIRST, then run analysis so first fetch uses the persisted mode
         this.strategyMode.set(prefs.strategy_mode || 'long_term');
         this.prefsLoaded.set(true);
+        this.runAnalysis(false); // Initial load with correct persisted mode
       },
-      error: () => { this.prefsLoaded.set(true); }
+      error: () => {
+        // Preferences unavailable (network error, new user) — run with default mode
+        this.prefsLoaded.set(true);
+        this.runAnalysis(false);
+      }
     });
   }
 
@@ -122,10 +127,15 @@ export class App implements OnInit, OnDestroy {
 
   toggleStrategyMode() {
     const newMode = this.strategyMode() === 'long_term' ? 'short_term' : 'long_term';
-    this.strategyMode.set(newMode);
-    this.savePreference('strategy_mode', newMode);
-    this.runAnalysis();
-    this.secondsRemaining = this.REFRESH_INTERVAL_SEC; // Reset countdown on manual toggle
+    this.switchStrategyMode(newMode);
+  }
+
+  switchStrategyMode(mode: 'long_term' | 'short_term') {
+    if (this.strategyMode() === mode) return; // already in this mode
+    this.strategyMode.set(mode);
+    this.savePreference('strategy_mode', mode);
+    this.runAnalysis(); // triggers full refetch with new mode
+    this.secondsRemaining = this.REFRESH_INTERVAL_SEC; // reset countdown
   }
 
   refreshAnalysis() {

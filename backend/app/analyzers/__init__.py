@@ -14,6 +14,8 @@ from .news_analyzer import analyze_news_sentiment
 from .pullback_warning_analyzer import analyze_pullback_warning
 from .relative_strength_analyzer import analyze_relative_strength
 from .psychological_analyzer import analyze_psychological_state
+from .intermarket_analyzer import analyze_intermarket_context
+from .technical_analyzer import analyze_session_context
 from ..models import CandleAnalysis, PerformanceSummary, CorrelationData, PullbackWarningAnalysis
 
 __all__ = [
@@ -39,5 +41,7 @@ __all__ = [
     'analyze_pullback_warning',
     'PullbackWarningAnalysis',
     'analyze_relative_strength',
-    'analyze_psychological_state'
+    'analyze_psychological_state',
+    'analyze_intermarket_context',
+    'analyze_session_context'
 ]

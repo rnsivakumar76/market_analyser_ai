@@ -9,6 +9,8 @@ from .auth import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
+
 # Replace with your actual Google Client ID and Secret
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
@@ -39,29 +41,44 @@ oauth.register(
 
 @router.get('/login')
 async def login(request: Request):
-    # Construct exact redirect URI using FRONTEND_URL to avoid proxy hostname issues
-    # FRONTEND_URL is something like https://d123.cloudfront.net
-    if "localhost" in str(request.base_url):
+    # Determine the redirect URI dynamically
+    # 1. Check for explicit override
+    explicit_redirect = os.environ.get("GOOGLE_REDIRECT_URI")
+    if explicit_redirect:
+        url = explicit_redirect
+    # 2. Localhost fallback
+    elif "localhost" in str(request.base_url) or "127.0.0.1" in str(request.base_url):
         url = str(request.url_for('auth_callback'))
+    # 3. Production Gateway (CloudFront / Custom Domain)
     else:
-        # For production, we must use the CloudFront/Public URL precisely
-        # FRONTEND_URL already has protocol
+        # We MUST use the public domain (CloudFront) that Google expects.
+        # Use FRONTEND_URL if set, otherwise try to reconstruct from headers.
         base = FRONTEND_URL.rstrip('/')
         url = f"{base}/api/auth/callback"
         
-    logger.info(f"Initiating Google login. Redirect URI: {url}")
-    return await oauth.google.authorize_redirect(request, url)
+    logger.info(f"Initiating Google login. Final Redirect URI: {url}")
+    try:
+        if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+            raise ValueError("Google Client ID or Secret is not configured in environment variables.")
+        return await oauth.google.authorize_redirect(request, url)
+    except Exception as e:
+        logger.error(f"Failed to initiate Google login: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Authentication Configuration Error: {str(e)}")
 
 from fastapi.responses import RedirectResponse
 import json
 import urllib.parse
 
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
-
 @router.get('/callback', name='auth_callback')
 async def auth_callback(request: Request):
     try:
         logger.info("Auth callback received. Attempting to exchange code for token...")
+        # Debug: check for session
+        if not request.session:
+            logger.warning("No session cookie found in callback request! This will cause state mismatch.")
+        elif 'google:state' not in request.session:
+            logger.warning(f"Session found but 'google:state' is missing. Available keys: {list(request.session.keys())}")
+            
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get('userinfo')
         if not user_info:
