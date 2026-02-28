@@ -171,6 +171,101 @@
       }
     </div>
 
+    <!-- Right Performance Panel -->
+    <div class="performance-panel">
+      <div class="perf-panel-header">
+        <h3 class="perf-panel-title">PERFORMANCE & STATUS</h3>
+      </div>
+
+      @if (weeklyPerformance(); as perf) {
+      <div class="perf-card" [class.positive]="perf.total_pnl_percent > 0">
+        <div class="perf-card-label">WEEKLY PNL</div>
+        <div class="perf-card-value" [class.positive]="perf.total_pnl_percent > 0" [class.negative]="perf.total_pnl_percent <= 0">
+          {{ perf.total_pnl_percent > 0 ? '+' : '' }}{{ perf.total_pnl_percent }}%
+        </div>
+        <div class="perf-card-stats">
+          <div class="pcs-item">
+            <span class="pcs-label">SETUPS</span>
+            <span class="pcs-value">{{ perf.total_trades }}</span>
+          </div>
+          <div class="pcs-item">
+            <span class="pcs-label">WIN RATE</span>
+            <span class="pcs-value">{{ perf.win_rate }}%</span>
+          </div>
+        </div>
+        <div class="perf-card-stats">
+          <div class="pcs-item">
+            <span class="pcs-label">BEST ({{ perf.best_trade_symbol }})</span>
+            <span class="pcs-value good">+{{ perf.best_trade_pnl }}%</span>
+          </div>
+          <div class="pcs-item">
+            <span class="pcs-label">WORST ({{ perf.worst_trade_symbol }})</span>
+            <span class="pcs-value bad">{{ perf.worst_trade_pnl }}%</span>
+          </div>
+        </div>
+      </div>
+      }
+
+      <div class="perf-card">
+        <div class="perf-card-label">MARKET SUMMARY</div>
+        <div class="perf-market-stats">
+          <div class="pms-item bullish">
+            <span class="pms-icon">▲</span>
+            <span class="pms-count">{{ bullishCount }}</span>
+            <span class="pms-label">Bullish</span>
+          </div>
+          <div class="pms-item bearish">
+            <span class="pms-icon">▼</span>
+            <span class="pms-count">{{ bearishCount }}</span>
+            <span class="pms-label">Bearish</span>
+          </div>
+          <div class="pms-item highlight">
+            <span class="pms-icon">⚡</span>
+            <span class="pms-count">{{ tradeWorthyCount }}</span>
+            <span class="pms-label">Trade-worthy</span>
+          </div>
+        </div>
+        <div class="pms-instruments">{{ instruments().length }} instruments tracked</div>
+      </div>
+
+      @if (psychologicalGuardrail(); as guard) {
+      <div class="perf-card shield-card" [class.restricted]="guard.status === 'restricted'">
+        <div class="perf-card-label">🛡️ PSYCHOLOGICAL SHIELD</div>
+        <div class="shield-status-display" [class.active]="guard.status === 'active'" [class.restricted]="guard.status === 'restricted'">
+          {{ guard.status === 'active' ? 'ACTIVE' : '🚨 RESTRICTED' }}
+        </div>
+        <div class="shield-details">
+          <div class="pcs-item">
+            <span class="pcs-label">DAILY PNL</span>
+            <span class="pcs-value" [class.bad]="guard.daily_pnl < 0">{{ guard.daily_pnl.toFixed(2) }}%</span>
+          </div>
+          <div class="pcs-item">
+            <span class="pcs-label">LOSS LIMIT</span>
+            <span class="pcs-value">{{ guard.daily_loss_limit.toFixed(2) }}%</span>
+          </div>
+        </div>
+      </div>
+      }
+
+      <div class="perf-card system-card">
+        <div class="perf-card-label">SYSTEM STATUS</div>
+        @if (lastUpdated()) {
+        <div class="sys-stat">
+          <span class="sys-label">🕐 LAST UPDATE</span>
+          <span class="sys-value">{{ lastUpdated() }}</span>
+        </div>
+        <div class="sys-stat">
+          <span class="sys-label">⏱ NEXT REFRESH</span>
+          <span class="sys-value" [class.syncing]="loading()">{{ nextRefreshCountdown() }}</span>
+        </div>
+        }
+        <div class="sys-stat">
+          <span class="sys-label">INSTRUMENTS</span>
+          <span class="sys-value">{{ instruments().length }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Lockdown Overlay -->
     @if (psychologicalGuardrail(); as guard) {
     @if (guard.status === 'restricted') {
