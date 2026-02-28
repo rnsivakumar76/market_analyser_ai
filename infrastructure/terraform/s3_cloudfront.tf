@@ -161,10 +161,9 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # Default behavior for S3 static content - LOWER PRECEDENCE
   default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3WebsiteOrigin"
-    compress               = true
+    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3WebsiteOrigin"
 
     forwarded_values {
       query_string = false
