@@ -76,7 +76,7 @@ resource "aws_cloudfront_origin_access_identity" "origin" {
   comment = "Origin access identity for CloudFront distribution"
 }
 
-resource "aws_cloudfront_distribution" "frontend_new" {
+resource "aws_cloudfront_distribution" "frontend_fixed" {
 
   enabled             = true
   default_root_object = "index.html"
