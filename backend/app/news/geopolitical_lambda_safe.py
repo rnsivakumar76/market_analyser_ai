@@ -1,6 +1,6 @@
 """
 Lambda-Safe Geopolitical News Sentiment Analyzer
-Fallback implementation that works without external dependencies
+Enhanced with caching, monitoring, and error handling
 """
 
 from datetime import datetime, timedelta
@@ -8,6 +8,10 @@ from typing import Dict, List, Optional
 import logging
 import json
 import os
+import time
+
+from .geopolitical_cache import GeopoliticalCacheManager
+from .geopolitical_monitoring import GeopoliticalMonitor, GeopoliticalAlertManager
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +19,15 @@ class LambdaSafeGeopoliticalAnalyzer:
     def __init__(self):
         # Use provided API key or environment variable
         self.news_api_key = os.getenv('NEWS_API_KEY', '87d3fef01bed4240b1e05926d7892e24')
-        self.base_url = 'https://newsapi.org/v2/everything'
+        self.base_url = 'https://newsapi.org/v2/everywhere'
+        
+        # Initialize cache and monitoring
+        self.cache_manager = GeopoliticalCacheManager()
+        self.monitor = GeopoliticalMonitor()
+        self.alert_manager = GeopoliticalAlertManager()
         
         logger.info(f"Initializing LambdaSafeGeopoliticalAnalyzer with API key: {self.news_api_key[:8]}...")
+        logger.info("Cache and monitoring systems initialized")
         
         # Geopolitical keywords for news filtering
         self.geopolitical_keywords = [

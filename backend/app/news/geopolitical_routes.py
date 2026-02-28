@@ -44,11 +44,38 @@ class GeopoliticalResponse(BaseModel):
 @router.get("/sentiment", response_model=GeopoliticalResponse)
 def get_geopolitical_sentiment():
     """Get real-time geopolitical sentiment analysis"""
+    start_time = geopolitical_analyzer.monitor.start_execution_timer()
+    cache_hit = False
+    error_occurred = False
+    error_message = None
+    
     try:
         logger.info("Starting geopolitical sentiment analysis...")
         
-        # Run analysis
+        # Try to get cached analysis first
+        cached_data = geopolitical_analyzer.cache_manager.get_analysis()
+        if cached_data:
+            cache_hit = True
+            execution_time = geopolitical_analyzer.monitor.end_execution_timer(start_time)
+            
+            # Record successful cache hit
+            geopolitical_analyzer.monitor.record_execution(
+                execution_time_ms=execution_time,
+                cache_hit=cache_hit,
+                events_processed=len(cached_data.get('critical_events', [])) + len(cached_data.get('high_impact_events', [])),
+                sentiment_score=cached_data.get('overall_sentiment', {}).get('overall_score', 0),
+                error_occurred=False
+            )
+            
+            logger.info(f"Returning cached analysis (execution: {execution_time:.2f}ms)")
+            return cached_data
+        
+        # Run analysis if no cache hit
+        logger.info("Cache miss - running fresh analysis...")
         analysis_result = geopolitical_analyzer.analyze_geopolitical_sentiment()
+        
+        # Cache the result
+        geopolitical_analyzer.cache_manager.store_analysis(analysis_result)
         
         # Convert to response format
         response = GeopoliticalResponse(
@@ -90,20 +117,105 @@ def get_geopolitical_sentiment():
             }
         )
         
+        execution_time = geopolitical_analyzer.monitor.end_execution_timer(start_time)
+        
+        # Record successful execution
+        geopolitical_analyzer.monitor.record_execution(
+            execution_time_ms=execution_time,
+            cache_hit=cache_hit,
+            events_processed=len(analysis_result['critical_events']) + len(analysis_result['high_impact_events']),
+            sentiment_score=analysis_result['overall_sentiment']['overall_score'],
+            error_occurred=False
+        )
+        
+        logger.info(f"Analysis completed successfully (execution: {execution_time:.2f}ms)")
         return response
         
     except Exception as e:
-        logger.error(f"Error in geopolitical sentiment analysis: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
-
-@router.get("/crisis-alerts")
-def get_crisis_alerts():
-    """Get immediate crisis alerts for trading"""
-    try:
-        analysis_result = geopolitical_analyzer.analyze_geopolitical_sentiment()
+        error_occurred = True
+        error_message = str(e)
+        execution_time = geopolitical_analyzer.monitor.end_execution_timer(start_time)
         
-        # Filter for critical and high-impact events
-        alerts = []
+        # Record error execution
+        geopolitical_analyzer.monitor.record_execution(
+            execution_time_ms=execution_time,
+            cache_hit=cache_hit,
+            events_processed=0,
+            sentiment_score=0,
+            error_occurred=True,
+            error_message=error_message
+        )
+        
+        logger.error(f"Error in geopolitical sentiment analysis: {error_message}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {error_message}")
+
+@router.get("/health")
+def get_health_status():
+    """Get system health status and performance metrics"""
+    try:
+        health_status = geopolitical_analyzer.monitor.get_health_status()
+        performance_metrics = geopolitical_analyzer.monitor.get_performance_summary()
+        cache_stats = geopolitical_analyzer.cache_manager.get_performance_metrics()
+        alerts = geopolitical_analyzer.alert_manager.check_alerts(geopolitical_analyzer.monitor)
+        
+        return {
+            'status': health_status['status'],
+            'timestamp': datetime.now().isoformat(),
+            'health': health_status,
+            'performance': performance_metrics,
+            'cache': cache_stats,
+            'alerts': alerts,
+            'system_info': {
+                'analyzer_type': 'lambda_safe',
+                'cache_enabled': True,
+                'monitoring_enabled': True,
+                'api_key_configured': bool(geopolitical_analyzer.news_api_key)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        return {
+            'status': 'UNHEALTHY',
+            'timestamp': datetime.now().isoformat(),
+            'error': str(e)
+        }
+
+@router.get("/metrics")
+def get_detailed_metrics():
+    """Get detailed performance metrics and analytics"""
+    try:
+        performance_summary = geopolitical_analyzer.monitor.get_performance_summary()
+        error_analysis = geopolitical_analyzer.monitor.get_error_analysis()
+        cache_stats = geopolitical_analyzer.cache_manager.get_performance_metrics()
+        
+        return {
+            'timestamp': datetime.now().isoformat(),
+            'performance': performance_summary,
+            'errors': error_analysis,
+            'cache': cache_stats,
+            'recommendations': geopolitical_analyzer.monitor.get_health_status()['recommendations']
+        }
+        
+    except Exception as e:
+        logger.error(f"Metrics error: {e}")
+        raise HTTPException(status_code=500, detail=f"Metrics failed: {e}")
+
+@router.post("/cache/clear")
+def clear_cache():
+    """Clear geopolitical analysis cache"""
+    try:
+        success = geopolitical_analyzer.cache_manager.invalidate_cache()
+        
+        return {
+            'success': success,
+            'message': 'Cache cleared successfully' if success else 'Failed to clear cache',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Cache clear error: {e}")
+        raise HTTPException(status_code=500, detail=f"Cache clear failed: {e}")
         
         for event in analysis_result['critical_events']:
             alerts.append({
