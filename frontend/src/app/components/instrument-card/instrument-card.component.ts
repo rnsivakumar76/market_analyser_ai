@@ -60,12 +60,16 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
            </div>
         </div>
 
-        <!-- 3. DECISION TILES (NEXUS PRO GRID - FULLY RESTORED) -->
-        <!-- 3. DECISION TILES (3-COLUMN COMMAND CENTER) -->
-        <div class="terminal-grid">
-          
-          <!-- COLUMN 1: STRATEGIC ACTION (TACTICAL EXECUTION) -->
-          <section class="t-tile action-tile">
+        <!-- ANALYSIS TABS NAVIGATION -->
+        <div class="analysis-tabs">
+          <button class="atab" [class.active]="activeAnalysisTab === 'scaling'" (click)="activeAnalysisTab = 'scaling'">🎯 SCALING</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'risk'" (click)="activeAnalysisTab = 'risk'">🛡️ RISK</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">📊 TECHNICAL</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'geopolitical'" (click)="activeAnalysisTab = 'geopolitical'">📰 GEOPOLITICAL</button>
+        </div>
+
+          @if (activeAnalysisTab === 'scaling') {
+          <section class="t-tile action-tile tab-content-tile">
             <div class="tile-header">🎯 STRATEGIC ACTION & SCALING</div>
             <div class="action-hero">
                <div class="aph-text">{{ analysis.trade_signal.action_plan }}</div>
@@ -109,9 +113,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <button class="btn-secondary" (click)="toggleChart()">📊 Open Chart</button>
             </div>
           </section>
+          }
 
-          <!-- COLUMN 2: VALIDATION & REASONING (RISK & CORRELATION) -->
-          <section class="t-tile status-tile">
+          @if (activeAnalysisTab === 'risk') {
+          <section class="t-tile status-tile tab-content-tile">
             <div class="tile-header">🛡️ VALIDATION & RISK INTEL</div>
             
             <div class="checklist-compact-full">
@@ -192,9 +197,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 {{ getTradeVerdict() }}
             </div>
           </section>
+          }
 
-          <!-- COLUMN 3: INSTITUTIONAL INTELLIGENCE STACK (ALWAYS FULL) -->
-          <section class="t-tile intel-tile">
+          @if (activeAnalysisTab === 'technical') {
+          <section class="t-tile intel-tile tab-content-tile">
              <div class="intel-column-stack">
                 
                 <!-- EXPERT BATTLE PLAN (CONDITIONAL) -->
@@ -273,12 +279,11 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
              </div>
           </section>
-        </div>
+          }
 
-        <!-- 4. INTELLIGENCE DEEP CENTER (RESTORED LONG-FORM - NO TABS) -->
-        <!-- 5. UNIVERSAL FOOTER (GEOPOLITICAL SENTIMENT) -->
-        <div class="geopolitical-footer">
-            <div class="section-label">📰 GEOPOLITICAL NEWS & MARKET SENTIMENT</div>
+          @if (activeAnalysisTab === 'geopolitical') {
+          <section class="t-tile geo-tab-tile tab-content-tile">
+            <div class="tile-header">📰 GEOPOLITICAL NEWS & MARKET SENTIMENT</div>
             <div class="geo-grid">
                 <div class="geo-summary">
                     <div class="sah-badge-v2" [class]="analysis.news_sentiment?.label?.toLowerCase()">{{ analysis.news_sentiment?.label | uppercase }}</div>
@@ -294,12 +299,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     }
                 </div>
             </div>
-        </div>
-
-
-        <!-- COLLAPSIBLE DEEP DATA -->
-        <div class="deep-data-section" *ngIf="showMoreIntel">
-           <div class="deep-grid">
+            <div class="deep-grid geo-deep-grid">
               <div class="deep-card news">
                 <div class="dc-header">NEWS INTELLIGENCE</div>
                 <div class="mini-news-stack">
@@ -327,8 +327,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     <div class="feb-item"><span>1.618 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1618 }}</strong></div>
                  </div>
               </div>
-           </div>
-        </div>
+            </div>
+          </section>
+          }
 
         <!-- Inline Chart Area -->
         <div class="terminal-chart-area" *ngIf="showChart">
@@ -591,11 +592,26 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .intel-expander-v2 { text-align: center; }
     .exp-btn-v2 { width: 100%; padding: 12px; background: #1a1a2a; border: 1px dashed #313244; color: #6c7086; border-radius: 8px; font-weight: 900; font-size: 0.75rem; cursor: pointer; }
 
-    /* MOBILE BREAKPOINT RESTORED */
+    /* ANALYSIS TABS */
+    .analysis-tabs { display: flex; background: #0b0b15; border-bottom: 2px solid #1f1f3a; overflow-x: auto; flex-shrink: 0; }
+    .analysis-tabs::-webkit-scrollbar { height: 0; }
+    .atab { flex: 1; padding: 13px 10px; background: transparent; border: none; border-bottom: 3px solid transparent; color: #45475a; font-size: 0.65rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; white-space: nowrap; min-width: 90px; }
+    .atab:hover { color: #9399b2; background: rgba(137, 180, 250, 0.04); }
+    .atab.active { color: #89b4fa; border-bottom-color: #89b4fa; background: rgba(137, 180, 250, 0.05); }
+    .tab-content-tile { border-right: none; width: 100%; box-sizing: border-box; }
+    .geo-tab-tile { padding: 30px; }
+    .geo-deep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #1f1f3a; }
+    .expert-metrics { display: flex; gap: 8px; margin-top: 12px; }
+    .em-pill { padding: 4px 10px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; display: flex; gap: 6px; align-items: center; font-size: 0.7rem; color: #9399b2; }
+    .em-pill span { font-size: 0.5rem; text-transform: uppercase; color: #45475a; }
+    .em-pill strong { font-weight: 900; color: #89b4fa; }
+    .em-pill.intent { color: #fab387; border-color: #fab387; background: rgba(250,179,135,0.08); font-weight: 900; font-size: 0.65rem; }
+    .no-events-sm { font-size: 0.75rem; color: #45475a; font-style: italic; padding: 10px; }
+    .sah-meta { font-size: 0.65rem; color: #6c7086; margin-top: 6px; }
     @media (max-width: 768px) {
-      .terminal-grid { grid-template-columns: 1fr; }
-      .t-tile { border-right: none; }
-      .levels-stack { flex-direction: column; }
+      .analysis-tabs { overflow-x: auto; }
+      .atab { min-width: 70px; font-size: 0.6rem; padding: 10px 6px; }
+      .geo-deep-grid { grid-template-columns: 1fr; }
     }
 
     /* DEEP DATA SECTION */
@@ -760,6 +776,7 @@ export class InstrumentCardComponent implements OnChanges {
   private marketAnalyzerService = inject(MarketAnalyzerService);
 
   selectedTab: 'plan' | 'insight' = 'plan';
+  activeAnalysisTab: 'scaling' | 'risk' | 'technical' | 'geopolitical' = 'scaling';
   showChart = false;
   isLoadingChart = false;
   chartData: ChartData[] = [];
