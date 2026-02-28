@@ -115,16 +115,17 @@ resource "aws_cloudfront_distribution" "frontend" {
     error_caching_min_ttl = 300
   }
 
-  # API Behavior (No caching, passing everything)
+  # API Behavior (No caching, passing everything) - HIGHER PRECEDENCE
   ordered_cache_behavior {
-    path_pattern     = "/api/*"
-    allowed_methods  = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "APIGatewayOrigin"
+    path_pattern           = "/api/*"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods          = ["GET", "HEAD"]
+    target_origin_id        = "APIGatewayOrigin"
+    compress               = true
 
     forwarded_values {
       query_string = true
-      headers      = ["Authorization", "Origin", "Referer", "X-Forwarded-Host", "X-Forwarded-Proto"]
+      headers      = ["Authorization", "Origin", "Referer", "X-Forwarded-Host", "X-Forwarded-Proto", "Content-Type", "Accept"]
       cookies {
         forward = "all"
       }
@@ -136,6 +137,29 @@ resource "aws_cloudfront_distribution" "frontend" {
     max_ttl                = 0
   }
 
+  # OAuth callback specific behavior - HIGHEST PRECEDENCE
+  ordered_cache_behavior {
+    path_pattern           = "/api/auth/callback"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods          = []
+    target_origin_id        = "APIGatewayOrigin"
+    compress               = true
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Authorization", "Origin", "Referer", "X-Forwarded-Host", "X-Forwarded-Proto", "Content-Type", "Accept", "User-Agent", "Set-Cookie"]
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "https-only"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+  }
+
+  # Default behavior for S3 static content - LOWER PRECEDENCE
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
