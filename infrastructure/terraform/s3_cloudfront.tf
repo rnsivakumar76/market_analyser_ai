@@ -68,18 +68,23 @@ resource "aws_s3_bucket_policy" "frontend_public" {
 
 
 # ------------------------------------------------------------------------------
-# CloudFront  HTTPS & Content Delivery
+# CloudFront  HTTPS & Content Delivery - Force Recreation
 # ------------------------------------------------------------------------------
+
+resource "aws_cloudfront_origin_access_identity" "origin" {
+  comment = "Origin access identity for CloudFront distribution"
+}
+
 resource "aws_cloudfront_distribution" "frontend" {
+  lifecycle {
+    create_before_destroy = true
+  }
   origin {
-    domain_name = aws_s3_bucket_website_configuration.frontend.website_endpoint
+    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3WebsiteOrigin"
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
+    s3_origin_config {
+      origin_access_identity = aws_cloudfront_origin_access_identity.origin.iam_arn
     }
   }
 
