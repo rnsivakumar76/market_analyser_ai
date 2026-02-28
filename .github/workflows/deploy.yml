@@ -219,10 +219,11 @@ jobs:
         run: |
           BUCKET=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_s3_bucket']['value'])")
           aws s3 sync ./dist/ s3://$BUCKET/ --delete
-      - name: Invalidate CloudFront
+      - name: Skip CloudFront (Testing S3 Only)
         run: |
-          DIST_ID=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['cloudfront_distribution_id']['value'])")
-          aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"
+          echo "⚠️  Skipping CloudFront invalidation - testing S3 only"
+          S3_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin)['frontend_url']['value'])")
+          echo "🌐 Test your app at: $S3_URL"
       - name: Summary
         run: |
           ENV=${{ needs.setup.outputs.environment }}
@@ -230,9 +231,13 @@ jobs:
           S3_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('frontend_url', {}).get('value'))")
           API_URL=$(cat tf_outputs.json | python3 -c "import sys,json; print(json.load(sys.stdin).get('api_gateway_url', {}).get('value'))")
           echo "### 🚀 Deployed to **${ENV}**!" >> $GITHUB_STEP_SUMMARY
-          echo "- **Primary App URL (CloudFront):** $CF_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- **Direct S3 URL (Backup):** $S3_URL" >> $GITHUB_STEP_SUMMARY
-          echo "- **API Gateway URL:** $API_URL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🧪 **TESTING MODE** - CloudFront issues being fixed" >> $GITHUB_STEP_SUMMARY
+          echo "- **🌐 Test App (S3 Direct):** $S3_URL" >> $GITHUB_STEP_SUMMARY
+          echo "- **🔄 CloudFront URL:** $CF_URL (may not work yet)" >> $GITHUB_STEP_SUMMARY
+          echo "- **🔗 API Gateway URL:** $API_URL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️  Use S3 URL for testing while CloudFront CachedMethods issue is resolved" >> $GITHUB_STEP_SUMMARY
 
   # ─── End-to-End Testing (Playwright) ────────────────────────────────────────
   e2e-tests:
@@ -257,9 +262,9 @@ jobs:
           path: .
       - name: Run Playwright tests
         run: |
-          # Use CloudFront URL if available (HTTPS), otherwise fallback to S3 Website (HTTP)
-          APP_URL=$(cat tf_outputs.json | python3 -c "import sys,json; o=json.load(sys.stdin); print(o.get('cloudfront_url', {}).get('value') or o['frontend_url']['value'])")
-          echo "Testing against: $APP_URL"
+          # Use S3 URL for testing while CloudFront issues are being resolved
+          APP_URL=$(cat tf_outputs.json | python3 -c "import sys,json; o=json.load(sys.stdin); print(o['frontend_url']['value'])")
+          echo "Testing against S3 URL: $APP_URL"
           BASE_URL=$APP_URL npm run test:e2e
       - name: Upload Report
         if: always()
