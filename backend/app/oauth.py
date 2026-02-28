@@ -103,7 +103,7 @@ async def auth_callback(request: Request):
             "picture": user_info.get("picture")
         }
         query_string = urllib.parse.urlencode(params)
-        redirect_url = f"{FRONTEND_URL}/dashboard?{query_string}" # Added /dashboard to avoid loop
+        redirect_url = f"{FRONTEND_URL}?{query_string}" # Redirect to root, not /dashboard
         logger.info(f"Redirecting user to frontend: {FRONTEND_URL}")
         return RedirectResponse(url=redirect_url)
         
