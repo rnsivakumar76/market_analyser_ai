@@ -51,6 +51,9 @@
       <button class="menu-btn alerts-btn" (click)="showSmartAlerts.set(true)" title="Smart Alerts">
         🔔
       </button>
+      <button class="menu-btn geopolitical-btn" (click)="showGeopoliticalAnalysis.set(true)" title="Geopolitical Analysis">
+        🌍
+      </button>
       <button class="mode-toggle-btn" (click)="toggleStrategyMode()"
         [class.short-term]="strategyMode() === 'short_term'">
         <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : 'Short Term' }}</span>
@@ -216,6 +219,10 @@
 
   @if (showSmartAlerts()) {
   <app-smart-alerts [instruments]="instruments()" (close)="showSmartAlerts.set(false)"></app-smart-alerts>
+  }
+
+  @if (showGeopoliticalAnalysis()) {
+  <app-geopolitical-analysis (close)="showGeopoliticalAnalysis.set(false)"></app-geopolitical-analysis>
   }
 </div>
 } @else {

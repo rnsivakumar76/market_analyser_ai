@@ -1,0 +1,223 @@
+<div class="geopolitical-analysis">
+  <div class="header">
+    <div class="header-content">
+      <h2>🌍 Geopolitical Analysis</h2>
+      <div class="header-actions">
+        <button class="refresh-btn" (click)="refreshData()" [disabled]="loading()">
+          🔄 Refresh
+        </button>
+        <label class="auto-refresh-toggle">
+          <input type="checkbox" [checked]="autoRefresh()" (change)="toggleAutoRefresh()">
+          Auto-refresh
+        </label>
+      </div>
+    </div>
+    @if (lastUpdated()) {
+      <div class="last-updated">Last updated: {{ lastUpdated() }}</div>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Analyzing geopolitical events...</p>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="error">
+      <p>⚠️ {{ error() }}</p>
+      <button (click)="refreshData()">Retry</button>
+    </div>
+  }
+
+  @if (geopoliticalData(); as data) {
+    <div class="geopolitical-content">
+      
+      <!-- Overall Sentiment Dashboard -->
+      <section class="sentiment-dashboard">
+        <h3>📊 Global Sentiment Overview</h3>
+        <div class="sentiment-metrics">
+          <div class="metric-card">
+            <div class="metric-label">Overall Sentiment</div>
+            <div class="metric-value" [class]="getSentimentColor(data.overall_sentiment.overall_score)">
+              {{ (data.overall_sentiment.overall_score * 100).toFixed(1) }}%
+            </div>
+            <div class="metric-trend">{{ data.overall_sentiment.trend }}</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Volatility Risk</div>
+            <div class="metric-value" [class]="getRiskLevelColor(data.risk_assessment.overall_risk_level)">
+              {{ (data.overall_sentiment.volatility_risk * 100).toFixed(1) }}%
+            </div>
+            <div class="metric-trend">{{ data.risk_assessment.volatility_expectation }}</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Active Events</div>
+            <div class="metric-value">
+              {{ data.overall_sentiment.event_count }}
+            </div>
+            <div class="metric-trend">{{ data.overall_sentiment.critical_count }} critical</div>
+          </div>
+          
+          <div class="metric-card">
+            <div class="metric-label">Risk Level</div>
+            <div class="metric-value" [class]="getRiskLevelColor(data.risk_assessment.overall_risk_level)">
+              {{ data.risk_assessment.overall_risk_level }}
+            </div>
+            <div class="metric-trend">{{ data.risk_assessment.recommended_position_sizing }}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Crisis Alerts -->
+      <section class="crisis-alerts">
+        <h3>🚨 Crisis Alerts</h3>
+        @if (getCrisisAlerts().length > 0) {
+          <div class="alerts-list">
+            @for (alert of getCrisisAlerts(); track alert.title) {
+              <div class="alert-card" [class]="alert.severity.toLowerCase()">
+                <div class="alert-header">
+                  <span class="alert-severity">{{ alert.severity }}</span>
+                  <span class="alert-time">{{ formatTime(alert.published) }}</span>
+                </div>
+                <h4 class="alert-title">{{ alert.title }}</h4>
+                <p class="alert-description">{{ alert.description }}</p>
+                <div class="alert-details">
+                  <div class="affected-regions">
+                    <strong>Regions:</strong> {{ alert.affected_regions.join(', ') }}
+                  </div>
+                  <div class="affected-sectors">
+                    <strong>Sectors:</strong> {{ alert.affected_sectors.join(', ') }}
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="no-alerts">
+            <p>✅ No critical alerts at this time</p>
+          </div>
+        }
+      </section>
+
+      <!-- Trading Recommendations -->
+      <section class="trading-recommendations">
+        <h3>💰 Trading Recommendations</h3>
+        
+        <!-- Energy Markets -->
+        <div class="recommendation-section">
+          <h4>⛽ Energy Markets</h4>
+          @if (data.trading_recommendations.energy_markets.length > 0) {
+            <div class="recommendations-grid">
+              @for (rec of data.trading_recommendations.energy_markets; track rec.asset) {
+                <div class="recommendation-card">
+                  <div class="rec-header">
+                    <span class="rec-asset">{{ rec.asset }}</span>
+                    <span class="rec-action" [class]="getActionColor(rec.action)">{{ rec.action }}</span>
+                  </div>
+                  <p class="rec-reason">{{ rec.reason }}</p>
+                  <div class="rec-details">
+                    <div class="rec-confidence">
+                      <span>Confidence:</span>
+                      <span class="confidence-bar" [class]="getConfidenceColor(rec.confidence)">
+                        {{ (rec.confidence * 100).toFixed(0) }}%
+                      </span>
+                    </div>
+                    <div class="rec-timeframe">
+                      <span>Timeframe:</span>
+                      <span>{{ rec.time_horizon }}</span>
+                    </div>
+                    <div class="rec-volatility">
+                      <span>Volatility:</span>
+                      <span>{{ rec.volatility_expectation }}</span>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="no-recommendations">
+              <p>No specific energy market recommendations at this time</p>
+            </div>
+          }
+        </div>
+
+        <!-- Safe Haven Assets -->
+        <div class="recommendation-section">
+          <h4>🏆 Safe Haven Assets</h4>
+          @if (data.trading_recommendations.commodities.length > 0) {
+            <div class="recommendations-grid">
+              @for (rec of data.trading_recommendations.commodities; track rec.asset) {
+                <div class="recommendation-card">
+                  <div class="rec-header">
+                    <span class="rec-asset">{{ rec.asset }}</span>
+                    <span class="rec-action" [class]="getActionColor(rec.action)">{{ rec.action }}</span>
+                  </div>
+                  <p class="rec-reason">{{ rec.reason }}</p>
+                  <div class="rec-details">
+                    <div class="rec-confidence">
+                      <span>Confidence:</span>
+                      <span class="confidence-bar" [class]="getConfidenceColor(rec.confidence)">
+                        {{ (rec.confidence * 100).toFixed(0) }}%
+                      </span>
+                    </div>
+                    <div class="rec-timeframe">
+                      <span>Timeframe:</span>
+                      <span>{{ rec.time_horizon }}</span>
+                    </div>
+                    <div class="rec-volatility">
+                      <span>Volatility:</span>
+                      <span>{{ rec.volatility_expectation }}</span>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="no-recommendations">
+              <p>No specific safe haven recommendations at this time</p>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Sector Impact Analysis -->
+      <section class="sector-impact">
+        <h3>📈 Sector Impact Analysis</h3>
+        <div class="sector-grid">
+          @for ((impact, sector) of data.affected_sectors; track sector) {
+            <div class="sector-card" [class]="impact > 0.5 ? 'high-impact' : impact > 0.2 ? 'medium-impact' : 'low-impact'">
+              <div class="sector-name">{{ sector.toUpperCase() }}</div>
+              <div class="sector-impact">
+                <div class="impact-bar">
+                  <div class="impact-fill" [style.width.%]="impact * 100"></div>
+                </div>
+                <span class="impact-value">{{ (impact * 100).toFixed(1) }}%</span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- Quick Actions -->
+      <section class="quick-actions">
+        <h3>⚡ Quick Actions</h3>
+        <div class="action-buttons">
+          <button class="action-btn" (click)="getEnergyMarketsAnalysis()">
+            ⛽ Energy Analysis
+          </button>
+          <button class="action-btn" (click)="getSafeHavenAnalysis()">
+            🏆 Safe Haven Analysis
+          </button>
+          <button class="action-btn" (click)="refreshData()">
+            🔄 Full Refresh
+          </button>
+        </div>
+      </section>
+
+    </div>
+  }
+</div>
