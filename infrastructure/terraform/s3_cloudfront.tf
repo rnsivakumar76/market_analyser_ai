@@ -79,6 +79,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   lifecycle {
     create_before_destroy = true
   }
+  
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "S3WebsiteOrigin"
