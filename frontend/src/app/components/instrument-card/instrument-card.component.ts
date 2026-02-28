@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem } from '../../services/market-analyzer.service';
-import { InstrumentChartComponent, ChartOverlayLevel } from '../instrument-chart/instrument-chart.component';
+import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
 import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi-timeframe-overlay.component';
 import { TradeJournalComponent } from '../trade-journal/trade-journal.component';
 
@@ -232,25 +232,6 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
         </div>
 
-            <!-- SECTION: GEOPOLITICAL NEWS -->
-            <div class="intel-section">
-                <div class="section-label">📰 GEOPOLITICAL NEWS & SENTIMENT</div>
-                <div class="news-intel-stack">
-                    <div class="sentiment-analysis-hub">
-                        <div class="sah-badge" [class]="analysis.news_sentiment?.label?.toLowerCase()">{{ analysis.news_sentiment?.label }}</div>
-                        <span class="sah-score">SENTIMENT SCORE: {{ analysis.news_sentiment?.score }}</span>
-                    </div>
-                    <div class="news-headlines-stack">
-                        @for (item of analysis.news_sentiment?.news_items; track item.title) {
-                            <div class="news-line-item" (click)="openNewsModal(item)">
-                                <div class="nli-meta"><span>{{ item.source }}</span><strong>{{ item.sentiment_label }}</strong></div>
-                                <div class="nli-title">{{ item.title }}</div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- COLLAPSIBLE DEEP DATA -->
         <div class="deep-data-section" *ngIf="showMoreIntel">

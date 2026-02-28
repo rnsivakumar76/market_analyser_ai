@@ -9,10 +9,8 @@ import { CorrelationModalComponent } from './components/correlation-modal/correl
 import { UserManualComponent } from './components/user-manual/user-manual.component';
 import { LoginComponent } from './components/login/login.component';
 import { AuthService, User } from './services/auth.service';
-import { InstrumentSummaryComponent } from './components/instrument-summary/instrument-summary.component';
 import { WatchlistHeatmapComponent } from './components/watchlist-heatmap/watchlist-heatmap.component';
 import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component';
-import { MultiTimeframeOverlayComponent } from './components/multi-timeframe-overlay/multi-timeframe-overlay.component';
 import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
 import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
 import { interval, Subscription, timer } from 'rxjs';
@@ -20,7 +18,7 @@ import { interval, Subscription, timer } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, InstrumentSummaryComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, MultiTimeframeOverlayComponent, TradeJournalComponent, SmartAlertsComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, PerformanceBannerComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
