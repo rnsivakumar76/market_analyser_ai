@@ -192,7 +192,7 @@
         <h3>📈 Sector Impact Analysis</h3>
         <div class="sector-grid">
           @for (sector of getSectorList(); track sector) {
-            @let impact = data.affected_sectors[sector]
+            @let impact = data.affected_sectors[sector];
             <div class="sector-card" [class]="impact > 0.5 ? 'high-impact' : impact > 0.2 ? 'medium-impact' : 'low-impact'">
               <div class="sector-name">{{ sector.toUpperCase() }}</div>
               <div class="sector-impact">
