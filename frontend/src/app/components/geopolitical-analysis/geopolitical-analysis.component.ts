@@ -37,12 +37,14 @@ export class GeopoliticalAnalysisComponent implements OnInit {
     this.error.set(null);
     
     try {
+      console.log('Loading geopolitical data...');
       const response = await this.analyzerService.getGeopoliticalSentiment().toPromise();
+      console.log('Geopolitical data received:', response);
       this.geopoliticalData.set(response || null);
       this.lastUpdated.set(new Date().toLocaleTimeString());
     } catch (err) {
-      this.error.set('Failed to load geopolitical data');
       console.error('Geopolitical analysis error:', err);
+      this.error.set('Failed to load geopolitical data');
     } finally {
       this.loading.set(false);
     }
@@ -150,17 +152,35 @@ export class GeopoliticalAnalysisComponent implements OnInit {
     if (!data) return [];
     
     return [
-      ...data.critical_events.map(event => ({ ...event, severity: 'CRITICAL' })),
-      ...data.high_impact_events.map(event => ({ ...event, severity: 'HIGH' }))
+      ...data.critical_events.map(event => ({
+        severity: 'CRITICAL',
+        title: event.title,
+        description: event.description,
+        source: event.source,
+        published: event.published,
+        affected_sectors: event.affected_sectors,
+        conflict_keywords: event.conflict_keywords
+      })),
+      ...data.high_impact_events.map(event => ({
+        severity: 'HIGH',
+        title: event.title,
+        description: event.description,
+        source: event.source,
+        published: event.published,
+        affected_sectors: event.affected_sectors,
+        conflict_keywords: event.conflict_keywords
+      }))
     ].sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
   }
   
   // Quick action methods
   async refreshData() {
+    console.log('Refresh button clicked');
     await this.loadGeopoliticalData();
   }
   
   async getEnergyMarketsAnalysis() {
+    console.log('Energy markets analysis requested');
     try {
       return await this.analyzerService.getEnergyMarketsAnalysis();
     } catch (err) {
@@ -170,6 +190,7 @@ export class GeopoliticalAnalysisComponent implements OnInit {
   }
   
   async getSafeHavenAnalysis() {
+    console.log('Safe haven analysis requested');
     try {
       return await this.analyzerService.getSafeHavenAnalysis();
     } catch (err) {
