@@ -338,48 +338,49 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                         <span class="pic-metric-value">{{ getPullbackAction() }}</span>
                     </div>
                 </div>
-              </div>
-            </div>
 
-            <!-- MACRO REGIME (moved from Signal tab) -->
-            <div class="macro-context-block">
-              <div class="tile-header">🌐 MACRO REGIME</div>
-              <div class="macro-mini">
-                <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
-                <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
+              <!-- MACRO REGIME -->
+              <div class="macro-context-block">
+                <div class="tile-header">🌐 MACRO REGIME</div>
+                <div class="macro-mini">
+                  <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
+                  <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
+                </div>
+                <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
               </div>
-              <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
-            </div>
 
-            <!-- LIQUIDITY MAP (under Pullback & Macro Regime) -->
-            @if (analysis.liquidity_map) {
-            <div class="liquidity-map-section">
-              <div class="tile-header">🗺️ LIQUIDITY MAP</div>
-              <div class="lm-dual">
-                <div class="lm-col">
-                  <div class="lm-col-header bearish">RESISTANCE</div>
-                  @for (lvl of analysis.liquidity_map.resistance_levels; track lvl.price) {
-                    <div class="lm-level" [class]="'lm-' + lvl.strength">
-                      <span class="lm-price bearish">\${{ lvl.price.toFixed(2) }}</span>
-                      <span class="lm-dist">+{{ lvl.distance_pct.toFixed(1) }}%</span>
-                      <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
-                    </div>
-                  }
+              <!-- LIQUIDITY MAP -->
+              @if (analysis.liquidity_map) {
+              <div class="liquidity-map-section">
+                <div class="tile-header">🗺️ LIQUIDITY MAP</div>
+                <div class="lm-dual">
+                  <div class="lm-col">
+                    <div class="lm-col-header bearish">RESISTANCE</div>
+                    @for (lvl of analysis.liquidity_map.resistance_levels; track lvl.price) {
+                      <div class="lm-level" [class]="'lm-' + lvl.strength">
+                        <span class="lm-price bearish">\${{ lvl.price.toFixed(2) }}</span>
+                        <span class="lm-dist">+{{ lvl.distance_pct.toFixed(1) }}%</span>
+                        <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
+                      </div>
+                    }
+                  </div>
+                  <div class="lm-col">
+                    <div class="lm-col-header bullish">SUPPORT</div>
+                    @for (lvl of analysis.liquidity_map.support_levels; track lvl.price) {
+                      <div class="lm-level" [class]="'lm-' + lvl.strength">
+                        <span class="lm-price bullish">\${{ lvl.price.toFixed(2) }}</span>
+                        <span class="lm-dist">-{{ lvl.distance_pct.toFixed(1) }}%</span>
+                        <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
+                      </div>
+                    }
+                  </div>
                 </div>
-                <div class="lm-col">
-                  <div class="lm-col-header bullish">SUPPORT</div>
-                  @for (lvl of analysis.liquidity_map.support_levels; track lvl.price) {
-                    <div class="lm-level" [class]="'lm-' + lvl.strength">
-                      <span class="lm-price bullish">\${{ lvl.price.toFixed(2) }}</span>
-                      <span class="lm-dist">-{{ lvl.distance_pct.toFixed(1) }}%</span>
-                      <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
-                    </div>
-                  }
-                </div>
+                <p class="lm-interpretation">{{ analysis.liquidity_map.interpretation }}</p>
               </div>
-              <p class="lm-interpretation">{{ analysis.liquidity_map.interpretation }}</p>
+              }
+
+              </div>
             </div>
-            }
 
             @if (analysis.fundamentals?.risk_reduction_active || analysis.fundamentals?.pre_event_caution) {
             <div class="pre-event-alert" [class]="analysis.fundamentals.risk_reduction_active ? 'pea-active' : 'pea-caution'">
