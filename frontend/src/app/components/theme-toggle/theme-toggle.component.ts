@@ -17,11 +17,15 @@ import { ThemeService } from '../../services/theme.service';
 export class ThemeToggleComponent {
   @Output() themeChanged = new EventEmitter<'dark' | 'light'>();
 
-  constructor(public themeService: ThemeService) {}
+  constructor(public themeService: ThemeService) {
+    console.log('ThemeToggleComponent: Initialized');
+  }
 
   toggleTheme(): void {
+    console.log('ThemeToggleComponent: Toggle button clicked');
     this.themeService.toggleTheme();
     this.themeChanged.emit(this.themeService.currentTheme());
+    console.log('ThemeToggleComponent: Theme changed to:', this.themeService.currentTheme());
   }
 
   getToggleTitle(): string {

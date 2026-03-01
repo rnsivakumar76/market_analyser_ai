@@ -1,4 +1,100 @@
 /* ========================================
+   THEME SYSTEM BASE
+   ======================================== */
+
+/* Default to dark theme if no theme class is present */
+:root {
+  /* Default to dark theme variables */
+  --bg-primary: #11111b;
+  --bg-secondary: #1e1e2e;
+  --bg-tertiary: #313244;
+  --bg-quaternary: #45475a;
+  
+  --surface-primary: #1e1e2e;
+  --surface-secondary: #313244;
+  --surface-tertiary: #45475a;
+  --surface-elevated: #1a1a2a;
+  
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-tertiary: #6c7086;
+  --text-quaternary: #45475a;
+  --text-inverse: #11111b;
+  
+  --border-primary: #313244;
+  --border-secondary: #45475a;
+  --border-tertiary: #585b70;
+  --border-focus: #89b4fa;
+  
+  --accent-primary: #89b4fa;
+  --accent-primary-hover: #b4befe;
+  --accent-primary-light: rgba(137, 180, 250, 0.1);
+  --accent-primary-lighter: rgba(137, 180, 250, 0.05);
+  
+  --accent-secondary: #6c7086;
+  --accent-secondary-hover: #7f849c;
+  
+  --success: #a6e3a1;
+  --success-light: rgba(166, 227, 161, 0.1);
+  --success-lighter: rgba(166, 227, 161, 0.05);
+  
+  --warning: #fab387;
+  --warning-light: rgba(250, 179, 135, 0.1);
+  --warning-lighter: rgba(250, 179, 135, 0.05);
+  
+  --error: #f38ba8;
+  --error-light: rgba(243, 139, 168, 0.1);
+  --error-lighter: rgba(243, 139, 168, 0.05);
+  
+  --info: #89b4fa;
+  --info-light: rgba(137, 180, 250, 0.1);
+  --info-lighter: rgba(137, 180, 250, 0.05);
+  
+  --bullish: #a6e3a1;
+  --bullish-light: rgba(166, 227, 161, 0.1);
+  --bearish: #f38ba8;
+  --bearish-light: rgba(243, 139, 168, 0.1);
+  --neutral: #fab387;
+  --neutral-light: rgba(250, 179, 135, 0.1);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  
+  --gradient-primary: linear-gradient(135deg, #89b4fa, #cba6f7);
+  --gradient-success: linear-gradient(135deg, #a6e3a1, #94e2d4);
+  --gradient-error: linear-gradient(135deg, #f38ba8, #eba0ac);
+  --gradient-warning: linear-gradient(135deg, #fab387, #f9e2af);
+  
+  --card-bg: #1e1e2e;
+  --card-border: #313244;
+  --card-shadow: var(--shadow);
+  
+  --input-bg: #1e1e2e;
+  --input-border: #45475a;
+  --input-border-focus: var(--accent-primary);
+  
+  --button-primary-bg: var(--accent-primary);
+  --button-primary-text: #1e1e2e;
+  --button-primary-hover: var(--accent-primary-hover);
+  
+  --button-secondary-bg: #313244;
+  --button-secondary-text: var(--text-primary);
+  --button-secondary-hover: #45475a;
+  
+  --header-bg: #1e1e2e;
+  --header-border: #313244;
+  
+  --sidebar-bg: #11111b;
+  --sidebar-border: #313244;
+  
+  --footer-bg: #181825;
+  --footer-border: #313244;
+}
+
+/* ========================================
    LIGHT THEME STYLES
    ======================================== */
 

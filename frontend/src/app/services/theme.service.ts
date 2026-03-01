@@ -15,21 +15,31 @@ export class ThemeService {
   }
   
   private initializeTheme(): void {
+    console.log('ThemeService: Initializing theme...');
+    
     // Check for saved theme preference
     const savedTheme = localStorage.getItem(this.THEME_KEY) as Theme;
+    console.log('ThemeService: Saved theme:', savedTheme);
+    
     if (savedTheme && (savedTheme === 'dark' || savedTheme === 'light')) {
       this.currentTheme.set(savedTheme);
+      console.log('ThemeService: Using saved theme:', savedTheme);
     } else {
       // Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      this.currentTheme.set(prefersDark ? 'dark' : 'light');
+      const systemTheme = prefersDark ? 'dark' : 'light';
+      this.currentTheme.set(systemTheme);
+      console.log('ThemeService: Using system theme:', systemTheme, 'prefersDark:', prefersDark);
     }
     
     this.applyTheme(this.currentTheme());
+    console.log('ThemeService: Theme initialized to:', this.currentTheme());
   }
   
   toggleTheme(): void {
-    const newTheme = this.currentTheme() === 'dark' ? 'light' : 'dark';
+    const currentTheme = this.currentTheme();
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    console.log('ThemeService: Toggling theme from', currentTheme, 'to', newTheme);
     this.setTheme(newTheme);
   }
   
@@ -40,21 +50,28 @@ export class ThemeService {
   }
   
   private applyTheme(theme: Theme): void {
+    console.log('ThemeService: Applying theme:', theme);
     const root = document.documentElement;
+    
+    // Remove existing theme classes
+    root.classList.remove('light-theme', 'dark-theme');
     
     if (theme === 'light') {
       root.classList.add('light-theme');
-      root.classList.remove('dark-theme');
+      console.log('ThemeService: Added light-theme class');
     } else {
       root.classList.add('dark-theme');
-      root.classList.remove('light-theme');
+      console.log('ThemeService: Added dark-theme class');
     }
+    
+    console.log('ThemeService: Current root classes:', root.className);
     
     // Update meta theme-color for mobile browsers
     const themeColor = theme === 'light' ? '#ffffff' : '#11111b';
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
       metaThemeColor.setAttribute('content', themeColor);
+      console.log('ThemeService: Updated meta theme-color to:', themeColor);
     }
   }
   
