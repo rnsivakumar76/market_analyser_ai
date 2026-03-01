@@ -159,7 +159,8 @@ jobs:
             -var="jwt_secret_key=${{ secrets.JWT_SECRET_KEY }}" \
             -var="session_secret=${{ secrets.SESSION_SECRET || secrets.JWT_SECRET_KEY }}" \
             -var="twelvedata_api_key=${{ secrets.TWELVEDATA_API_KEY }}" \
-            -var="fmp_api_key=${{ secrets.FMP_API_KEY }}"
+            -var="fmp_api_key=${{ secrets.FMP_API_KEY }}" \
+            -var="news_api_key=${{ secrets.NEWS_API_KEY }}"
       - name: Save outputs
         run: |
           cd ${{ env.TF_ROOT }}

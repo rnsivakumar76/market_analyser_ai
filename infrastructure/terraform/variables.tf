@@ -118,3 +118,10 @@ variable "fmp_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "news_api_key" {
+  description = "NewsAPI.org API Key for market news sentiment"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

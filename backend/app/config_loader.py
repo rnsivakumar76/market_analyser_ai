@@ -83,8 +83,8 @@ def get_alert_config(config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_newsapi_key(config: Dict[str, Any]) -> str:
-    """Extract NewsAPI key from config."""
-    return config.get('newsapi', {}).get('api_key', '')
+    """Extract NewsAPI key - env var takes priority over YAML config."""
+    return os.environ.get('NEWS_API_KEY') or config.get('newsapi', {}).get('api_key', '')
 
 
 def get_strategy_config(config: Dict[str, Any]) -> Dict[str, Any]:

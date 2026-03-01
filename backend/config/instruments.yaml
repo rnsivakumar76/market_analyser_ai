@@ -5,7 +5,7 @@ twelvedata:
 fmp:
   api_key: bF2I9pQqYw0jRnnJbv3yrDmFwA4yyESM
 newsapi:
-  api_key: 87d3fef01bed4240b1e05926d7892e24
+  api_key: ""
 instruments:
 - symbol: XAU
   name: Gold
