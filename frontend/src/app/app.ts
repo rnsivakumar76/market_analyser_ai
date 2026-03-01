@@ -57,6 +57,15 @@ export class App implements OnInit, OnDestroy {
   private readonly REFRESH_INTERVAL_SEC = 300; // 5 minutes
   private secondsRemaining = 300;
 
+  // Background scheduler monitoring
+  private consecutiveFailures = 0;
+  private readonly MAX_CONSECUTIVE_FAILURES = 2;
+  private lastSuccessfulRefresh?: Date;
+  private isInitialStartup = true;
+  private startupTimeout?: any;
+  schedulerHealthStatus = signal<'healthy' | 'warning' | 'critical' | 'initializing'>('initializing');
+  schedulerHealthMessage = signal<string>('Initializing scheduler...');
+
   ngOnInit() {
     // Ensure theme is initialized early
     console.log('App: ngOnInit - ensuring theme is initialized');
@@ -230,15 +239,69 @@ export class App implements OnInit, OnDestroy {
         this.psychologicalGuardrail.set(response.psychological_guardrail);
         this.lastUpdated.set(new Date(response.analysis_timestamp).toLocaleString());
         this.loading.set(false);
+
+        // Track scheduler health
+        this.handleSchedulerSuccess();
       },
       error: (err) => {
+        console.error('Analysis failed:', err);
         if (!silent) {
           this.error.set('Failed to fetch analysis. Make sure the backend is running.');
         }
         this.loading.set(false);
-        console.error('Analysis error:', err);
+
+        // Track scheduler health
+        this.handleSchedulerFailure(err);
       }
     });
+  }
+
+  private handleSchedulerSuccess(): void {
+    this.consecutiveFailures = 0;
+    this.lastSuccessfulRefresh = new Date();
+    
+    if (this.isInitialStartup) {
+      this.isInitialStartup = false;
+      this.schedulerHealthStatus.set('healthy');
+      this.schedulerHealthMessage.set('Scheduler running normally');
+      console.log('App: Initial startup completed - scheduler healthy');
+    } else {
+      this.schedulerHealthStatus.set('healthy');
+      this.schedulerHealthMessage.set('Scheduler running normally');
+    }
+
+    // Clear any startup timeout
+    if (this.startupTimeout) {
+      clearTimeout(this.startupTimeout);
+      this.startupTimeout = undefined;
+    }
+  }
+
+  private handleSchedulerFailure(error: any): void {
+    this.consecutiveFailures++;
+    
+    console.error(`Scheduler failure #${this.consecutiveFailures}:`, error);
+
+    if (this.isInitialStartup) {
+      this.schedulerHealthStatus.set('critical');
+      this.schedulerHealthMessage.set('Initial analysis failed - data may be stale');
+      
+      // Set a timeout to show critical message if startup takes too long
+      if (!this.startupTimeout) {
+        this.startupTimeout = setTimeout(() => {
+          if (this.isInitialStartup) {
+            this.schedulerHealthStatus.set('critical');
+            this.schedulerHealthMessage.set('Startup failed - Check backend connection');
+          }
+        }, 10000); // 10 seconds
+      }
+    } else if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
+      this.schedulerHealthStatus.set('critical');
+      this.schedulerHealthMessage.set(`Scheduler failed ${this.consecutiveFailures} times - Data may be stale`);
+    } else if (this.consecutiveFailures === 1) {
+      this.schedulerHealthStatus.set('warning');
+      this.schedulerHealthMessage.set('Scheduler experiencing issues');
+    }
   }
 
   refreshInstrument(symbol: string) {

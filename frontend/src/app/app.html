@@ -133,6 +133,25 @@
   </div>
   }
 
+  <!-- Scheduler Health Alert -->
+  @if (schedulerHealthStatus() !== 'healthy') {
+  <div class="scheduler-health-banner" [class]="schedulerHealthStatus()">
+    <div class="health-content">
+      <span class="health-icon">
+        @switch (schedulerHealthStatus()) {
+          @case ('initializing') { ⏳ }
+          @case ('warning') { ⚠️ }
+          @case ('critical') { 🚨 }
+        }
+      </span>
+      <span class="health-message">{{ schedulerHealthMessage() }}</span>
+      @if (schedulerHealthStatus() === 'critical') {
+      <button class="health-retry-btn" (click)="refreshAnalysis()">Retry Now</button>
+      }
+    </div>
+  </div>
+  }
+
   @if (loading() && instruments().length === 0) {
   <div class="loading-screen">
     <div class="loading-content">
