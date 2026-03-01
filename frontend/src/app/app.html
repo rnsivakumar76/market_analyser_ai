@@ -130,6 +130,9 @@
   <div class="error-banner">
     <span>{{ error() }}</span>
     <button (click)="runAnalysis()">Retry</button>
+    <button class="health-diagnose-btn" (click)="showDiagnostics.set(true)" title="View Error Diagnostics">
+      🔍 Diagnose
+    </button>
   </div>
   }
 
@@ -148,6 +151,134 @@
       @if (schedulerHealthStatus() === 'critical') {
       <button class="health-retry-btn" (click)="refreshAnalysis()">Retry Now</button>
       }
+      <button class="health-diagnose-btn" (click)="showDiagnostics.set(true)" title="View Error Diagnostics">
+        🔍 Diagnose
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- Error Diagnostics Modal -->
+  @if (showDiagnostics()) {
+  <div class="diagnostics-modal" (click)="showDiagnostics.set(false)">
+    <div class="diagnostics-content" (click)="$event.stopPropagation()">
+      <div class="diagnostics-header">
+        <h3>🔍 Error Diagnostics</h3>
+        <button class="close-btn" (click)="showDiagnostics.set(false)">✕</button>
+      </div>
+      <div class="diagnostics-body">
+        @if (lastErrorInfo(); as error) {
+        <div class="error-details">
+          <div class="error-section">
+            <h4>Error Information</h4>
+            <div class="error-grid">
+              <div class="error-item">
+                <span class="error-label">Timestamp:</span>
+                <span class="error-value">{{ error.timestamp }}</span>
+              </div>
+              <div class="error-item">
+                <span class="error-label">Failure Count:</span>
+                <span class="error-value">{{ error.failureCount }}</span>
+              </div>
+              <div class="error-item">
+                <span class="error-label">Error Type:</span>
+                <span class="error-value">{{ error.errorType }}</span>
+              </div>
+              <div class="error-item">
+                <span class="error-label">CloudWatch Error:</span>
+                <span class="error-value" [class]="error.isCloudWatch ? 'error-yes' : 'error-no'">
+                  {{ error.isCloudWatch ? 'Yes' : 'No' }}
+                </span>
+              </div>
+              <div class="error-item">
+                <span class="error-label">Timeout Error:</span>
+                <span class="error-value" [class]="error.isTimeout ? 'error-yes' : 'error-no'">
+                  {{ error.isTimeout ? 'Yes' : 'No' }}
+                </span>
+              </div>
+              <div class="error-item">
+                <span class="error-label">Network Error:</span>
+                <span class="error-value" [class]="error.isNetwork ? 'error-yes' : 'error-no'">
+                  {{ error.isNetwork ? 'Yes' : 'No' }}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="error-section">
+            <h4>Error Message</h4>
+            <div class="error-message">{{ error.errorMessage }}</div>
+          </div>
+          
+          <div class="error-section">
+            <h4>Troubleshooting Steps</h4>
+            <div class="troubleshooting-steps">
+              @if (error.isCloudWatch) {
+              <div class="step">
+                <span class="step-number">1</span>
+                <span class="step-text">Check AWS Lambda function logs in CloudWatch</span>
+              </div>
+              <div class="step">
+                <span class="step-number">2</span>
+                <span class="step-text">Verify API Gateway endpoints are deployed</span>
+              </div>
+              <div class="step">
+                <span class="step-number">3</span>
+                <span class="step-text">Check Lambda execution timeout settings</span>
+              </div>
+              <div class="step">
+                <span class="step-number">4</span>
+                <span class="step-text">Verify AWS credentials and permissions</span>
+              </div>
+              } @else if (error.isTimeout) {
+              <div class="step">
+                <span class="step-number">1</span>
+                <span class="step-text">Backend may be overloaded - try again later</span>
+              </div>
+              <div class="step">
+                <span class="step-number">2</span>
+                <span class="step-text">Check if analysis is taking too long</span>
+              </div>
+              <div class="step">
+                <span class="step-number">3</span>
+                <span class="step-text">Consider reducing analysis scope</span>
+              </div>
+              } @else if (error.isNetwork) {
+              <div class="step">
+                <span class="step-number">1</span>
+                <span class="step-text">Check internet connection</span>
+              </div>
+              <div class="step">
+                <span class="step-number">2</span>
+                <span class="step-text">Verify backend API is accessible</span>
+              </div>
+              <div class="step">
+                <span class="step-number">3</span>
+                <span class="step-text">Check for CORS or firewall issues</span>
+              </div>
+              } @else {
+              <div class="step">
+                <span class="step-number">1</span>
+                <span class="step-text">Check backend service status</span>
+              </div>
+              <div class="step">
+                <span class="step-number">2</span>
+                <span class="step-text">Verify API endpoints are working</span>
+              </div>
+              <div class="step">
+                <span class="step-number">3</span>
+                <span class="step-text">Contact support if issue persists</span>
+              </div>
+              }
+            </div>
+          </div>
+        </div>
+        } @else {
+        <div class="no-error-data">
+          <p>No error data available. Check browser console for detailed error information.</p>
+        </div>
+        }
+      </div>
     </div>
   </div>
   }

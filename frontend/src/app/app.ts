@@ -65,8 +65,13 @@ export class App implements OnInit, OnDestroy {
   private startupTimeout?: any;
   schedulerHealthStatus = signal<'healthy' | 'warning' | 'critical' | 'initializing'>('initializing');
   schedulerHealthMessage = signal<string>('Initializing scheduler...');
+  showDiagnostics = signal<boolean>(false);
+  lastErrorInfo = signal<any>(null);
 
   ngOnInit() {
+    // Load any previous error information
+    this.loadLastError();
+    
     // Ensure theme is initialized early
     console.log('App: ngOnInit - ensuring theme is initialized');
     this.themeService.setTheme(this.themeService.currentTheme());
@@ -282,25 +287,164 @@ export class App implements OnInit, OnDestroy {
     
     console.error(`Scheduler failure #${this.consecutiveFailures}:`, error);
 
+    // Enhanced error analysis for CloudWatch issues
+    const errorMessage = this.extractErrorMessage(error);
+    const isCloudWatchError = this.isCloudWatchError(error);
+    const isTimeoutError = this.isTimeoutError(error);
+    const isNetworkError = this.isNetworkError(error);
+
     if (this.isInitialStartup) {
       this.schedulerHealthStatus.set('critical');
-      this.schedulerHealthMessage.set('Initial analysis failed - data may be stale');
+      
+      if (isCloudWatchError) {
+        this.schedulerHealthMessage.set('CloudWatch analysis service unavailable - Check AWS configuration');
+      } else if (isTimeoutError) {
+        this.schedulerHealthMessage.set('Analysis timeout - Backend may be overloaded');
+      } else if (isNetworkError) {
+        this.schedulerHealthMessage.set('Network connectivity issues - Check connection');
+      } else {
+        this.schedulerHealthMessage.set('Initial analysis failed - Data may be stale');
+      }
       
       // Set a timeout to show critical message if startup takes too long
       if (!this.startupTimeout) {
         this.startupTimeout = setTimeout(() => {
           if (this.isInitialStartup) {
             this.schedulerHealthStatus.set('critical');
-            this.schedulerHealthMessage.set('Startup failed - Check backend connection');
+            this.schedulerHealthMessage.set('Startup failed - Check backend and AWS services');
           }
         }, 10000); // 10 seconds
       }
     } else if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
       this.schedulerHealthStatus.set('critical');
-      this.schedulerHealthMessage.set(`Scheduler failed ${this.consecutiveFailures} times - Data may be stale`);
+      
+      if (isCloudWatchError) {
+        this.schedulerHealthMessage.set(`CloudWatch errors (${this.consecutiveFailures}x) - Analysis service down`);
+      } else if (isTimeoutError) {
+        this.schedulerHealthMessage.set(`Analysis timeouts (${this.consecutiveFailures}x) - Backend overloaded`);
+      } else if (isNetworkError) {
+        this.schedulerHealthMessage.set(`Network failures (${this.consecutiveFailures}x) - Connection unstable`);
+      } else {
+        this.schedulerHealthMessage.set(`Scheduler failed ${this.consecutiveFailures} times - Data may be stale`);
+      }
     } else if (this.consecutiveFailures === 1) {
       this.schedulerHealthStatus.set('warning');
-      this.schedulerHealthMessage.set('Scheduler experiencing issues');
+      
+      if (isCloudWatchError) {
+        this.schedulerHealthMessage.set('CloudWatch service issues detected');
+      } else if (isTimeoutError) {
+        this.schedulerHealthMessage.set('Analysis timeout - Retrying...');
+      } else if (isNetworkError) {
+        this.schedulerHealthMessage.set('Network connectivity issues');
+      } else {
+        this.schedulerHealthMessage.set('Scheduler experiencing issues');
+      }
+    }
+
+    // Log detailed error information for debugging
+    this.logDetailedError(error, this.consecutiveFailures);
+  }
+
+  private extractErrorMessage(error: any): string {
+    if (typeof error === 'string') return error;
+    if (error?.message) return error.message;
+    if (error?.error?.message) return error.error.message;
+    if (error?.statusText) return error.statusText;
+    return 'Unknown error occurred';
+  }
+
+  private isCloudWatchError(error: any): boolean {
+    const message = this.extractErrorMessage(error).toLowerCase();
+    const cloudWatchIndicators = [
+      'cloudwatch',
+      'aws',
+      'lambda',
+      'api gateway',
+      'execution timeout',
+      'function timeout',
+      'resource not found',
+      'access denied',
+      'credentials'
+    ];
+    return cloudWatchIndicators.some(indicator => message.includes(indicator));
+  }
+
+  private isTimeoutError(error: any): boolean {
+    const message = this.extractErrorMessage(error).toLowerCase();
+    const timeoutIndicators = [
+      'timeout',
+      'timed out',
+      'deadline',
+      'timeout exceeded',
+      'connection timeout',
+      'read timeout'
+    ];
+    return timeoutIndicators.some(indicator => message.includes(indicator));
+  }
+
+  private isNetworkError(error: any): boolean {
+    const message = this.extractErrorMessage(error).toLowerCase();
+    const networkIndicators = [
+      'network',
+      'connection',
+      'fetch',
+      'cors',
+      'offline',
+      'unreachable',
+      'dns',
+      'socket'
+    ];
+    return networkIndicators.some(indicator => message.includes(indicator));
+  }
+
+  private logDetailedError(error: any, failureCount: number): void {
+    const errorInfo = {
+      timestamp: new Date().toISOString(),
+      failureCount: failureCount,
+      errorMessage: this.extractErrorMessage(error),
+      errorType: this.classifyError(error),
+      isCloudWatch: this.isCloudWatchError(error),
+      isTimeout: this.isTimeoutError(error),
+      isNetwork: this.isNetworkError(error),
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+
+    console.group('🚨 Scheduler Error Analysis');
+    console.error('Error Details:', errorInfo);
+    console.error('Original Error:', error);
+    console.groupEnd();
+
+    // Store error info for potential debugging
+    this.storeLastError(errorInfo);
+  }
+
+  private classifyError(error: any): string {
+    if (this.isCloudWatchError(error)) return 'CloudWatch/AWS';
+    if (this.isTimeoutError(error)) return 'Timeout';
+    if (this.isNetworkError(error)) return 'Network';
+    if (error?.status >= 500) return 'Server Error';
+    if (error?.status >= 400) return 'Client Error';
+    return 'Unknown';
+  }
+
+  private storeLastError(errorInfo: any): void {
+    try {
+      localStorage.setItem('lastSchedulerError', JSON.stringify(errorInfo));
+      this.lastErrorInfo.set(errorInfo);
+    } catch (e) {
+      console.warn('Could not store error info:', e);
+    }
+  }
+
+  private loadLastError(): void {
+    try {
+      const stored = localStorage.getItem('lastSchedulerError');
+      if (stored) {
+        this.lastErrorInfo.set(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('Could not load error info:', e);
     }
   }
 
