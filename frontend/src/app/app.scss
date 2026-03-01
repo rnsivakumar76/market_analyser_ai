@@ -428,14 +428,16 @@
 }
 
 .badge {
-  background: linear-gradient(135deg, #f5c2e7, #cba6f7);
-  color: #11111b;
-  font-size: 0.6rem;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  font-size: 0.5rem;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 2px;
+  vertical-align: middle;
 }
 
 .subtitle {
@@ -1862,4 +1864,39 @@
   .split-view-container {
     padding-bottom: 56px;
   }
+}
+
+/* ============================================================
+   LIGHT THEME — INSTRUMENT CARD OVERRIDES
+   instrument-card uses hardcoded hex; override globally here
+   ============================================================ */
+:root.light-theme {
+  .instrument-terminal                { background: #f1f5f9 !important; color: #1e293b !important; }
+  .terminal-banner                    { background: #ffffff !important; border-bottom-color: #e2e8f0 !important; }
+  .ai-executive-synthesis             { background: #f0f4ff !important; border-color: #c7d2fe !important; color: #1e293b !important; }
+  .synthesis-header, .tile-header     { color: #3b82f6 !important; }
+  .synthesis-text, .intel-text-sm,
+  .pic-desc, .expert-plan-text        { color: #334155 !important; }
+  .analysis-tabs                      { background: #e2e8f0 !important; border-bottom-color: #cbd5e1 !important; }
+  .atab                               { background: transparent !important; color: #64748b !important; border-bottom-color: transparent !important; }
+  .atab.active                        { background: #ffffff !important; color: #0f172a !important; border-bottom-color: #3b82f6 !important; }
+  .t-tile, .tab-content-tile          { background: #f8fafc !important; }
+  .tech-section                       { background: #ffffff !important; border-color: #e2e8f0 !important; }
+  .intel-block                        { background: #ffffff !important; border-color: #e2e8f0 !important; }
+  .risk-panel-card, .risk-dual-panel  { background: #ffffff !important; border-color: #e2e8f0 !important; }
+  .pullback-intel-card                { background: #ffffff !important; border-color: #e2e8f0 !important; }
+  .ch-item                            { border-bottom-color: #f1f5f9 !important; }
+  .ch-i                               { color: #475569 !important; }
+  .ch-v                               { color: #0f172a !important; }
+  .ch-correlation                     { color: #64748b !important; }
+  .macro-context-block                { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+  .liquidity-map-section              { border-top-color: #e2e8f0 !important; }
+  .lm-interpretation                  { color: #64748b !important; }
+  .probability-box-v2                 { background: #ffffff !important; border-color: #e2e8f0 !important; }
+  .pb2-stat span                      { color: #64748b !important; }
+  .terminal-chart-area                { background: #ffffff !important; border-color: #e2e8f0 !important; }
+  .chart-placeholder                  { color: #94a3b8 !important; }
+  .rrd-container                      { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+  .terminal-gauge-section             { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+  .expert-intel-block                 { background: #eef2ff !important; border-color: #c7d2fe !important; }
 }

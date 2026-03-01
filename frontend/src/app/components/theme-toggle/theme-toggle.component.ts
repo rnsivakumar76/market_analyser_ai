@@ -28,11 +28,11 @@ export class ThemeToggleComponent {
   }
 
   getThemeIcon(): string {
-    return this.themeService.currentTheme() === 'dark' ? '☀️' : '🌙';
+    return this.themeService.currentTheme() === 'dark' ? '🌙' : '☀️';
   }
 
   getThemeLabel(): string {
-    return this.themeService.currentTheme() === 'dark' ? 'LIGHT' : 'DARK';
+    return this.themeService.currentTheme() === 'dark' ? 'DARK' : 'LIGHT';
   }
 
   getToggleTitle(): string {
