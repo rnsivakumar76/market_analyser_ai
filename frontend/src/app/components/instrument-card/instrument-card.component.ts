@@ -165,10 +165,6 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                    <div class="mmf-item"><span>VWAP DIST</span><strong [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct?.toFixed(2) }}%</strong></div>
                 </div>
 
-                <div class="tile-actions">
-                  <button class="btn-primary" (click)="openJournalModal()">📒 Log Trade</button>
-                  <button class="btn-secondary" (click)="toggleChart()">📊 Open Chart</button>
-                </div>
               </div>
 
               <!-- EXPERT BATTLE PLAN (Short-Term) -->
@@ -355,30 +351,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
             </div>
 
-            @if (analysis.fundamentals?.risk_reduction_active || analysis.fundamentals?.pre_event_caution) {
-            <div class="pre-event-alert" [class]="analysis.fundamentals.risk_reduction_active ? 'pea-active' : 'pea-caution'">
-              <div class="pea-header">
-                <span>{{ analysis.fundamentals.risk_reduction_active ? '🔴' : '🟡' }}</span>
-                <span class="pea-title">{{ analysis.fundamentals.risk_reduction_active ? 'RISK REDUCTION ACTIVE' : 'PRE-EVENT CAUTION' }}</span>
-                @if (analysis.fundamentals.minutes_to_next_event) {
-                  <span class="pea-countdown">{{ getEventCountdown(analysis.fundamentals.minutes_to_next_event) }}</span>
-                }
-              </div>
-              <div class="pea-body">
-                {{ analysis.fundamentals.risk_reduction_active
-                   ? 'High-impact event within 60 min. Position size auto-capped at 50%.'
-                   : 'High-impact event within 24h. Consider reducing size to 75%.' }}
-              </div>
-              @if (analysis.fundamentals.event_timestamps?.length) {
-                <div class="pea-event">{{ analysis.fundamentals.event_timestamps[0].event }}</div>
-              }
-              <div class="pea-multiplier">
-                Size Multiplier: <strong>×{{ analysis.fundamentals.recommended_position_multiplier?.toFixed(2) }}</strong>
-              </div>
-            </div>
-            }
-
-            <!-- P8: LIQUIDITY MAP -->
+            <!-- LIQUIDITY MAP (under Pullback & Macro Regime) -->
             @if (analysis.liquidity_map) {
             <div class="liquidity-map-section">
               <div class="tile-header">🗺️ LIQUIDITY MAP</div>
@@ -405,6 +378,29 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 </div>
               </div>
               <p class="lm-interpretation">{{ analysis.liquidity_map.interpretation }}</p>
+            </div>
+            }
+
+            @if (analysis.fundamentals?.risk_reduction_active || analysis.fundamentals?.pre_event_caution) {
+            <div class="pre-event-alert" [class]="analysis.fundamentals.risk_reduction_active ? 'pea-active' : 'pea-caution'">
+              <div class="pea-header">
+                <span>{{ analysis.fundamentals.risk_reduction_active ? '🔴' : '🟡' }}</span>
+                <span class="pea-title">{{ analysis.fundamentals.risk_reduction_active ? 'RISK REDUCTION ACTIVE' : 'PRE-EVENT CAUTION' }}</span>
+                @if (analysis.fundamentals.minutes_to_next_event) {
+                  <span class="pea-countdown">{{ getEventCountdown(analysis.fundamentals.minutes_to_next_event) }}</span>
+                }
+              </div>
+              <div class="pea-body">
+                {{ analysis.fundamentals.risk_reduction_active
+                   ? 'High-impact event within 60 min. Position size auto-capped at 50%.'
+                   : 'High-impact event within 24h. Consider reducing size to 75%.' }}
+              </div>
+              @if (analysis.fundamentals.event_timestamps?.length) {
+                <div class="pea-event">{{ analysis.fundamentals.event_timestamps[0].event }}</div>
+              }
+              <div class="pea-multiplier">
+                Size Multiplier: <strong>×{{ analysis.fundamentals.recommended_position_multiplier?.toFixed(2) }}</strong>
+              </div>
             </div>
             }
 
