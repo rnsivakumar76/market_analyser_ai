@@ -162,7 +162,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 <div class="mm-footer">
                    <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
                    <div class="mmf-item"><span>RISK $</span><strong>{{ getRiskAmount() }}</strong></div>
-                   <div class="mmf-item"><span>VWAP DIST</span><strong [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct?.toFixed(2) }}%</strong></div>
+                   <div class="mmf-item"><span>VWAP DIST</span><strong [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct != null ? (analysis.daily_strength.vwap_dist_pct.toFixed(2) + '%') : 'N/A' }}</strong></div>
                 </div>
 
               </div>
@@ -2027,18 +2027,31 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   // ── Visual R/R Diagram Helpers ──────────────────────────────────────────────
+  private isShortTrade(): boolean {
+    const vr = this.analysis.volatility_risk;
+    if (!vr) return false;
+    const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
+    return vr.stop_loss > entry;
+  }
+
   getRRReward(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
     const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
-    return Math.max(0, vr.take_profit - entry).toFixed(2);
+    const reward = this.isShortTrade()
+      ? entry - vr.take_profit
+      : vr.take_profit - entry;
+    return Math.max(0, reward).toFixed(2);
   }
 
   getRRRisk(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
     const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
-    return Math.max(0, entry - vr.stop_loss).toFixed(2);
+    const risk = this.isShortTrade()
+      ? vr.stop_loss - entry
+      : entry - vr.stop_loss;
+    return Math.max(0, risk).toFixed(2);
   }
 
   getRRRatio(): string {

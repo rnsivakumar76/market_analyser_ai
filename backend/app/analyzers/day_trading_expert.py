@@ -117,10 +117,15 @@ def generate_expert_trade_plan(
     if rvol > 2.0:
         plan.append(f"HIGH CONVICTION: RVOL is {rvol}x. Institutions are active.")
     
-    # 3. Pivot Targets
+    # 3. Pivot Targets — use ORB direction to set targets, not price vs pivot
     if technical and technical.pivot_points:
         p = technical.pivot_points
-        if price > p.pivot:
+        orb_direction = or_data.get("broken")
+        if orb_direction == "bullish":
+            plan.append(f"TARGETS: Aim for R1 ({p.r1}) then R2 ({p.r2}).")
+        elif orb_direction == "bearish":
+            plan.append(f"TARGETS: Aim for S1 ({p.s1}) then S2 ({p.s2}).")
+        elif price > p.pivot:
             plan.append(f"TARGETS: Aim for R1 ({p.r1}) then R2 ({p.r2}).")
         else:
             plan.append(f"TARGETS: Aim for S1 ({p.s1}) then S2 ({p.s2}).")
