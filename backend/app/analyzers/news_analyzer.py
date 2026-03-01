@@ -53,19 +53,23 @@ def fetch_rss_news(symbol: str) -> List[Dict[str, str]]:
                     channel = root.find('channel')
                     if channel is not None:
                         for item in channel.findall('item'):
-                            title_el = item.find('title')
-                            link_el  = item.find('link')
+                            title_el  = item.find('title')
+                            link_el   = item.find('link')
                             source_el = item.find('source')
+                            pubdate_el = item.find('pubDate')
 
                             if title_el is not None and title_el.text and len(title_el.text.strip()) > 10:
                                 news_items.append({
-                                    "title":  title_el.text.strip(),
-                                    "source": (source_el.text.strip()
-                                               if source_el is not None and source_el.text
-                                               else "Yahoo Finance"),
-                                    "url":    (link_el.text.strip()
-                                               if link_el is not None and link_el.text
-                                               else url)
+                                    "title":        title_el.text.strip(),
+                                    "source":       (source_el.text.strip()
+                                                     if source_el is not None and source_el.text
+                                                     else "Yahoo Finance"),
+                                    "url":          (link_el.text.strip()
+                                                     if link_el is not None and link_el.text
+                                                     else url),
+                                    "published_at": (pubdate_el.text.strip()
+                                                     if pubdate_el is not None and pubdate_el.text
+                                                     else None)
                                 })
                 except ET.ParseError as e:
                     logger.error(f"RSS parse error for {symbol}: {e}")
@@ -113,9 +117,10 @@ def fetch_newsapi_news(symbol: str, api_key: str) -> List[Dict[str, str]]:
                 title = article.get('title', '')
                 if title and len(title) > 10 and title != '[Removed]':
                     news_items.append({
-                        'title':  title.strip(),
-                        'source': article.get('source', {}).get('name', 'NewsAPI'),
-                        'url':    article.get('url', url)
+                        'title':        title.strip(),
+                        'source':       article.get('source', {}).get('name', 'NewsAPI'),
+                        'url':          article.get('url', url),
+                        'published_at': article.get('publishedAt')
                     })
         else:
             logger.warning(f"NewsAPI returned {response.status_code} for {symbol}: {response.text[:200]}")
@@ -181,7 +186,8 @@ def analyze_news_sentiment(symbol: str, api_key: str = '') -> NewsSentiment:
             source=item["source"],
             url=item["url"],
             sentiment_score=round(compound, 2),
-            sentiment_label=item_label
+            sentiment_label=item_label,
+            published_at=item.get("published_at")
         ))
     
     avg_score = total_compound / len(news_data)

@@ -1456,6 +1456,23 @@
 
 .ctx-news-title { font-size: 0.6rem; color: #9399b2; line-height: 1.35; }
 
+.ctx-news-age {
+  font-size: 0.44rem;
+  font-weight: 700;
+  color: #a6e3a1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  &.ctx-news-age--stale { color: #45475a; }
+}
+
+.ctx-nl-age {
+  font-size: 0.42rem;
+  font-weight: 700;
+  color: #a6e3a1;
+  margin-left: 4px;
+  &.ctx-news-age--stale { color: #45475a; }
+}
+
 .ctx-more-news {
   border-top: 1px solid #1f1f3a;
   padding-top: 8px;

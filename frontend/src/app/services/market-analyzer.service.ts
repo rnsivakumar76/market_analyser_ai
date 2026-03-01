@@ -244,6 +244,7 @@ export interface NewsItem {
   url: string;
   sentiment_score: number;
   sentiment_label: string;
+  published_at?: string;
 }
 
 export interface NewsSentiment {

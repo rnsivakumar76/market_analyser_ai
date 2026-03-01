@@ -230,6 +230,7 @@ class NewsItem(BaseModel):
     url: str
     sentiment_score: float # -1 to 1
     sentiment_label: str # Bullish, Bearish, Neutral
+    published_at: Optional[str] = None # ISO-8601 or RFC-822 timestamp
 
 
 class NewsSentiment(BaseModel):

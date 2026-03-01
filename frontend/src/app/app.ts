@@ -537,4 +537,34 @@ export class App implements OnInit, OnDestroy {
   get bearishCount(): number {
     return this.instruments().filter(i => i.trade_signal.recommendation === 'bearish').length;
   }
+
+  formatNewsAge(published_at?: string): string {
+    if (!published_at) return '';
+    try {
+      const pub = new Date(published_at);
+      if (isNaN(pub.getTime())) return '';
+      const diffMs = Date.now() - pub.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1)   return 'just now';
+      if (diffMins < 60)  return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 7)   return `${diffDays}d ago`;
+      return pub.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  }
+
+  isStaleNews(published_at?: string): boolean {
+    if (!published_at) return false;
+    try {
+      const pub = new Date(published_at);
+      if (isNaN(pub.getTime())) return false;
+      return (Date.now() - pub.getTime()) > 48 * 60 * 60 * 1000; // older than 48h
+    } catch {
+      return false;
+    }
+  }
 }
