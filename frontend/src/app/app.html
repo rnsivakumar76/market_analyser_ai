@@ -420,38 +420,36 @@
       </div>
       }
 
-      <!-- PERFORMANCE SNAPSHOT -->
-      @if (weeklyPerformance(); as perf) {
-      <div class="perf-card" [class.positive]="perf.total_pnl_percent > 0">
+      <!-- WEEKLY PNL: hidden -->
+      <!-- <div class="perf-card" [class.positive]="weeklyPerformance().total_pnl_percent > 0">
         <div class="perf-card-label">📊 WEEKLY PNL</div>
-        <div class="perf-card-value" [class.positive]="perf.total_pnl_percent > 0" [class.negative]="perf.total_pnl_percent <= 0">
-          {{ perf.total_pnl_percent > 0 ? '+' : '' }}{{ perf.total_pnl_percent }}%
+        <div class="perf-card-value" [class.positive]="weeklyPerformance().total_pnl_percent > 0" [class.negative]="weeklyPerformance().total_pnl_percent <= 0">
+          {{ weeklyPerformance().total_pnl_percent > 0 ? '+' : '' }}{{ weeklyPerformance().total_pnl_percent }}%
         </div>
         <div class="perf-card-stats">
           <div class="pcs-item">
             <span class="pcs-label">SETUPS</span>
-            <span class="pcs-value">{{ perf.total_trades }}</span>
+            <span class="pcs-value">{{ weeklyPerformance().total_trades }}</span>
           </div>
           <div class="pcs-item">
             <span class="pcs-label">WIN RATE</span>
-            <span class="pcs-value">{{ perf.win_rate }}%</span>
+            <span class="pcs-value">{{ weeklyPerformance().win_rate }}%</span>
           </div>
         </div>
         <div class="perf-card-stats">
           <div class="pcs-item">
-            <span class="pcs-label">BEST ({{ perf.best_trade_symbol }})</span>
-            <span class="pcs-value good">+{{ perf.best_trade_pnl }}%</span>
+            <span class="pcs-label">BEST ({{ weeklyPerformance().best_trade_symbol }})</span>
+            <span class="pcs-value good">+{{ weeklyPerformance().best_trade_pnl }}%</span>
           </div>
           <div class="pcs-item">
-            <span class="pcs-label">WORST ({{ perf.worst_trade_symbol }})</span>
-            <span class="pcs-value bad">{{ perf.worst_trade_pnl }}%</span>
+            <span class="pcs-label">WORST ({{ weeklyPerformance().worst_trade_symbol }})</span>
+            <span class="pcs-value bad">{{ weeklyPerformance().worst_trade_pnl }}%</span>
           </div>
         </div>
-      </div>
-      }
+      </div> -->
 
-      <!-- MARKET SUMMARY -->
-      <div class="perf-card">
+      <!-- MARKET SUMMARY: hidden -->
+      <!-- <div class="perf-card">
         <div class="perf-card-label">MARKET SUMMARY</div>
         <div class="perf-market-stats">
           <div class="pms-item bullish">
@@ -471,28 +469,28 @@
           </div>
         </div>
         <div class="pms-instruments">{{ instruments().length }} instruments tracked</div>
-      </div>
+      </div> -->
 
-      @if (psychologicalGuardrail(); as guard) {
-      <div class="perf-card shield-card" [class.restricted]="guard.status === 'restricted'">
+      <!-- PSYCHOLOGICAL SHIELD: hidden -->
+      <!-- <div class="perf-card shield-card" [class.restricted]="psychologicalGuardrail().status === 'restricted'">
         <div class="perf-card-label">🛡️ PSYCHOLOGICAL SHIELD</div>
-        <div class="shield-status-display" [class.active]="guard.status === 'active'" [class.restricted]="guard.status === 'restricted'">
-          {{ guard.status === 'active' ? 'ACTIVE' : '🚨 RESTRICTED' }}
+        <div class="shield-status-display" [class.active]="psychologicalGuardrail().status === 'active'" [class.restricted]="psychologicalGuardrail().status === 'restricted'">
+          {{ psychologicalGuardrail().status === 'active' ? 'ACTIVE' : '🚨 RESTRICTED' }}
         </div>
         <div class="shield-details">
           <div class="pcs-item">
             <span class="pcs-label">DAILY PNL</span>
-            <span class="pcs-value" [class.bad]="guard.daily_pnl < 0">{{ guard.daily_pnl.toFixed(2) }}%</span>
+            <span class="pcs-value" [class.bad]="psychologicalGuardrail().daily_pnl < 0">{{ psychologicalGuardrail().daily_pnl.toFixed(2) }}%</span>
           </div>
           <div class="pcs-item">
             <span class="pcs-label">LOSS LIMIT</span>
-            <span class="pcs-value">{{ guard.daily_loss_limit.toFixed(2) }}%</span>
+            <span class="pcs-value">{{ psychologicalGuardrail().daily_loss_limit.toFixed(2) }}%</span>
           </div>
         </div>
-      </div>
-      }
+      </div> -->
 
-      <div class="perf-card system-card">
+      <!-- SYSTEM STATUS: hidden -->
+      <!-- <div class="perf-card system-card">
         <div class="perf-card-label">SYSTEM STATUS</div>
         @if (lastUpdated()) {
         <div class="sys-stat">
@@ -508,7 +506,7 @@
           <span class="sys-label">INSTRUMENTS</span>
           <span class="sys-value">{{ instruments().length }}</span>
         </div>
-      </div>
+      </div> -->
     </div>
 
     <!-- Lockdown Overlay -->
