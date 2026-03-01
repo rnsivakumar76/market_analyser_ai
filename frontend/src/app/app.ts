@@ -110,7 +110,7 @@ export class App implements OnInit, OnDestroy {
   private startAutoRefresh() {
     // 1. Scheduler for Analysis
     this.refreshSubscription = interval(this.REFRESH_INTERVAL_SEC * 1000).subscribe(() => {
-      this.runAnalysis(true); // Background update: silent
+      this.runAnalysis(true, true); // Background update: silent + force fresh prices
       this.secondsRemaining = this.REFRESH_INTERVAL_SEC;
     });
 
