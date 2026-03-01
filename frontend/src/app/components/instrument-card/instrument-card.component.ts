@@ -391,28 +391,32 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
               <div class="risk-panel-card">
                 <div class="tile-header">⚠️ PULLBACK & TRAP ANALYSIS</div>
-                <p class="pic-desc">{{ analysis.pullback_warning?.description }}</p>
+                <p class="pic-desc">{{ analysis.pullback_warning?.description || 'No immediate pullback or trap risk detected. Current price action appears normal.' }}</p>
                 <div class="pic-reasons">
-                    @for (reason of analysis.pullback_warning?.reasons; track reason) {
-                        <div class="pic-reason-tag" [class]="getPullbackReasonClass(reason)">◈ {{ reason }}</div>
+                    @if (hasPullbackReasons()) {
+                        @for (reason of analysis.pullback_warning!.reasons; track reason) {
+                            <div class="pic-reason-tag" [class]="getPullbackReasonClass(reason)">◈ {{ reason }}</div>
+                        }
+                    } @else {
+                        <div class="pic-reason-tag neutral">◈ Market conditions stable</div>
+                        <div class="pic-reason-tag neutral">◈ No trap patterns identified</div>
+                        <div class="pic-reason-tag neutral">◈ Normal price progression</div>
                     }
                 </div>
-                @if (analysis.pullback_warning) {
-                    <div class="pic-metrics">
-                        <div class="pic-metric">
-                            <span class="pic-metric-label">Risk Level</span>
-                            <span class="pic-metric-value" [class]="getPullbackRiskClass()">{{ getPullbackRiskLevel() }}</span>
-                        </div>
-                        <div class="pic-metric">
-                            <span class="pic-metric-label">Current Position</span>
-                            <span class="pic-metric-value">{{ getPullbackPosition() }}</span>
-                        </div>
-                        <div class="pic-metric">
-                            <span class="pic-metric-label">Recommended Action</span>
-                            <span class="pic-metric-value">{{ getPullbackAction() }}</span>
-                        </div>
+                <div class="pic-metrics">
+                    <div class="pic-metric">
+                        <span class="pic-metric-label">Risk Level</span>
+                        <span class="pic-metric-value" [class]="getPullbackRiskClass()">{{ getPullbackRiskLevel() }}</span>
                     </div>
-                }
+                    <div class="pic-metric">
+                        <span class="pic-metric-label">Current Position</span>
+                        <span class="pic-metric-value">{{ getPullbackPosition() }}</span>
+                    </div>
+                    <div class="pic-metric">
+                        <span class="pic-metric-label">Recommended Action</span>
+                        <span class="pic-metric-value">{{ getPullbackAction() }}</span>
+                    </div>
+                </div>
               </div>
             </div>
 
@@ -1407,6 +1411,10 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   // ── Enhanced Pullback Analysis Methods ───────────────────────────────────────
+  hasPullbackReasons(): boolean {
+    return !!(this.analysis.pullback_warning?.reasons && this.analysis.pullback_warning.reasons.length > 0);
+  }
+
   getPullbackReasonClass(reason: string): string {
     const lowerReason = reason.toLowerCase();
     if (lowerReason.includes('extended') || lowerReason.includes('overbought')) return 'high-risk';
