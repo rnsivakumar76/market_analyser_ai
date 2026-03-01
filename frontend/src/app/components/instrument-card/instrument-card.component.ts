@@ -44,6 +44,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             <div class="th-status-pill" [class]="getSignalClass()">
                <span class="th-s-val">{{ analysis.trade_signal.score }}</span>
                <span class="th-s-rec">{{ analysis.trade_signal.recommendation }}</span>
+               @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
+                 <span class="th-conflict-badge" [class]="'sev-' + analysis.trade_signal.signal_conflict!.severity">⚡ CONFLICT</span>
+               }
             </div>
             <button class="btn-refresh-circle" (click)="onRefresh()">🔄</button>
           </div>
@@ -62,46 +65,42 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
         <!-- ANALYSIS TABS NAVIGATION -->
         <div class="analysis-tabs">
-          <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">TECHNICAL</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">SIGNAL</button>
           <button class="atab" [class.active]="activeAnalysisTab === 'risk'" (click)="activeAnalysisTab = 'risk'">RISK</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'performance'" (click)="activeAnalysisTab = 'performance'">PERFORMANCE</button>
         </div>
 
           @if (activeAnalysisTab === 'technical') {
           <section class="t-tile intel-tile tab-content-tile">
             <div class="intel-column-stack">
 
-              <!-- SIGNAL CONFLICT BANNER -->
-              @if (analysis.trade_signal.signal_conflict && analysis.trade_signal.signal_conflict.conflict_type !== 'none') {
-              <div class="signal-conflict-banner" [class]="'conflict-' + analysis.trade_signal.signal_conflict.severity">
-                <div class="scb-header">
-                  <span class="scb-icon">{{ analysis.trade_signal.signal_conflict.severity === 'high' ? '⚡' : '⚠️' }}</span>
-                  <span class="scb-title">SIGNAL CONFLICT DETECTED</span>
-                  <span class="scb-badge">{{ analysis.trade_signal.signal_conflict.severity | uppercase }}</span>
-                </div>
-                <div class="scb-headline">{{ analysis.trade_signal.signal_conflict.headline }}</div>
-                <div class="scb-guidance">{{ analysis.trade_signal.signal_conflict.guidance }}</div>
-                @if (analysis.trade_signal.signal_conflict.trigger_price_up || analysis.trade_signal.signal_conflict.trigger_price_down) {
-                <div class="scb-triggers">
-                  @if (analysis.trade_signal.signal_conflict.trigger_price_up) {
-                    <span class="scb-trigger bullish">▲ BULL TRIGGER: \${{ analysis.trade_signal.signal_conflict.trigger_price_up?.toFixed(2) }}</span>
-                  }
-                  @if (analysis.trade_signal.signal_conflict.trigger_price_down) {
-                    <span class="scb-trigger bearish">▼ BEAR TRIGGER: \${{ analysis.trade_signal.signal_conflict.trigger_price_down?.toFixed(2) }}</span>
-                  }
-                </div>
+              <!-- CONFLICT DETAIL (inline, compact) -->
+              @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
+              <div class="conflict-inline" [class]="'ci-' + analysis.trade_signal.signal_conflict!.severity">
+                <span class="ci-text">{{ analysis.trade_signal.signal_conflict!.guidance }}</span>
+                @if (analysis.trade_signal.signal_conflict!.trigger_price_up) {
+                  <span class="ci-trigger bullish">▲ \${{ analysis.trade_signal.signal_conflict!.trigger_price_up?.toFixed(2) }}</span>
+                }
+                @if (analysis.trade_signal.signal_conflict!.trigger_price_down) {
+                  <span class="ci-trigger bearish">▼ \${{ analysis.trade_signal.signal_conflict!.trigger_price_down?.toFixed(2) }}</span>
                 }
               </div>
               }
 
               <!-- SECTION 1: STRATEGIC ACTION & SCALING -->
               <div class="tech-section action-section">
-                <div class="tile-header">🎯 STRATEGIC ACTION & SCALING</div>
+                <div class="tile-header">
+                  🎯 STRATEGIC ACTION & SCALING
+                  <span class="action-rec-badge" [class]="isWaitAction() ? 'badge-wait' : getSignalClass()">{{ analysis.trade_signal.action_plan }}</span>
+                </div>
                 <div class="action-hero">
-                   <div class="aph-text">{{ analysis.trade_signal.action_plan }}</div>
                    <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
                 </div>
 
-                <div class="levels-stack">
+                <div class="levels-stack" [class.levels-inactive]="isWaitAction()">
+                  @if (isWaitAction()) {
+                    <div class="levels-pending">⏸ Levels pending signal confirmation — wait for alignment before entering</div>
+                  }
                   <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
                   <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
                   <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
@@ -134,9 +133,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                   <div class="rrd-stats">
                     <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
-                    <div class="rrd-stat"><span>PROBABILITY</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
                     <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
                     <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
+                    <div class="rrd-stat"><span>SIGNAL SCORE</span><strong [class]="getSignalClass()">{{ analysis.trade_signal.score }}</strong></div>
                   </div>
                 </div>
 
@@ -206,87 +205,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 </div>
               </div>
 
-              <!-- SECTION 3: AI TRADE REASONING -->
-              <div class="tech-section ai-reasoning-section">
-                <div class="tile-header">🧠 AI TRADE REASONING — WHY {{ getTradeDirection() }}</div>
-                @if (getBullishFactors().length > 0) {
-                  <div class="air-group">
-                    <div class="air-group-label bullish-label">BULLISH FACTORS</div>
-                    @for (factor of getBullishFactors(); track factor.indicator) {
-                      <div class="air-factor bullish-factor">
-                        <div class="air-indicator">● {{ factor.indicator }}: <strong>{{ factor.value }}</strong></div>
-                        <div class="air-explanation">{{ factor.explanation }}</div>
-                      </div>
-                    }
-                  </div>
-                }
-                @if (getCautionFactors().length > 0) {
-                  <div class="air-group">
-                    <div class="air-group-label caution-label">CAUTION / BEARISH FACTORS</div>
-                    @for (factor of getCautionFactors(); track factor.indicator) {
-                      <div class="air-factor caution-factor">
-                        <div class="air-indicator">⚠ {{ factor.indicator }}: <strong>{{ factor.value }}</strong></div>
-                        <div class="air-explanation">{{ factor.explanation }}</div>
-                      </div>
-                    }
-                  </div>
-                }
-                <div class="air-range">
-                  <div class="air-range-header">NEXT RANGE ESTIMATE</div>
-                  <div class="air-range-row up">
-                    <span class="air-dir">▲ UP:</span>
-                    <span class="air-range-text">{{ getRangeUp() }}</span>
-                  </div>
-                  <div class="air-range-row down">
-                    <span class="air-dir">▼ DOWN:</span>
-                    <span class="air-range-text">{{ getRangeDown() }}</span>
-                  </div>
-                </div>
-                <div class="air-data-line">DATA: {{ getReasoningDataLine() }}</div>
-              </div>
 
-              <!-- SECTION 4: TECHNICAL ANALYSIS -->
-              <div class="intel-block">
-                  <div class="tile-header">🌐 MACRO REGIME</div>
-                  <div class="macro-mini">
-                     <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
-                     <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
-                  </div>
-                  <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
-              </div>
-
-              <div class="intel-block">
-                  <div class="tile-header">📊 TECHNICAL HEAT</div>
-                  <div class="heat-context">
-                      <p class="heat-intro">Current trade technical strength indicators:</p>
-                  </div>
-                  <div class="heat-bars">
-                      <div class="hb-item">
-                          <span>ADX Strength</span>
-                          <div class="hb-track">
-                              <div class="hb-fill adx" [style.width.%]="analysis.daily_strength.adx * 2"></div>
-                          </div>
-                          <span class="hb-interpretation">{{ getADXInterpretation() }}</span>
-                      </div>
-                      <div class="hb-item">
-                          <span>RSI Power</span>
-                          <div class="hb-track">
-                              <div class="hb-fill rsi" [style.left.%]="analysis.daily_strength.rsi"></div>
-                          </div>
-                          <span class="hb-interpretation">{{ getRSIInterpretation() }}</span>
-                      </div>
-                  </div>
-                  <div class="heat-implications">
-                      <div class="heat-impact">
-                          <span class="heat-label">Trade Impact:</span>
-                          <span class="heat-value" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</span>
-                      </div>
-                      <div class="heat-recommendation">
-                          <span class="heat-label">Recommendation:</span>
-                          <span class="heat-value">{{ getTechnicalRecommendation() }}</span>
-                      </div>
-                  </div>
-              </div>
 
               <!-- P6: VOLUME PROFILE -->
               @if (analysis.volume_profile) {
@@ -312,7 +231,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               }
 
               <!-- P7: SESSION VWAP -->
-              @if (analysis.session_vwap) {
+              @if (analysis.session_vwap && analysis.session_vwap.vwap > 0) {
               <div class="intel-block">
                 <div class="tile-header">📐 SESSION VWAP</div>
                 <div class="vwap-grid">
@@ -352,7 +271,11 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                   <div class="ch-item" [class]="getVolumeCheck()">
                      <div class="ch-left-data"><span class="ch-i">Volume Analysis</span><span class="ch-v">{{ getVolumeStatus() }}</span></div>
-                     <div class="ch-correlation">{{ getVolumeCorrelation() }}</div>
+                     @if (getVolumeStatus() !== 'ANALYZING') {
+                       <div class="ch-correlation">{{ getVolumeCorrelation() }}</div>
+                     } @else {
+                       <div class="ch-correlation muted">Insufficient volume data — computing</div>
+                     }
                   </div>
                   <div class="ch-item" [class]="getSupportResistanceCheck()">
                      <div class="ch-left-data"><span class="ch-i">Key Levels</span><span class="ch-v">{{ getLevelStatus() }}</span></div>
@@ -364,7 +287,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                 </div>
 
-                @if (analysis.instrument_correlations) {
+                @if (analysis.instrument_correlations &&
+                     !(analysis.instrument_correlations.interpretation?.toLowerCase()?.includes('insufficient')) &&
+                     (analysis.instrument_correlations.vs_dxy != null || analysis.instrument_correlations.vs_spx != null || analysis.instrument_correlations.vs_btc != null)) {
                 <div class="corr-matrix-row">
                   <div class="cm-label">30-DAY CORRELATIONS</div>
                   <div class="cm-cells">
@@ -420,23 +345,14 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               </div>
             </div>
 
-            <div class="probability-box-v2">
-              <div class="pb2-header">📈 PROBABILITY & BACKTEST QUALITY</div>
-              <div class="pb2-grid">
-                <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
-                <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results.profit_factor }}</strong></div>
-                <div class="pb2-stat"><span>SHARPE</span><strong [class]="analysis.backtest_results.sharpe_ratio >= 1 ? 'bullish' : 'bearish'">{{ analysis.backtest_results.sharpe_ratio?.toFixed(2) }}</strong></div>
-                <div class="pb2-stat"><span>EXPECTANCY</span><strong [class]="analysis.backtest_results.expectancy >= 0 ? 'bullish' : 'bearish'">{{ analysis.backtest_results.expectancy >= 0 ? '+' : '' }}{{ analysis.backtest_results.expectancy?.toFixed(2) }}%</strong></div>
+            <!-- MACRO REGIME (moved from Signal tab) -->
+            <div class="macro-context-block">
+              <div class="tile-header">🌐 MACRO REGIME</div>
+              <div class="macro-mini">
+                <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
+                <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
               </div>
-              <div class="pb2-grid pb2-grid-secondary">
-                <div class="pb2-stat"><span>MAX DD</span><strong class="bearish">{{ analysis.backtest_results.max_drawdown_pct?.toFixed(1) }}%</strong></div>
-                <div class="pb2-stat"><span>MAX STREAK</span><strong>{{ analysis.backtest_results.max_consecutive_losses }}L</strong></div>
-                <div class="pb2-stat"><span>SAMPLE</span><strong>n={{ analysis.backtest_results.sample_size }}</strong></div>
-                <div class="pb2-stat"><span>MAE</span><strong>{{ analysis.backtest_results.max_adverse_excursion_pct?.toFixed(1) }}% vs</strong></div>
-              </div>
-              <div class="bt-spark-v2">
-                <svg viewBox="0 0 200 40" preserveAspectRatio="none"><polyline [attr.points]="getEquityCurvePoints()" class="spark-line" /></svg>
-              </div>
+              <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
             </div>
 
             @if (analysis.fundamentals?.risk_reduction_active || analysis.fundamentals?.pre_event_caution) {
@@ -523,16 +439,50 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
             }
 
-            <div class="verdict-banner-final" [class]="getOverallCheckClass()">
-                {{ getTradeVerdict() }}
+          </section>
+          }
+
+          @if (activeAnalysisTab === 'performance') {
+          <section class="t-tile perf-tab-tile tab-content-tile">
+            <div class="perf-content">
+              <div class="probability-box-v2">
+                <div class="pb2-header">📈 PROBABILITY & BACKTEST QUALITY</div>
+                <div class="pb2-grid">
+                  <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
+                  <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results.profit_factor }}</strong></div>
+                  <div class="pb2-stat"><span>SHARPE</span><strong [class]="analysis.backtest_results.sharpe_ratio >= 1 ? 'bullish' : 'bearish'">{{ analysis.backtest_results.sharpe_ratio?.toFixed(2) }}</strong></div>
+                  <div class="pb2-stat"><span>EXPECTANCY</span><strong [class]="analysis.backtest_results.expectancy >= 0 ? 'bullish' : 'bearish'">{{ analysis.backtest_results.expectancy >= 0 ? '+' : '' }}{{ analysis.backtest_results.expectancy?.toFixed(2) }}%</strong></div>
+                </div>
+                <div class="pb2-grid pb2-grid-secondary">
+                  <div class="pb2-stat"><span>MAX DD</span><strong class="bearish">{{ analysis.backtest_results.max_drawdown_pct?.toFixed(1) }}%</strong></div>
+                  <div class="pb2-stat"><span>MAX STREAK</span><strong>{{ analysis.backtest_results.max_consecutive_losses }}L</strong></div>
+                  <div class="pb2-stat"><span>SAMPLE</span><strong>n={{ analysis.backtest_results.sample_size }}</strong></div>
+                  <div class="pb2-stat"><span>MAE</span><strong>{{ analysis.backtest_results.max_adverse_excursion_pct?.toFixed(1) }}% vs</strong></div>
+                </div>
+                @if (analysis.backtest_results.sample_size < 30) {
+                  <div class="sample-size-warning">⚠ Low sample size (n={{ analysis.backtest_results.sample_size }}). Results are indicative only — not statistically significant until n≥30.</div>
+                }
+                <div class="bt-spark-v2">
+                  <svg viewBox="0 0 200 60" preserveAspectRatio="none">
+                    <polyline [attr.points]="getEquityCurvePoints()" class="spark-line" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Chart Area in Performance tab -->
+              <div class="perf-chart-area">
+                <div class="tile-header">📉 PRICE CHART</div>
+                <div class="terminal-chart-area">
+                  <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol" [overlayLevels]="getChartOverlays()" *ngIf="chartData.length > 0"></app-instrument-chart>
+                  @if (!chartData.length) {
+                    <div class="chart-placeholder">Chart data loading — click Refresh 🔄</div>
+                  }
+                </div>
+              </div>
             </div>
           </section>
           }
 
-        <!-- Inline Chart Area -->
-        <div class="terminal-chart-area" *ngIf="showChart">
-           <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol" [overlayLevels]="getChartOverlays()" *ngIf="chartData.length > 0"></app-instrument-chart>
-        </div>
       </div>
 
        <!-- Journal Modal -->
@@ -1034,6 +984,39 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .cm-cell.corr-strong-neg strong { color: #f38ba8; }
     .cm-interpretation { font-size: 0.58rem; color: #6c7086; line-height: 1.4; }
 
+    /* SAMPLE SIZE WARNING */
+    .sample-size-warning { margin: 10px 0; padding: 8px 12px; background: rgba(249,226,175,0.07); border: 1px solid rgba(249,226,175,0.3); border-radius: 6px; font-size: 0.62rem; color: #f9e2af; line-height: 1.4; }
+
+    /* MACRO CONTEXT BLOCK (in Risk tab) */
+    .macro-context-block { padding: 16px 20px; border-bottom: 1px solid #1f1f3a; background: rgba(17,17,27,0.4); }
+    .macro-context-block .tile-header { margin-bottom: 10px; }
+
+    /* LEVELS INACTIVE (wait state) */
+    .levels-inactive { opacity: 0.45; pointer-events: none; position: relative; }
+    .levels-pending { font-size: 0.65rem; color: #f9e2af; background: rgba(249,226,175,0.08); border: 1px solid rgba(249,226,175,0.25); border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; }
+
+    /* ACTION REC BADGE */
+    .action-rec-badge { font-size: 0.5rem; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; }
+    .action-rec-badge.bullish { background: rgba(166,227,161,0.15); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .action-rec-badge.bearish { background: rgba(243,139,168,0.15); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .action-rec-badge.badge-wait { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+    .action-rec-badge.neutral { background: rgba(108,112,134,0.15); color: #9399b2; border: 1px solid rgba(108,112,134,0.3); }
+
+    /* CONFLICT BADGE ON STATUS PILL */
+    .th-conflict-badge { font-size: 0.45rem; font-weight: 900; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px; }
+    .th-conflict-badge.sev-high { background: rgba(243,139,168,0.2); color: #f38ba8; border: 1px solid rgba(243,139,168,0.4); }
+    .th-conflict-badge.sev-medium { background: rgba(249,226,175,0.2); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+
+    /* PERFORMANCE TAB */
+    .perf-content { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+    .perf-chart-area { background: #000; border-radius: 8px; overflow: hidden; }
+    .perf-chart-area .tile-header { padding: 12px 16px; background: #0b0b15; margin-bottom: 0; border-bottom: 1px solid #1f1f3a; }
+    .perf-chart-area .terminal-chart-area { height: 360px; }
+    .chart-placeholder { display: flex; align-items: center; justify-content: center; height: 200px; color: #45475a; font-size: 0.75rem; }
+
+    /* MUTED CORRELATION TEXT */
+    .ch-correlation.muted { color: #45475a; font-style: italic; }
+
     /* SECONDARY BACKTEST GRID */
     .pb2-grid-secondary { margin-top: 6px; padding-top: 8px; border-top: 1px solid #1f1f3a; }
 
@@ -1239,7 +1222,7 @@ export class InstrumentCardComponent implements OnChanges {
   private marketAnalyzerService = inject(MarketAnalyzerService);
 
   selectedTab: 'plan' | 'insight' = 'plan';
-  activeAnalysisTab: 'technical' | 'risk' = 'technical';
+  activeAnalysisTab: 'technical' | 'risk' | 'performance' = 'technical';
   showChart = false;
   isLoadingChart = false;
   chartData: ChartData[] = [];
@@ -1299,6 +1282,11 @@ export class InstrumentCardComponent implements OnChanges {
 
   onRefresh() {
     this.refresh.emit(this.analysis.symbol);
+  }
+
+  isWaitAction(): boolean {
+    const action = this.analysis?.trade_signal?.action_plan?.toLowerCase() ?? '';
+    return action.includes('wait') || action.includes('observe') || action.includes('sideline') || action.includes('neutral');
   }
 
   // CSS Class Helpers
