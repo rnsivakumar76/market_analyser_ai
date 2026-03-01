@@ -1,5 +1,5 @@
 import requests
-from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import logging
 import time
@@ -10,55 +10,71 @@ logger = logging.getLogger(__name__)
 
 # Global cache for news sentiment (15 minute TTL)
 _news_cache = {}
-_CACHE_TTL = 900 # 15 minutes
+_CACHE_TTL = 900  # 15 minutes
+
+# Map internal symbols to Yahoo Finance tickers for RSS
+_YAHOO_SYMBOL_MAP = {
+    'XAU':  ('GC=F',       'Gold'),
+    'XAG':  ('SI=F',       'Silver'),
+    'WTI':  ('CL=F',       'Crude Oil'),
+    'SPX':  ('^GSPC',      'S&P 500'),
+    'BTC':  ('BTC-USD',    'Bitcoin'),
+    'ETH':  ('ETH-USD',    'Ethereum'),
+    'EUR':  ('EURUSD=X',   'Euro'),
+    'GBP':  ('GBPUSD=X',   'British Pound'),
+    'JPY':  ('USDJPY=X',   'US Dollar Yen'),
+    'DXY':  ('DX-Y.NYB',   'US Dollar Index'),
+    'NAS':  ('NQ=F',       'Nasdaq'),
+    'DOW':  ('YM=F',       'Dow Jones'),
+}
+
 
 def fetch_rss_news(symbol: str) -> List[Dict[str, str]]:
-    """Fetch news from various RSS sources."""
+    """Fetch news from Yahoo Finance RSS. Works reliably from AWS Lambda."""
     news_items = []
-    
-    # Financial symbols often work well with Yahoo Finance and Google News search
-    # This is a robust free way to get headlines
+    symbol_upper = symbol.upper()
+
+    yf_ticker, _ = _YAHOO_SYMBOL_MAP.get(symbol_upper, (symbol_upper, symbol_upper))
+
     urls = [
-        f"https://www.google.com/search?q={symbol}+stock+news&tbm=nws&tbs=qdr:d",
+        f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={yf_ticker}&region=US&lang=en-US",
     ]
-    
+
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (compatible; MarketAnalyser/1.0)'
     }
-    
+
     for url in urls:
         try:
-            response = requests.get(url, headers=headers, timeout=2) # Shorter timeout
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Google News scrape (simplified)
-                # Google often changes its structure, so we look for common title patterns
-                for item in soup.find_all('div', attrs={'role': 'heading'}):
-                    title = item.get_text()
-                    if title and len(title) > 10:
-                        news_items.append({
-                            "title": title,
-                            "source": "Google News (Search)",
-                            "url": url
-                        })
-                
-                # If Google News div fails, try common anchor tags in news search
-                if not news_items:
-                    for a in soup.find_all('a'):
-                        text = a.get_text()
-                        if len(text) > 30: # Likely a headline
-                            news_items.append({
-                                "title": text,
-                                "source": "News Search",
-                                "url": url
-                            })
-                            
+            response = requests.get(url, headers=headers, timeout=5)
+            if response.status_code == 200 and response.content:
+                try:
+                    root = ET.fromstring(response.content)
+                    channel = root.find('channel')
+                    if channel is not None:
+                        for item in channel.findall('item'):
+                            title_el = item.find('title')
+                            link_el  = item.find('link')
+                            source_el = item.find('source')
+
+                            if title_el is not None and title_el.text and len(title_el.text.strip()) > 10:
+                                news_items.append({
+                                    "title":  title_el.text.strip(),
+                                    "source": (source_el.text.strip()
+                                               if source_el is not None and source_el.text
+                                               else "Yahoo Finance"),
+                                    "url":    (link_el.text.strip()
+                                               if link_el is not None and link_el.text
+                                               else url)
+                                })
+                except ET.ParseError as e:
+                    logger.error(f"RSS parse error for {symbol}: {e}")
+
             if len(news_items) >= 10:
                 break
         except Exception as e:
             logger.error(f"Failed to fetch news for {symbol}: {e}")
-            
+
     return news_items[:10]
 
 def analyze_news_sentiment(symbol: str) -> NewsSentiment:
