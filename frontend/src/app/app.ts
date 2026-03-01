@@ -12,12 +12,13 @@ import { WatchlistHeatmapComponent } from './components/watchlist-heatmap/watchl
 import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component';
 import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
 import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
+import { GeopoliticalAnalysisComponent } from './components/geopolitical-analysis/geopolitical-analysis.component';
 import { interval, Subscription, timer } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -36,6 +37,7 @@ export class App implements OnInit, OnDestroy {
   showUserManual = signal(false);
   showTradeJournal = signal(false);
   showSmartAlerts = signal(false);
+  showGeopoliticalAnalysis = signal(false);
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
   psychologicalGuardrail = signal<PsychologicalGuardrail | null>(null);

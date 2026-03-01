@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 # Import auth dependencies - these are light
 from .auth import get_current_user
 from .oauth import router as auth_router
+from .news.geopolitical_routes import router as geopolitical_router
 
 # Base logging
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +56,8 @@ app.add_middleware(
 
 # Include Auth routes at top level - these are fast enough
 app.include_router(auth_router, prefix="/api")
+# Include Geopolitical routes
+app.include_router(geopolitical_router)
 
 # Required for Authlib OAuth state storage
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "super-secret-session-key")

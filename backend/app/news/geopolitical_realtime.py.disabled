@@ -1,0 +1,162 @@
+"""
+Real-Time Geopolitical News Sentiment Analyzer
+Integrates with NewsAPI.org for live geopolitical intelligence
+"""
+
+import os
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Note: requests not available in Lambda - this file is for reference only
+
+class RealTimeGeopoliticalAnalyzer:
+    def __init__(self):
+        # Use provided API key or environment variable
+        self.news_api_key = os.getenv('NEWS_API_KEY', '87d3fef01bed4240b1e05926d7892e24')
+        self.base_url = 'https://newsapi.org/v2/everything'
+        
+        logger.info(f"Initializing RealTimeGeopoliticalAnalyzer with API key: {self.news_api_key[:8]}...")
+        
+        # Geopolitical keywords for news filtering
+        self.geopolitical_keywords = [
+            'iran', 'usa', 'military', 'conflict', 'tension', 'sanctions',
+            'war', 'geopolitical', 'crisis', 'diplomatic', 'nuclear',
+            'oil', 'energy', 'supply chain', 'trade war', 'embargo',
+            'middle east', 'russia', 'ukraine', 'china', 'taiwan'
+        ]
+        
+        # Sector mapping for impact analysis
+        self.sector_mapping = {
+            'energy': ['oil', 'gas', 'energy', 'petroleum', 'opec'],
+            'commodities': ['gold', 'silver', 'metals', 'commodities'],
+            'defense': ['military', 'defense', 'weapons', 'aerospace'],
+            'transportation': ['shipping', 'logistics', 'supply chain', 'airlines'],
+            'finance': ['banking', 'finance', 'currency', 'markets', 'trading']
+        }
+    
+    def fetch_geopolitical_news(self) -> List[Dict]:
+        """Fetch real-time geopolitical news from NewsAPI"""
+        try:
+            logger.info("Fetching real-time geopolitical news...")
+            
+            # Build query with top keywords
+            query_keywords = self.geopolitical_keywords[:8]  # Limit to 8 keywords per request
+            query = ' OR '.join(query_keywords)
+            
+            params = {
+                'q': query,
+                'apiKey': self.news_api_key,
+                'language': 'en',
+                'sortBy': 'publishedAt',
+                'pageSize': 20,
+                'from': (datetime.now() - timedelta(hours=24)).isoformat(),
+                'to': datetime.now().isoformat(),
+                'domains': 'reuters.com,bloomberg.com,bbc.com,cnn.com,aljazeera.com'  # Major news sources
+            }
+            
+            logger.info(f"Making request to NewsAPI with query: {query}")
+            response = requests.get(self.base_url, params=params, timeout=15)
+            
+            if response.status_code == 200:
+                data = response.json()
+                articles = data.get('articles', [])
+                logger.info(f"Successfully fetched {len(articles)} articles")
+                return self.process_news_articles(articles)
+            else:
+                logger.error(f"NewsAPI error: {response.status_code} - {response.text}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Error fetching news: {e}")
+            return []
+    
+    def process_news_articles(self, articles: List[Dict]) -> List[Dict]:
+        """Process and filter news articles"""
+        processed_articles = []
+        
+        for article in articles:
+            # Skip articles without content
+            if not article.get('title') or not article.get('description'):
+                continue
+            
+            # Check for geopolitical relevance
+            title_desc = f"{article.get('title', '')} {article.get('description', '')}".lower()
+            
+            # Count geopolitical keywords
+            keyword_count = sum(1 for keyword in self.geopolitical_keywords if keyword in title_desc)
+            
+            # Only include articles with at least 2 geopolitical keywords
+            if keyword_count >= 2:
+                processed_article = {
+                    'title': article.get('title', ''),
+                    'description': article.get('description', ''),
+                    'source': article.get('source', {}).get('name', 'Unknown'),
+                    'published': self.parse_newsapi_date(article.get('publishedAt', '')),
+                    'url': article.get('url', ''),
+                    'image_url': article.get('urlToImage', ''),
+                    'keyword_count': keyword_count,
+                    'content_length': len(title_desc)
+                }
+                processed_articles.append(processed_article)
+        
+        logger.info(f"Processed {len(processed_articles)} relevant articles")
+        return processed_articles
+    
+    def parse_newsapi_date(self, date_str: str) -> datetime:
+        """Parse NewsAPI date string"""
+        try:
+            # NewsAPI returns ISO format: 2024-02-28T10:30:00Z
+            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        except:
+            return datetime.now()
+    
+    def get_affected_sectors(self, content: str) -> List[str]:
+        """Determine affected sectors based on content"""
+        content_lower = content.lower()
+        affected_sectors = []
+        
+        for sector, keywords in self.sector_mapping.items():
+            if any(keyword in content_lower for keyword in keywords):
+                affected_sectors.append(sector)
+        
+        return affected_sectors or ['general']
+    
+    def get_affected_regions(self, content: str) -> List[str]:
+        """Determine affected regions based on content"""
+        content_lower = content.lower()
+        regions = []
+        
+        region_keywords = {
+            'middle_east': ['iran', 'iraq', 'saudi', 'israel', 'palestine', 'syria', 'uae'],
+            'europe': ['russia', 'ukraine', 'europe', 'nato', 'germany', 'france'],
+            'asia_pacific': ['china', 'taiwan', 'japan', 'korea', 'asia', 'pacific'],
+            'north_america': ['usa', 'america', 'canada', 'mexico'],
+            'global': ['global', 'worldwide', 'international']
+        }
+        
+        for region, keywords in region_keywords.items():
+            if any(keyword in content_lower for keyword in keywords):
+                regions.append(region)
+        
+        return regions or ['global']
+    
+    def extract_conflict_keywords(self, content: str) -> List[str]:
+        """Extract conflict-related keywords from content"""
+        content_lower = content.lower()
+        found_keywords = []
+        
+        conflict_keywords = [
+            'iran', 'usa', 'military', 'conflict', 'tension', 'sanctions',
+            'war', 'crisis', 'diplomatic', 'nuclear', 'oil', 'energy',
+            'embargo', 'trade war', 'geopolitical', 'russia', 'ukraine',
+            'china', 'taiwan', 'middle east'
+        ]
+        
+        for keyword in conflict_keywords:
+            if keyword in content_lower:
+                found_keywords.append(keyword)
+        
+        return found_keywords[:5]  # Limit to top 5 keywords

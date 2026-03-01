@@ -1,7 +1,5 @@
 fastapi==0.109.0
 uvicorn==0.27.0
-pandas==2.2.0
-numpy==1.26.3
 pyyaml==6.0.1
 python-dateutil==2.8.2
 pydantic==2.5.3
@@ -20,3 +18,5 @@ vaderSentiment
 beautifulsoup4
 boto3
 botocore
+numpy==1.26.4
+pandas==2.1.4

@@ -3,6 +3,53 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+export interface GeopoliticalEvent {
+  title: string;
+  description: string;
+  source: string;
+  published: string;
+  sentiment_score: number;
+  affected_regions: string[];
+  affected_sectors: string[];
+  conflict_keywords: string[];
+}
+
+export interface TradingRecommendation {
+  asset: string;
+  action: string;
+  reason: string;
+  confidence: number;
+  time_horizon: string;
+  volatility_expectation: string;
+}
+
+export interface GeopoliticalData {
+  timestamp: string;
+  overall_sentiment: {
+    overall_score: number;
+    trend: string;
+    volatility_risk: number;
+    event_count: number;
+    critical_count: number;
+  };
+  critical_events: GeopoliticalEvent[];
+  high_impact_events: GeopoliticalEvent[];
+  trading_recommendations: {
+    energy_markets: TradingRecommendation[];
+    commodities: TradingRecommendation[];
+    equities: any[];
+    currencies: any[];
+  };
+  affected_sectors: Record<string, number>;
+  risk_assessment: {
+    overall_risk_level: string;
+    critical_event_count: number;
+    high_impact_count: number;
+    volatility_expectation: string;
+    recommended_position_sizing: string;
+  };
+}
+
 export interface TrendAnalysis {
   direction: 'bullish' | 'bearish' | 'neutral';
   fast_ma: number;
@@ -341,5 +388,34 @@ export class MarketAnalyzerService {
 
   deleteTrade(tradeId: string): Observable<any> {
     return this.http.delete(`${this.apiUrl}/journal/${tradeId}`);
+  }
+
+  // Geopolitical Analysis Methods
+  getGeopoliticalSentiment(): Observable<GeopoliticalData> {
+    return this.http.get<GeopoliticalData>(`${this.apiUrl}/geopolitical/sentiment`);
+  }
+
+  getCrisisAlerts(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/geopolitical/crisis-alerts`);
+  }
+
+  getEnergyMarketsAnalysis(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/geopolitical/energy-markets`);
+  }
+
+  getSafeHavenAnalysis(): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/geopolitical/safe-haven`);
+  }
+
+  getCustomGeopoliticalAnalysis(regions: string[], sectors: string[]): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/geopolitical/custom-analysis`, {
+      regions,
+      sectors,
+      time_horizon: '24h'
+    });
+  }
+
+  getHistoricalSentiment(days: number = 7): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/geopolitical/historical-sentiment?days=${days}`);
   }
 }

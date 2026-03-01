@@ -60,12 +60,18 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
            </div>
         </div>
 
-        <!-- 3. DECISION TILES (NEXUS PRO GRID - FULLY RESTORED) -->
-        <!-- 3. DECISION TILES (3-COLUMN COMMAND CENTER) -->
-        <div class="terminal-grid">
-          
-          <!-- COLUMN 1: STRATEGIC ACTION (TACTICAL EXECUTION) -->
-          <section class="t-tile action-tile">
+        <!-- ANALYSIS TABS NAVIGATION -->
+        <div class="analysis-tabs">
+          <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">TECHNICAL</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'geopolitical'" (click)="activeAnalysisTab = 'geopolitical'">GEOPOLITICAL</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'risk'" (click)="activeAnalysisTab = 'risk'">RISK</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'scaling'" (click)="activeAnalysisTab = 'scaling'">SCALING</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'performance'" (click)="activeAnalysisTab = 'performance'">PERFORMANCE</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'settings'" (click)="activeAnalysisTab = 'settings'">SETTINGS</button>
+        </div>
+
+          @if (activeAnalysisTab === 'scaling') {
+          <section class="t-tile action-tile tab-content-tile">
             <div class="tile-header">🎯 STRATEGIC ACTION & SCALING</div>
             <div class="action-hero">
                <div class="aph-text">{{ analysis.trade_signal.action_plan }}</div>
@@ -76,6 +82,40 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
               <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
               <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
+            </div>
+
+            <!-- VISUAL R/R DIAGRAM -->
+            <div class="rr-visual-diagram">
+              <div class="rrd-header">VISUAL R/R DIAGRAM</div>
+              <div class="rrd-chart">
+                <div class="rrd-row">
+                  <span class="rrd-tag tp-tag">TARGET</span>
+                  <div class="rrd-bar tp-bar"></div>
+                  <span class="rrd-price bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
+                </div>
+                <div class="rrd-row reward-row">
+                  <span class="rrd-amount bullish">▲ +\${{ getRRReward() }} REWARD</span>
+                </div>
+                <div class="rrd-row">
+                  <span class="rrd-tag entry-tag">ENTRY ●</span>
+                  <div class="rrd-bar entry-bar"></div>
+                  <span class="rrd-price">\${{ getEntryZone() }}</span>
+                </div>
+                <div class="rrd-row risk-row">
+                  <span class="rrd-amount bearish">▼ -\${{ getRRRisk() }} RISK</span>
+                </div>
+                <div class="rrd-row">
+                  <span class="rrd-tag sl-tag">STOP</span>
+                  <div class="rrd-bar sl-bar"></div>
+                  <span class="rrd-price bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
+                </div>
+              </div>
+              <div class="rrd-stats">
+                <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
+                <div class="rrd-stat"><span>PROBABILITY</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
+                <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
+                <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
+              </div>
             </div>
 
             <div class="terminal-gauge">
@@ -109,9 +149,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <button class="btn-secondary" (click)="toggleChart()">📊 Open Chart</button>
             </div>
           </section>
+          }
 
-          <!-- COLUMN 2: VALIDATION & REASONING (RISK & CORRELATION) -->
-          <section class="t-tile status-tile">
+          @if (activeAnalysisTab === 'risk') {
+          <section class="t-tile status-tile tab-content-tile">
             <div class="tile-header">🛡️ VALIDATION & RISK INTEL</div>
             
             <div class="checklist-compact-full">
@@ -192,9 +233,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 {{ getTradeVerdict() }}
             </div>
           </section>
+          }
 
-          <!-- COLUMN 3: INSTITUTIONAL INTELLIGENCE STACK (ALWAYS FULL) -->
-          <section class="t-tile intel-tile">
+          @if (activeAnalysisTab === 'technical') {
+          <section class="t-tile intel-tile tab-content-tile">
              <div class="intel-column-stack">
                 
                 <!-- EXPERT BATTLE PLAN (CONDITIONAL) -->
@@ -273,12 +315,11 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
              </div>
           </section>
-        </div>
+          }
 
-        <!-- 4. INTELLIGENCE DEEP CENTER (RESTORED LONG-FORM - NO TABS) -->
-        <!-- 5. UNIVERSAL FOOTER (GEOPOLITICAL SENTIMENT) -->
-        <div class="geopolitical-footer">
-            <div class="section-label">📰 GEOPOLITICAL NEWS & MARKET SENTIMENT</div>
+          @if (activeAnalysisTab === 'geopolitical') {
+          <section class="t-tile geo-tab-tile tab-content-tile">
+            <div class="tile-header">📰 GEOPOLITICAL NEWS & MARKET SENTIMENT</div>
             <div class="geo-grid">
                 <div class="geo-summary">
                     <div class="sah-badge-v2" [class]="analysis.news_sentiment?.label?.toLowerCase()">{{ analysis.news_sentiment?.label | uppercase }}</div>
@@ -294,12 +335,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     }
                 </div>
             </div>
-        </div>
-
-
-        <!-- COLLAPSIBLE DEEP DATA -->
-        <div class="deep-data-section" *ngIf="showMoreIntel">
-           <div class="deep-grid">
+            <div class="deep-grid geo-deep-grid">
               <div class="deep-card news">
                 <div class="dc-header">NEWS INTELLIGENCE</div>
                 <div class="mini-news-stack">
@@ -327,8 +363,96 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     <div class="feb-item"><span>1.618 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1618 }}</strong></div>
                  </div>
               </div>
-           </div>
-        </div>
+            </div>
+          </section>
+          }
+
+          @if (activeAnalysisTab === 'performance') {
+          <section class="t-tile perf-tab-tile tab-content-tile">
+            <div class="tile-header">📊 TRADING PERFORMANCE DASHBOARD</div>
+            <div class="perf-summary-row">
+              <div class="perf-kpi"><span>THIS WEEK</span><strong class="bullish">+2.5%</strong></div>
+              <div class="perf-kpi"><span>THIS MONTH</span><strong class="bullish">+8.7%</strong></div>
+              <div class="perf-kpi"><span>ALL TIME</span><strong class="bullish">+124.3%</strong></div>
+            </div>
+            <div class="perf-metrics-grid">
+              <div class="pm-kpi"><span>WIN RATE</span><strong>67%</strong></div>
+              <div class="pm-kpi"><span>PROFIT FACTOR</span><strong>1.85</strong></div>
+              <div class="pm-kpi"><span>MAX DRAWDOWN</span><strong class="bearish">8.5%</strong></div>
+              <div class="pm-kpi"><span>SHARPE RATIO</span><strong>1.25</strong></div>
+            </div>
+            <div class="perf-streaks">
+              <span class="streak-item win">🏆 Best Streak: 5 wins</span>
+              <span class="streak-item loss">Worst: 2 losses</span>
+              <span class="streak-item">Avg Duration: 2.3 days</span>
+            </div>
+            <div class="recent-trades-header">RECENT TRADES</div>
+            <div class="recent-trades-list">
+              <div class="rt-item"><span class="rt-symbol">AAPL LONG</span><span class="rt-pct bullish">+4.2%</span><span class="rt-age">2 days ago</span><span class="rt-badge win-badge">WIN</span></div>
+              <div class="rt-item"><span class="rt-symbol">TSLA SHORT</span><span class="rt-pct bearish">-1.8%</span><span class="rt-age">1 day ago</span><span class="rt-badge loss-badge">LOSS</span></div>
+              <div class="rt-item"><span class="rt-symbol">MSFT LONG</span><span class="rt-pct bullish">+2.1%</span><span class="rt-age">3 days ago</span><span class="rt-badge win-badge">WIN</span></div>
+              <div class="rt-item"><span class="rt-symbol">NVDA LONG</span><span class="rt-pct bullish">+3.5%</span><span class="rt-age">4 days ago</span><span class="rt-badge win-badge">WIN</span></div>
+              <div class="rt-item"><span class="rt-symbol">GOOGL SHORT</span><span class="rt-pct bearish">-0.8%</span><span class="rt-age">5 days ago</span><span class="rt-badge loss-badge">LOSS</span></div>
+            </div>
+            <div class="perf-actions">
+              <button class="btn-secondary">📒 View Trade Journal</button>
+              <button class="btn-secondary">📊 Performance Chart</button>
+              <button class="btn-secondary">📈 Export Data</button>
+            </div>
+          </section>
+          }
+
+          @if (activeAnalysisTab === 'settings') {
+          <section class="t-tile settings-tab-tile tab-content-tile">
+            <div class="tile-header">⚙️ SYSTEM SETTINGS & CONFIGURATION</div>
+            <div class="settings-section">
+              <div class="settings-label">📊 WATCHLIST MANAGEMENT</div>
+              <div class="settings-actions">
+                <button class="settings-btn">Add Symbol</button>
+                <button class="settings-btn">Remove Symbol</button>
+                <button class="settings-btn">Reorder</button>
+                <button class="settings-btn">Import Watchlist</button>
+              </div>
+            </div>
+            <div class="settings-section">
+              <div class="settings-label">⚡ STRATEGY CONFIGURATION</div>
+              <div class="settings-grid">
+                <div class="sg-item"><span>Risk per Trade</span><strong>1%</strong></div>
+                <div class="sg-item"><span>Max Daily Loss</span><strong>3%</strong></div>
+                <div class="sg-item"><span>Position Sizing</span><strong>Fixed</strong></div>
+                <div class="sg-item"><span>Stop Loss ATR</span><strong>2x</strong></div>
+                <div class="sg-item"><span>Take Profit R/R</span><strong>3:1</strong></div>
+                <div class="sg-item"><span>Trailing Stop</span><strong>OFF</strong></div>
+              </div>
+            </div>
+            <div class="settings-section">
+              <div class="settings-label">🔔 ALERT SETTINGS</div>
+              <div class="settings-toggles">
+                <div class="st-item"><span>Price Alerts</span><span class="st-on">ON</span></div>
+                <div class="st-item"><span>Signal Alerts</span><span class="st-on">ON</span></div>
+                <div class="st-item"><span>News Alerts</span><span class="st-on">ON</span></div>
+                <div class="st-item"><span>Email Notifications</span><span class="st-off">OFF</span></div>
+                <div class="st-item"><span>Push Notifications</span><span class="st-on">ON</span></div>
+              </div>
+            </div>
+            <div class="settings-section">
+              <div class="settings-label">🎨 DISPLAY PREFERENCES</div>
+              <div class="settings-grid">
+                <div class="sg-item"><span>Theme</span><strong>Dark</strong></div>
+                <div class="sg-item"><span>Chart Type</span><strong>Candlestick</strong></div>
+                <div class="sg-item"><span>Timezone</span><strong>SGT</strong></div>
+                <div class="sg-item"><span>Auto-refresh</span><strong>5 min</strong></div>
+                <div class="sg-item"><span>Sound Alerts</span><strong>ON</strong></div>
+                <div class="sg-item"><span>Animations</span><strong>ON</strong></div>
+              </div>
+            </div>
+            <div class="settings-footer-actions">
+              <button class="btn-primary">💾 Save Settings</button>
+              <button class="btn-secondary">🔄 Reset to Default</button>
+              <button class="btn-secondary">📤 Export Config</button>
+            </div>
+          </section>
+          }
 
         <!-- Inline Chart Area -->
         <div class="terminal-chart-area" *ngIf="showChart">
@@ -591,12 +715,103 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .intel-expander-v2 { text-align: center; }
     .exp-btn-v2 { width: 100%; padding: 12px; background: #1a1a2a; border: 1px dashed #313244; color: #6c7086; border-radius: 8px; font-weight: 900; font-size: 0.75rem; cursor: pointer; }
 
-    /* MOBILE BREAKPOINT RESTORED */
+    /* ANALYSIS TABS */
+    .analysis-tabs { display: flex; background: #0b0b15; border-bottom: 2px solid #1f1f3a; overflow-x: auto; flex-shrink: 0; }
+    .analysis-tabs::-webkit-scrollbar { height: 0; }
+    .atab { flex: 1; padding: 13px 8px; background: transparent; border: none; border-bottom: 3px solid transparent; color: #45475a; font-size: 0.6rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; white-space: nowrap; min-width: 72px; }
+    .atab:hover { color: #9399b2; background: rgba(137, 180, 250, 0.04); }
+    .atab.active { color: #89b4fa; border-bottom-color: #89b4fa; background: rgba(137, 180, 250, 0.05); }
+    .tab-content-tile { border-right: none; width: 100%; box-sizing: border-box; }
+    .geo-tab-tile { padding: 30px; }
+    .geo-deep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #1f1f3a; }
+    .expert-metrics { display: flex; gap: 8px; margin-top: 12px; }
+    .em-pill { padding: 4px 10px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; display: flex; gap: 6px; align-items: center; font-size: 0.7rem; color: #9399b2; }
+    .em-pill span { font-size: 0.5rem; text-transform: uppercase; color: #45475a; }
+    .em-pill strong { font-weight: 900; color: #89b4fa; }
+    .em-pill.intent { color: #fab387; border-color: #fab387; background: rgba(250,179,135,0.08); font-weight: 900; font-size: 0.65rem; }
+    .no-events-sm { font-size: 0.75rem; color: #45475a; font-style: italic; padding: 10px; }
+    .sah-meta { font-size: 0.65rem; color: #6c7086; margin-top: 6px; }
     @media (max-width: 768px) {
-      .terminal-grid { grid-template-columns: 1fr; }
-      .t-tile { border-right: none; }
-      .levels-stack { flex-direction: column; }
+      .analysis-tabs { overflow-x: auto; }
+      .atab { min-width: 60px; font-size: 0.55rem; padding: 10px 4px; }
+      .geo-deep-grid { grid-template-columns: 1fr; }
+      .rrd-stats { grid-template-columns: repeat(2, 1fr); }
+      .perf-summary-row { grid-template-columns: repeat(3, 1fr); }
+      .perf-metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .settings-grid { grid-template-columns: repeat(2, 1fr); }
     }
+
+    /* VISUAL R/R DIAGRAM */
+    .rr-visual-diagram { background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .rrd-header { font-size: 0.55rem; color: #45475a; font-weight: 900; letter-spacing: 1px; margin-bottom: 14px; }
+    .rrd-chart { display: flex; flex-direction: column; gap: 0; }
+    .rrd-row { display: flex; align-items: center; gap: 10px; }
+    .rrd-tag { font-size: 0.55rem; font-weight: 900; padding: 3px 8px; border-radius: 4px; width: 60px; text-align: center; flex-shrink: 0; }
+    .tp-tag { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .entry-tag { background: rgba(137,180,250,0.1); color: #89b4fa; border: 1px solid rgba(137,180,250,0.3); }
+    .sl-tag { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .rrd-bar { flex: 1; height: 2px; }
+    .tp-bar { background: rgba(166,227,161,0.4); }
+    .entry-bar { background: rgba(137,180,250,0.5); height: 3px; }
+    .sl-bar { background: rgba(243,139,168,0.4); }
+    .rrd-price { font-size: 0.75rem; font-weight: 900; color: #cdd6f4; width: 80px; text-align: right; flex-shrink: 0; }
+    .rrd-price.bullish { color: #a6e3a1; }
+    .rrd-price.bearish { color: #f38ba8; }
+    .reward-row { padding: 5px 70px; }
+    .risk-row { padding: 5px 70px; }
+    .rrd-amount { font-size: 0.7rem; font-weight: 900; }
+    .rrd-amount.bullish { color: #a6e3a1; }
+    .rrd-amount.bearish { color: #f38ba8; }
+    .rrd-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #1f1f3a; }
+    .rrd-stat { display: flex; flex-direction: column; background: #11111b; border-radius: 6px; padding: 8px; text-align: center; }
+    .rrd-stat span { font-size: 0.45rem; color: #45475a; font-weight: 900; text-transform: uppercase; margin-bottom: 4px; }
+    .rrd-stat strong { font-size: 0.8rem; font-weight: 900; color: #cdd6f4; }
+    .rrd-stat strong.bullish { color: #a6e3a1; }
+
+    /* PERFORMANCE TAB */
+    .perf-tab-tile { padding: 24px; }
+    .perf-summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .perf-kpi { background: #11111b; border: 1px solid #1f1f3a; border-radius: 8px; padding: 14px; text-align: center; display: flex; flex-direction: column; gap: 4px; }
+    .perf-kpi span { font-size: 0.45rem; color: #45475a; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+    .perf-kpi strong { font-size: 1.1rem; font-weight: 900; color: #cdd6f4; }
+    .perf-kpi strong.bullish { color: #a6e3a1; }
+    .perf-metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+    .pm-kpi { background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 6px; padding: 10px; text-align: center; }
+    .pm-kpi span { display: block; font-size: 0.45rem; color: #45475a; font-weight: 900; margin-bottom: 4px; }
+    .pm-kpi strong { font-size: 0.85rem; font-weight: 900; color: #cdd6f4; }
+    .pm-kpi strong.bearish { color: #f38ba8; }
+    .perf-streaks { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .streak-item { font-size: 0.65rem; color: #9399b2; padding: 4px 10px; background: #11111b; border-radius: 100px; border: 1px solid #313244; }
+    .streak-item.win { color: #a6e3a1; border-color: rgba(166,227,161,0.3); }
+    .streak-item.loss { color: #f38ba8; border-color: rgba(243,139,168,0.3); }
+    .recent-trades-header { font-size: 0.55rem; color: #45475a; font-weight: 900; letter-spacing: 1px; margin-bottom: 10px; }
+    .recent-trades-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .rt-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 6px; }
+    .rt-symbol { font-size: 0.7rem; font-weight: 900; color: #cdd6f4; flex: 1; }
+    .rt-pct { font-size: 0.75rem; font-weight: 900; width: 50px; text-align: right; }
+    .rt-age { font-size: 0.6rem; color: #45475a; width: 80px; text-align: center; }
+    .rt-badge { font-size: 0.5rem; font-weight: 900; padding: 2px 8px; border-radius: 4px; }
+    .win-badge { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .loss-badge { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .perf-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* SETTINGS TAB */
+    .settings-tab-tile { padding: 24px; }
+    .settings-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #1f1f3a; }
+    .settings-section:last-of-type { border-bottom: none; }
+    .settings-label { font-size: 0.6rem; color: #89b4fa; font-weight: 900; letter-spacing: 1px; margin-bottom: 12px; }
+    .settings-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .settings-btn { padding: 6px 14px; background: #1a1a2a; border: 1px solid #313244; color: #9399b2; font-size: 0.65rem; font-weight: 800; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+    .settings-btn:hover { background: #252535; color: #cdd6f4; border-color: #89b4fa; }
+    .settings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .sg-item { background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .sg-item span { font-size: 0.45rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
+    .sg-item strong { font-size: 0.75rem; font-weight: 900; color: #89b4fa; }
+    .settings-toggles { display: flex; flex-direction: column; gap: 6px; }
+    .st-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 6px; font-size: 0.65rem; color: #9399b2; }
+    .st-on { font-size: 0.6rem; font-weight: 900; color: #a6e3a1; background: rgba(166,227,161,0.08); padding: 2px 8px; border-radius: 4px; }
+    .st-off { font-size: 0.6rem; font-weight: 900; color: #45475a; background: #1a1a2a; padding: 2px 8px; border-radius: 4px; }
+    .settings-footer-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 8px; }
 
     /* DEEP DATA SECTION */
     .deep-data-section { padding: 24px; background: rgba(17, 17, 27, 0.5); border-bottom: 1px solid #1f1f3a; }
@@ -760,6 +975,7 @@ export class InstrumentCardComponent implements OnChanges {
   private marketAnalyzerService = inject(MarketAnalyzerService);
 
   selectedTab: 'plan' | 'insight' = 'plan';
+  activeAnalysisTab: 'technical' | 'geopolitical' | 'risk' | 'scaling' | 'performance' | 'settings' = 'technical';
   showChart = false;
   isLoadingChart = false;
   chartData: ChartData[] = [];
@@ -1393,6 +1609,35 @@ export class InstrumentCardComponent implements OnChanges {
 
   getEquityCurveArea(): string {
     return this.generateCurve(true);
+  }
+
+  // ── Visual R/R Diagram Helpers ──────────────────────────────────────────────
+  getRRReward(): string {
+    const vr = this.analysis.volatility_risk;
+    if (!vr) return '0.00';
+    const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
+    return Math.max(0, vr.take_profit - entry).toFixed(2);
+  }
+
+  getRRRisk(): string {
+    const vr = this.analysis.volatility_risk;
+    if (!vr) return '0.00';
+    const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
+    return Math.max(0, entry - vr.stop_loss).toFixed(2);
+  }
+
+  getRRRatio(): string {
+    const reward = parseFloat(this.getRRReward());
+    const risk = parseFloat(this.getRRRisk());
+    if (!risk) return '0.00';
+    return (reward / risk).toFixed(2);
+  }
+
+  getExpectedValue(): string {
+    const reward = parseFloat(this.getRRReward());
+    const risk = parseFloat(this.getRRRisk());
+    const winRate = (this.analysis.backtest_results?.win_rate || 50) / 100;
+    return Math.max(0, reward * winRate - risk * (1 - winRate)).toFixed(2);
   }
 
   private generateCurve(asArea: boolean): string {
