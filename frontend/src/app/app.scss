@@ -953,6 +953,169 @@
   &.syncing { color: #f9e2af; animation: text-pulse 1s infinite alternate; }
 }
 
+/* ─── CONTEXT INTELLIGENCE PANEL ─────────────────────────────────── */
+.ctx-card {
+  background: #1e1e2e;
+  border: 1px solid #313244;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.ctx-card-label {
+  font-size: 0.5rem;
+  font-weight: 900;
+  color: #45475a;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.ctx-event-alert {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #f38ba8;
+  background: rgba(243, 139, 168, 0.08);
+  border: 1px solid rgba(243, 139, 168, 0.25);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+.ctx-events-list { display: flex; flex-direction: column; gap: 6px; }
+
+.ctx-event-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 10px;
+  background: #11111b;
+  border-radius: 6px;
+  border: 1px solid #1f1f3a;
+
+  &.high-impact { border-color: rgba(243, 139, 168, 0.2); }
+}
+
+.ctx-event-icon { font-size: 0.65rem; flex-shrink: 0; }
+.ctx-event-text { font-size: 0.6rem; color: #9399b2; line-height: 1.4; }
+.ctx-no-events { font-size: 0.6rem; color: #45475a; font-style: italic; padding: 6px 0; }
+
+.ctx-event-footer {
+  font-size: 0.55rem;
+  color: #45475a;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #1f1f3a;
+  line-height: 1.4;
+}
+
+.ctx-sentiment-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ctx-sentiment-badge {
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: rgba(137, 180, 250, 0.1);
+  color: #89b4fa;
+  border: 1px solid rgba(137, 180, 250, 0.25);
+
+  &.bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; border-color: rgba(166,227,161,0.25); }
+  &.bearish { background: rgba(243,139,168,0.1); color: #f38ba8; border-color: rgba(243,139,168,0.25); }
+  &.neutral { background: rgba(249,226,175,0.1); color: #f9e2af; border-color: rgba(249,226,175,0.25); }
+}
+
+.ctx-sentiment-score { font-size: 0.55rem; color: #6c7086; font-weight: 700; }
+
+.ctx-sentiment-summary {
+  font-size: 0.6rem;
+  color: #6c7086;
+  line-height: 1.4;
+  margin: 0 0 12px;
+}
+
+.ctx-news-cards { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+
+.ctx-news-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 10px;
+  background: #11111b;
+  border: 1px solid #1f1f3a;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    border-color: #313244;
+    background: #181825;
+  }
+}
+
+.ctx-news-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.ctx-news-source { font-size: 0.48rem; font-weight: 900; color: #45475a; text-transform: uppercase; }
+
+.ctx-news-tag {
+  font-size: 0.45rem;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+
+  &.bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; }
+  &.bearish { background: rgba(243,139,168,0.1); color: #f38ba8; }
+  &.neutral { background: rgba(249,226,175,0.08); color: #f9e2af; }
+}
+
+.ctx-news-title { font-size: 0.6rem; color: #9399b2; line-height: 1.35; }
+
+.ctx-more-news {
+  border-top: 1px solid #1f1f3a;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.ctx-more-news-header {
+  font-size: 0.44rem;
+  color: #45475a;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ctx-news-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  text-decoration: none;
+  border-bottom: 1px solid #1f1f3a;
+
+  &:last-child { border-bottom: none; }
+  &:hover .ctx-nl-title { color: #cdd6f4; }
+}
+
+.ctx-nl-source { font-size: 0.44rem; font-weight: 900; color: #45475a; text-transform: uppercase; white-space: nowrap; }
+.ctx-nl-title { font-size: 0.58rem; color: #6c7086; flex: 1; line-height: 1.3; }
+.ctx-nl-tag {
+  font-size: 0.44rem; font-weight: 900; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; white-space: nowrap;
+  &.bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; }
+  &.bearish { background: rgba(243,139,168,0.1); color: #f38ba8; }
+  &.neutral { background: rgba(249,226,175,0.08); color: #f9e2af; }
+}
+
 /* ─── RESPONSIVE: Desktop only — right panel visible, hide bottom-bar duplicates */
 @media (min-width: 1025px) {
   .bottom-perf {
@@ -1232,5 +1395,73 @@
       gap: 16px;
       padding: 16px;
     }
+  }
+}
+
+/* ─── MOBILE BOTTOM NAV ────────────────────────────────────────────── */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: #11111b;
+    border-top: 1px solid #313244;
+    height: 56px;
+  }
+
+  .mbn-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 0;
+    transition: background 0.15s;
+
+    &.active {
+      background: rgba(137, 180, 250, 0.06);
+      border-top: 2px solid #89b4fa;
+    }
+
+    &.active .mbn-icon { filter: none; opacity: 1; }
+    &.active .mbn-label { color: #89b4fa; }
+  }
+
+  .mbn-icon { font-size: 1.1rem; opacity: 0.5; }
+  .mbn-label { font-size: 0.55rem; font-weight: 900; color: #45475a; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Panel visibility on mobile */
+  .sidebar-panel.mobile-hidden { display: none !important; }
+  .detail-panel.mobile-hidden { display: none !important; }
+
+  .performance-panel {
+    display: none;
+  }
+
+  .performance-panel.mobile-context-active {
+    display: flex !important;
+    width: 100%;
+    min-width: unset;
+    border-left: none;
+    border-top: 1px solid #313244;
+    max-height: calc(100vh - 146px - 56px);
+    overflow-y: auto;
+    padding-bottom: 16px;
+  }
+
+  /* Add bottom padding to main content for nav bar */
+  .split-view-container {
+    padding-bottom: 56px;
   }
 }

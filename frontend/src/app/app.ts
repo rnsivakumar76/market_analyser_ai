@@ -45,6 +45,7 @@ export class App implements OnInit, OnDestroy {
   strategyMode = signal<StrategyMode>('long_term');
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
+  mobileTab = signal<'watchlist' | 'analysis' | 'context'>('watchlist');
 
   // Auto-refresh properties
   nextRefreshCountdown = signal<string>('05:00');

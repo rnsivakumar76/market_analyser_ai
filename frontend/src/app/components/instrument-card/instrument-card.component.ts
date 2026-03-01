@@ -63,143 +63,253 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         <!-- ANALYSIS TABS NAVIGATION -->
         <div class="analysis-tabs">
           <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">TECHNICAL</button>
-          <button class="atab" [class.active]="activeAnalysisTab === 'geopolitical'" (click)="activeAnalysisTab = 'geopolitical'">GEOPOLITICAL</button>
           <button class="atab" [class.active]="activeAnalysisTab === 'risk'" (click)="activeAnalysisTab = 'risk'">RISK</button>
-          <button class="atab" [class.active]="activeAnalysisTab === 'scaling'" (click)="activeAnalysisTab = 'scaling'">SCALING</button>
-          <button class="atab" [class.active]="activeAnalysisTab === 'performance'" (click)="activeAnalysisTab = 'performance'">PERFORMANCE</button>
-          <button class="atab" [class.active]="activeAnalysisTab === 'settings'" (click)="activeAnalysisTab = 'settings'">SETTINGS</button>
         </div>
 
-          @if (activeAnalysisTab === 'scaling') {
-          <section class="t-tile action-tile tab-content-tile">
-            <div class="tile-header">🎯 STRATEGIC ACTION & SCALING</div>
-            <div class="action-hero">
-               <div class="aph-text">{{ analysis.trade_signal.action_plan }}</div>
-               <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
-            </div>
-            
-            <div class="levels-stack">
-              <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
-              <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
-              <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
-            </div>
+          @if (activeAnalysisTab === 'technical') {
+          <section class="t-tile intel-tile tab-content-tile">
+            <div class="intel-column-stack">
 
-            <!-- VISUAL R/R DIAGRAM -->
-            <div class="rr-visual-diagram">
-              <div class="rrd-header">VISUAL R/R DIAGRAM</div>
-              <div class="rrd-chart">
-                <div class="rrd-row">
-                  <span class="rrd-tag tp-tag">TARGET</span>
-                  <div class="rrd-bar tp-bar"></div>
-                  <span class="rrd-price bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
+              <!-- SECTION 1: STRATEGIC ACTION & SCALING -->
+              <div class="tech-section action-section">
+                <div class="tile-header">🎯 STRATEGIC ACTION & SCALING</div>
+                <div class="action-hero">
+                   <div class="aph-text">{{ analysis.trade_signal.action_plan }}</div>
+                   <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
                 </div>
-                <div class="rrd-row reward-row">
-                  <span class="rrd-amount bullish">▲ +\${{ getRRReward() }} REWARD</span>
+
+                <div class="levels-stack">
+                  <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
+                  <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
+                  <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
                 </div>
-                <div class="rrd-row">
-                  <span class="rrd-tag entry-tag">ENTRY ●</span>
-                  <div class="rrd-bar entry-bar"></div>
-                  <span class="rrd-price">\${{ getEntryZone() }}</span>
+
+                <div class="rr-visual-diagram">
+                  <div class="rrd-header">VISUAL R/R DIAGRAM</div>
+                  <div class="rrd-chart">
+                    <div class="rrd-row">
+                      <span class="rrd-tag tp-tag">TARGET</span>
+                      <div class="rrd-bar tp-bar"></div>
+                      <span class="rrd-price bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
+                    </div>
+                    <div class="rrd-row reward-row">
+                      <span class="rrd-amount bullish">▲ +\${{ getRRReward() }} REWARD</span>
+                    </div>
+                    <div class="rrd-row">
+                      <span class="rrd-tag entry-tag">ENTRY ●</span>
+                      <div class="rrd-bar entry-bar"></div>
+                      <span class="rrd-price">\${{ getEntryZone() }}</span>
+                    </div>
+                    <div class="rrd-row risk-row">
+                      <span class="rrd-amount bearish">▼ -\${{ getRRRisk() }} RISK</span>
+                    </div>
+                    <div class="rrd-row">
+                      <span class="rrd-tag sl-tag">STOP</span>
+                      <div class="rrd-bar sl-bar"></div>
+                      <span class="rrd-price bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
+                    </div>
+                  </div>
+                  <div class="rrd-stats">
+                    <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
+                    <div class="rrd-stat"><span>PROBABILITY</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
+                    <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
+                    <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
+                  </div>
                 </div>
-                <div class="rrd-row risk-row">
-                  <span class="rrd-amount bearish">▼ -\${{ getRRRisk() }} RISK</span>
+
+                <div class="terminal-gauge">
+                   <div class="tg-track">
+                      <div class="tg-fill" [style.left.%]="getPricePositionPercent()"></div>
+                      <div class="tg-marker pivot" style="left: 50%"></div>
+                   </div>
+                   <div class="tg-labels"><span>S1</span><span>PIVOT</span><span>R1</span></div>
                 </div>
-                <div class="rrd-row">
-                  <span class="rrd-tag sl-tag">STOP</span>
-                  <div class="rrd-bar sl-bar"></div>
-                  <span class="rrd-price bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
+
+                <div class="scaling-zone">
+                    <div class="sz-header">⚖️ FIXED SCALING ENTRIES (50 / 30 / 20)</div>
+                    <div class="sz-grid">
+                        @for (step of getScalingStrategy(); track step.stage) {
+                          <div class="sz-item">
+                             <div class="sz-top"><span>{{ step.percent }}% ALLOC</span><strong>{{ step.stage }}</strong></div>
+                             <div class="sz-val">{{ step.target }}</div>
+                          </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="mm-footer">
+                   <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
+                   <div class="mmf-item"><span>RISK $</span><strong>{{ getRiskAmount() }}</strong></div>
+                   <div class="mmf-item"><span>VWAP DIST</span><strong [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct?.toFixed(2) }}%</strong></div>
+                </div>
+
+                <div class="tile-actions">
+                  <button class="btn-primary" (click)="openJournalModal()">📒 Log Trade</button>
+                  <button class="btn-secondary" (click)="toggleChart()">📊 Open Chart</button>
                 </div>
               </div>
-              <div class="rrd-stats">
-                <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
-                <div class="rrd-stat"><span>PROBABILITY</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
-                <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
-                <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
+
+              <!-- EXPERT BATTLE PLAN (Short-Term) -->
+              @if (analysis.expert_trade_plan) {
+              <div class="tech-section expert-battle-section">
+                <div class="expert-intel-block" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
+                  <div class="tile-header">🎖️ EXPERT BATTLE PLAN</div>
+                  <p class="expert-plan-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
+                  <div class="expert-metrics">
+                    <div class="em-pill"><span>RVOL</span><strong>{{ analysis.expert_trade_plan.rvol }}x</strong></div>
+                    @if (analysis.expert_trade_plan.is_high_intent) {
+                      <div class="em-pill intent">🔥 HIGH INTENT</div>
+                    }
+                  </div>
+                </div>
               </div>
-            </div>
+              }
 
-            <div class="terminal-gauge">
-               <div class="tg-track">
-                  <div class="tg-fill" [style.left.%]="getPricePositionPercent()"></div>
-                  <div class="tg-marker pivot" style="left: 50%"></div>
-               </div>
-               <div class="tg-labels"><span>S1</span><span>PIVOT</span><span>R1</span></div>
-            </div>
+              <!-- SECTION 2: PIVOT MATRIX & EXTENSIONS -->
+              <div class="tech-section pivot-section">
+                <div class="tile-header">📐 PIVOT MATRIX & EXTENSIONS</div>
+                <div class="pm-grid">
+                   <div class="pm-v res">R3: \${{ analysis.technical_indicators?.pivot_points?.r3 }}</div>
+                   <div class="pm-v res">R2: \${{ analysis.technical_indicators?.pivot_points?.r2 }}</div>
+                   <div class="pm-v res">R1: \${{ analysis.technical_indicators?.pivot_points?.r1 }}</div>
+                   <div class="pm-v center">P: \${{ analysis.technical_indicators?.pivot_points?.pivot }}</div>
+                   <div class="pm-v sup">S1: \${{ analysis.technical_indicators?.pivot_points?.s1 }}</div>
+                   <div class="pm-v sup">S2: \${{ analysis.technical_indicators?.pivot_points?.s2 }}</div>
+                   <div class="pm-v sup">S3: \${{ analysis.technical_indicators?.pivot_points?.s3 }}</div>
+                </div>
+                <div class="fib-ext-belt">
+                   <div class="feb-item"><span>1.272 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1272 }}</strong></div>
+                   <div class="feb-item"><span>1.618 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1618 }}</strong></div>
+                </div>
+              </div>
 
-            <div class="scaling-zone">
-                <div class="sz-header">⚖️ FIXED SCALING ENTRIES (50 / 30 / 20)</div>
-                <div class="sz-grid">
-                    @for (step of getScalingStrategy(); track step.stage) {
-                      <div class="sz-item">
-                         <div class="sz-top"><span>{{ step.percent }}% ALLOC</span><strong>{{ step.stage }}</strong></div>
-                         <div class="sz-val">{{ step.target }}</div>
+              <!-- SECTION 3: AI TRADE REASONING -->
+              <div class="tech-section ai-reasoning-section">
+                <div class="tile-header">🧠 AI TRADE REASONING — WHY {{ getTradeDirection() }}</div>
+                @if (getBullishFactors().length > 0) {
+                  <div class="air-group">
+                    <div class="air-group-label bullish-label">BULLISH FACTORS</div>
+                    @for (factor of getBullishFactors(); track factor.indicator) {
+                      <div class="air-factor bullish-factor">
+                        <div class="air-indicator">● {{ factor.indicator }}: <strong>{{ factor.value }}</strong></div>
+                        <div class="air-explanation">{{ factor.explanation }}</div>
                       </div>
                     }
+                  </div>
+                }
+                @if (getCautionFactors().length > 0) {
+                  <div class="air-group">
+                    <div class="air-group-label caution-label">CAUTION / BEARISH FACTORS</div>
+                    @for (factor of getCautionFactors(); track factor.indicator) {
+                      <div class="air-factor caution-factor">
+                        <div class="air-indicator">⚠ {{ factor.indicator }}: <strong>{{ factor.value }}</strong></div>
+                        <div class="air-explanation">{{ factor.explanation }}</div>
+                      </div>
+                    }
+                  </div>
+                }
+                <div class="air-range">
+                  <div class="air-range-header">NEXT RANGE ESTIMATE</div>
+                  <div class="air-range-row up">
+                    <span class="air-dir">▲ UP:</span>
+                    <span class="air-range-text">{{ getRangeUp() }}</span>
+                  </div>
+                  <div class="air-range-row down">
+                    <span class="air-dir">▼ DOWN:</span>
+                    <span class="air-range-text">{{ getRangeDown() }}</span>
+                  </div>
                 </div>
-            </div>
+                <div class="air-data-line">DATA: {{ getReasoningDataLine() }}</div>
+              </div>
 
-            <div class="mm-footer">
-               <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
-               <div class="mmf-item"><span>RISK $</span><strong>{{ getRiskAmount() }}</strong></div>
-               <div class="mmf-item"><span>VWAP DIST</span><strong [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct?.toFixed(2) }}%</strong></div>
-            </div>
+              <!-- SECTION 4: TECHNICAL ANALYSIS -->
+              <div class="intel-block">
+                  <div class="tile-header">🌐 MACRO REGIME</div>
+                  <div class="macro-mini">
+                     <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
+                     <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
+                  </div>
+                  <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
+              </div>
 
-            <div class="tile-actions">
-              <button class="btn-primary" (click)="openJournalModal()">📒 Log Trade</button>
-              <button class="btn-secondary" (click)="toggleChart()">📊 Open Chart</button>
+              <div class="intel-block">
+                  <div class="tile-header">📊 TECHNICAL HEAT</div>
+                  <div class="heat-context">
+                      <p class="heat-intro">Current trade technical strength indicators:</p>
+                  </div>
+                  <div class="heat-bars">
+                      <div class="hb-item">
+                          <span>ADX Strength</span>
+                          <div class="hb-track">
+                              <div class="hb-fill adx" [style.width.%]="analysis.daily_strength.adx * 2"></div>
+                          </div>
+                          <span class="hb-interpretation">{{ getADXInterpretation() }}</span>
+                      </div>
+                      <div class="hb-item">
+                          <span>RSI Power</span>
+                          <div class="hb-track">
+                              <div class="hb-fill rsi" [style.left.%]="analysis.daily_strength.rsi"></div>
+                          </div>
+                          <span class="hb-interpretation">{{ getRSIInterpretation() }}</span>
+                      </div>
+                  </div>
+                  <div class="heat-implications">
+                      <div class="heat-impact">
+                          <span class="heat-label">Trade Impact:</span>
+                          <span class="heat-value" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</span>
+                      </div>
+                      <div class="heat-recommendation">
+                          <span class="heat-label">Recommendation:</span>
+                          <span class="heat-value">{{ getTechnicalRecommendation() }}</span>
+                      </div>
+                  </div>
+              </div>
+
             </div>
           </section>
           }
 
           @if (activeAnalysisTab === 'risk') {
           <section class="t-tile status-tile tab-content-tile">
-            <div class="tile-header">🛡️ VALIDATION & RISK INTEL</div>
-            
-            <div class="checklist-compact-full">
-              <div class="ch-item" [class]="getTrendCheck()">
-                 <div class="ch-left-data"><span class="ch-i">Trend Structure</span><span class="ch-v">{{ analysis.monthly_trend.direction | uppercase }}</span></div>
-                 <div class="ch-correlation">{{ getTrendCorrelation() }}</div>
+            <div class="risk-dual-panel">
+              <div class="risk-panel-card">
+                <div class="tile-header">🛡️ VALIDATION & RISK INTEL</div>
+                <div class="checklist-compact-full">
+                  <div class="ch-item" [class]="getTrendCheck()">
+                     <div class="ch-left-data"><span class="ch-i">Trend Structure</span><span class="ch-v">{{ analysis.monthly_trend.direction | uppercase }}</span></div>
+                     <div class="ch-correlation">{{ getTrendCorrelation() }}</div>
+                  </div>
+                  <div class="ch-item" [class]="getMomentumCheck()">
+                     <div class="ch-left-data"><span class="ch-i">Momentum (ADX)</span><span class="ch-v">{{ analysis.daily_strength.adx.toFixed(0) }}</span></div>
+                     <div class="ch-correlation">{{ getMomentumCorrelation() }}</div>
+                  </div>
+                  <div class="ch-item" [class]="getVolatilityCheck()">
+                     <div class="ch-left-data"><span class="ch-i">Volatility Risk</span><span class="ch-v">{{ getVolatilityLevel() }}</span></div>
+                     <div class="ch-correlation">{{ getVolatilityCorrelation() }}</div>
+                  </div>
+                  <div class="ch-item" [class]="getVolumeCheck()">
+                     <div class="ch-left-data"><span class="ch-i">Volume Analysis</span><span class="ch-v">{{ getVolumeStatus() }}</span></div>
+                     <div class="ch-correlation">{{ getVolumeCorrelation() }}</div>
+                  </div>
+                  <div class="ch-item" [class]="getSupportResistanceCheck()">
+                     <div class="ch-left-data"><span class="ch-i">Key Levels</span><span class="ch-v">{{ getLevelStatus() }}</span></div>
+                     <div class="ch-correlation">{{ getLevelCorrelation() }}</div>
+                  </div>
+                  <div class="ch-item" [class]="getCorrelationRiskCheck()">
+                     <div class="ch-left-data"><span class="ch-i">Market Correlation</span><span class="ch-v">{{ getCorrelationStatus() }}</span></div>
+                     <div class="ch-correlation">{{ getCorrelationRisk() }}</div>
+                  </div>
+                </div>
               </div>
-              <div class="ch-item" [class]="getMomentumCheck()">
-                 <div class="ch-left-data"><span class="ch-i">Momentum (ADX)</span><span class="ch-v">{{ analysis.daily_strength.adx.toFixed(0) }}</span></div>
-                 <div class="ch-correlation">{{ getMomentumCorrelation() }}</div>
-              </div>
-              
-              <!-- Additional Risk Factors -->
-              <div class="ch-item" [class]="getVolatilityCheck()">
-                 <div class="ch-left-data"><span class="ch-i">Volatility Risk</span><span class="ch-v">{{ getVolatilityLevel() }}</span></div>
-                 <div class="ch-correlation">{{ getVolatilityCorrelation() }}</div>
-              </div>
-              
-              <div class="ch-item" [class]="getVolumeCheck()">
-                 <div class="ch-left-data"><span class="ch-i">Volume Analysis</span><span class="ch-v">{{ getVolumeStatus() }}</span></div>
-                 <div class="ch-correlation">{{ getVolumeCorrelation() }}</div>
-              </div>
-              
-              <div class="ch-item" [class]="getSupportResistanceCheck()">
-                 <div class="ch-left-data"><span class="ch-i">Key Levels</span><span class="ch-v">{{ getLevelStatus() }}</span></div>
-                 <div class="ch-correlation">{{ getLevelCorrelation() }}</div>
-              </div>
-              
-              <div class="ch-item" [class]="getCorrelationRiskCheck()">
-                 <div class="ch-left-data"><span class="ch-i">Market Correlation</span><span class="ch-v">{{ getCorrelationStatus() }}</span></div>
-                 <div class="ch-correlation">{{ getCorrelationRisk() }}</div>
-              </div>
-            </div>
 
-            <!-- PULLBACK WARNING SECTION -->
-            <div class="pullback-intel-card" [class]="getPullbackCheck()">
-                <div class="pic-header">⚠️ PULLBACK & TRAP ANALYSIS</div>
+              <div class="risk-panel-card">
+                <div class="tile-header">⚠️ PULLBACK & TRAP ANALYSIS</div>
                 <p class="pic-desc">{{ analysis.pullback_warning?.description }}</p>
-                
-                <!-- Always show reasoning details -->
                 <div class="pic-reasons">
                     @for (reason of analysis.pullback_warning?.reasons; track reason) {
                         <div class="pic-reason-tag" [class]="getPullbackReasonClass(reason)">◈ {{ reason }}</div>
                     }
                 </div>
-                
-                <!-- Additional pullback metrics -->
                 @if (analysis.pullback_warning) {
                     <div class="pic-metrics">
                         <div class="pic-metric">
@@ -216,6 +326,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                         </div>
                     </div>
                 }
+              </div>
             </div>
 
             <div class="probability-box-v2">
@@ -231,225 +342,6 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
             <div class="verdict-banner-final" [class]="getOverallCheckClass()">
                 {{ getTradeVerdict() }}
-            </div>
-          </section>
-          }
-
-          @if (activeAnalysisTab === 'technical') {
-          <section class="t-tile intel-tile tab-content-tile">
-             <div class="intel-column-stack">
-                
-                <!-- EXPERT BATTLE PLAN (CONDITIONAL) -->
-                @if (analysis.expert_trade_plan) {
-                  <div class="expert-intel-block" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
-                    <div class="tile-header">🎖️ EXPERT BATTLE PLAN</div>
-                    <p class="expert-plan-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
-                    <div class="expert-metrics">
-                        <div class="em-pill"><span>RVOL</span><strong>{{ analysis.expert_trade_plan.rvol }}x</strong></div>
-                        @if (analysis.expert_trade_plan.is_high_intent) {
-                          <div class="em-pill intent">🔥 HIGH INTENT</div>
-                        }
-                    </div>
-                  </div>
-                }
-
-                <!-- MACRO & REGIME -->
-                <div class="intel-block">
-                    <div class="tile-header">🌐 MACRO REGIME</div>
-                    <div class="macro-mini">
-                       <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
-                       <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
-                    </div>
-                    <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
-                </div>
-
-                <!-- TECHNICAL MICRO HEAT -->
-                <div class="intel-block">
-                    <div class="tile-header">📊 TECHNICAL HEAT</div>
-                    <div class="heat-context">
-                        <p class="heat-intro">Current trade technical strength indicators:</p>
-                    </div>
-                    <div class="heat-bars">
-                        <div class="hb-item">
-                            <span>ADX Strength</span>
-                            <div class="hb-track">
-                                <div class="hb-fill adx" [style.width.%]="analysis.daily_strength.adx * 2"></div>
-                            </div>
-                            <span class="hb-interpretation">{{ getADXInterpretation() }}</span>
-                        </div>
-                        <div class="hb-item">
-                            <span>RSI Power</span>
-                            <div class="hb-track">
-                                <div class="hb-fill rsi" [style.left.%]="analysis.daily_strength.rsi"></div>
-                            </div>
-                            <span class="hb-interpretation">{{ getRSIInterpretation() }}</span>
-                        </div>
-                    </div>
-                    <div class="heat-implications">
-                        <div class="heat-impact">
-                            <span class="heat-label">Trade Impact:</span>
-                            <span class="heat-value" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</span>
-                        </div>
-                        <div class="heat-recommendation">
-                            <span class="heat-label">Recommendation:</span>
-                            <span class="heat-value">{{ getTechnicalRecommendation() }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ECONOMIC CATALYSTS -->
-                <div class="intel-block">
-                    <div class="tile-header">📅 ECONOMIC DATA</div>
-                    <div class="events-mini-list">
-                        @for (event of analysis.fundamentals.events.slice(0, 2); track event) {
-                            <div class="em-list-item" [class.high]="analysis.fundamentals.has_high_impact_events">
-                                <span>{{ event }}</span>
-                                <strong>{{ analysis.fundamentals.has_high_impact_events ? '!!!' : '!!' }}</strong>
-                            </div>
-                        }
-                        @if (!analysis.fundamentals.events.length) {
-                           <div class="no-events-sm">No critical data expected.</div>
-                        }
-                    </div>
-                </div>
-
-             </div>
-          </section>
-          }
-
-          @if (activeAnalysisTab === 'geopolitical') {
-          <section class="t-tile geo-tab-tile tab-content-tile">
-            <div class="tile-header">📰 GEOPOLITICAL NEWS & MARKET SENTIMENT</div>
-            <div class="geo-grid">
-                <div class="geo-summary">
-                    <div class="sah-badge-v2" [class]="analysis.news_sentiment?.label?.toLowerCase()">{{ analysis.news_sentiment?.label | uppercase }}</div>
-                    <div class="sah-meta">SCORING: {{ analysis.news_sentiment?.score }} | IMPACT: {{ analysis.news_sentiment?.sentiment_summary }}</div>
-                </div>
-                <div class="geo-headlines">
-                    @for (item of analysis.news_sentiment?.news_items?.slice(0, 6); track item.title) {
-                        <div class="news-pill-v2" (click)="openNewsModal(item)">
-                            <span class="np2-source">{{ item.source }}</span>
-                            <span class="np2-title">{{ item.title }}</span>
-                            <span class="np2-tag" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
-                        </div>
-                    }
-                </div>
-            </div>
-            <div class="deep-grid geo-deep-grid">
-              <div class="deep-card news">
-                <div class="dc-header">NEWS INTELLIGENCE</div>
-                <div class="mini-news-stack">
-                  @for (item of analysis.news_sentiment?.news_items?.slice(0, 3); track item.title) {
-                    <div class="mn-item" (click)="openNewsModal(item)">
-                       <span class="mn-t">{{ item.title }}</span>
-                       <span class="mn-s" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
-                    </div>
-                  }
-                </div>
-              </div>
-              <div class="deep-card pivots">
-                 <div class="dc-header">PIVOT MATRIX / EXTENSIONS</div>
-                 <div class="pm-grid">
-                    <div class="pm-v res">R3: \${{ analysis.technical_indicators?.pivot_points?.r3 }}</div>
-                    <div class="pm-v res">R2: \${{ analysis.technical_indicators?.pivot_points?.r2 }}</div>
-                    <div class="pm-v res">R1: \${{ analysis.technical_indicators?.pivot_points?.r1 }}</div>
-                    <div class="pm-v center">P: \${{ analysis.technical_indicators?.pivot_points?.pivot }}</div>
-                    <div class="pm-v sup">S1: \${{ analysis.technical_indicators?.pivot_points?.s1 }}</div>
-                    <div class="pm-v sup">S2: \${{ analysis.technical_indicators?.pivot_points?.s2 }}</div>
-                    <div class="pm-v sup">S3: \${{ analysis.technical_indicators?.pivot_points?.s3 }}</div>
-                 </div>
-                 <div class="fib-ext-belt">
-                    <div class="feb-item"><span>1.272 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1272 }}</strong></div>
-                    <div class="feb-item"><span>1.618 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1618 }}</strong></div>
-                 </div>
-              </div>
-            </div>
-          </section>
-          }
-
-          @if (activeAnalysisTab === 'performance') {
-          <section class="t-tile perf-tab-tile tab-content-tile">
-            <div class="tile-header">📊 TRADING PERFORMANCE DASHBOARD</div>
-            <div class="perf-summary-row">
-              <div class="perf-kpi"><span>THIS WEEK</span><strong class="bullish">+2.5%</strong></div>
-              <div class="perf-kpi"><span>THIS MONTH</span><strong class="bullish">+8.7%</strong></div>
-              <div class="perf-kpi"><span>ALL TIME</span><strong class="bullish">+124.3%</strong></div>
-            </div>
-            <div class="perf-metrics-grid">
-              <div class="pm-kpi"><span>WIN RATE</span><strong>67%</strong></div>
-              <div class="pm-kpi"><span>PROFIT FACTOR</span><strong>1.85</strong></div>
-              <div class="pm-kpi"><span>MAX DRAWDOWN</span><strong class="bearish">8.5%</strong></div>
-              <div class="pm-kpi"><span>SHARPE RATIO</span><strong>1.25</strong></div>
-            </div>
-            <div class="perf-streaks">
-              <span class="streak-item win">🏆 Best Streak: 5 wins</span>
-              <span class="streak-item loss">Worst: 2 losses</span>
-              <span class="streak-item">Avg Duration: 2.3 days</span>
-            </div>
-            <div class="recent-trades-header">RECENT TRADES</div>
-            <div class="recent-trades-list">
-              <div class="rt-item"><span class="rt-symbol">AAPL LONG</span><span class="rt-pct bullish">+4.2%</span><span class="rt-age">2 days ago</span><span class="rt-badge win-badge">WIN</span></div>
-              <div class="rt-item"><span class="rt-symbol">TSLA SHORT</span><span class="rt-pct bearish">-1.8%</span><span class="rt-age">1 day ago</span><span class="rt-badge loss-badge">LOSS</span></div>
-              <div class="rt-item"><span class="rt-symbol">MSFT LONG</span><span class="rt-pct bullish">+2.1%</span><span class="rt-age">3 days ago</span><span class="rt-badge win-badge">WIN</span></div>
-              <div class="rt-item"><span class="rt-symbol">NVDA LONG</span><span class="rt-pct bullish">+3.5%</span><span class="rt-age">4 days ago</span><span class="rt-badge win-badge">WIN</span></div>
-              <div class="rt-item"><span class="rt-symbol">GOOGL SHORT</span><span class="rt-pct bearish">-0.8%</span><span class="rt-age">5 days ago</span><span class="rt-badge loss-badge">LOSS</span></div>
-            </div>
-            <div class="perf-actions">
-              <button class="btn-secondary">📒 View Trade Journal</button>
-              <button class="btn-secondary">📊 Performance Chart</button>
-              <button class="btn-secondary">📈 Export Data</button>
-            </div>
-          </section>
-          }
-
-          @if (activeAnalysisTab === 'settings') {
-          <section class="t-tile settings-tab-tile tab-content-tile">
-            <div class="tile-header">⚙️ SYSTEM SETTINGS & CONFIGURATION</div>
-            <div class="settings-section">
-              <div class="settings-label">📊 WATCHLIST MANAGEMENT</div>
-              <div class="settings-actions">
-                <button class="settings-btn">Add Symbol</button>
-                <button class="settings-btn">Remove Symbol</button>
-                <button class="settings-btn">Reorder</button>
-                <button class="settings-btn">Import Watchlist</button>
-              </div>
-            </div>
-            <div class="settings-section">
-              <div class="settings-label">⚡ STRATEGY CONFIGURATION</div>
-              <div class="settings-grid">
-                <div class="sg-item"><span>Risk per Trade</span><strong>1%</strong></div>
-                <div class="sg-item"><span>Max Daily Loss</span><strong>3%</strong></div>
-                <div class="sg-item"><span>Position Sizing</span><strong>Fixed</strong></div>
-                <div class="sg-item"><span>Stop Loss ATR</span><strong>2x</strong></div>
-                <div class="sg-item"><span>Take Profit R/R</span><strong>3:1</strong></div>
-                <div class="sg-item"><span>Trailing Stop</span><strong>OFF</strong></div>
-              </div>
-            </div>
-            <div class="settings-section">
-              <div class="settings-label">🔔 ALERT SETTINGS</div>
-              <div class="settings-toggles">
-                <div class="st-item"><span>Price Alerts</span><span class="st-on">ON</span></div>
-                <div class="st-item"><span>Signal Alerts</span><span class="st-on">ON</span></div>
-                <div class="st-item"><span>News Alerts</span><span class="st-on">ON</span></div>
-                <div class="st-item"><span>Email Notifications</span><span class="st-off">OFF</span></div>
-                <div class="st-item"><span>Push Notifications</span><span class="st-on">ON</span></div>
-              </div>
-            </div>
-            <div class="settings-section">
-              <div class="settings-label">🎨 DISPLAY PREFERENCES</div>
-              <div class="settings-grid">
-                <div class="sg-item"><span>Theme</span><strong>Dark</strong></div>
-                <div class="sg-item"><span>Chart Type</span><strong>Candlestick</strong></div>
-                <div class="sg-item"><span>Timezone</span><strong>SGT</strong></div>
-                <div class="sg-item"><span>Auto-refresh</span><strong>5 min</strong></div>
-                <div class="sg-item"><span>Sound Alerts</span><strong>ON</strong></div>
-                <div class="sg-item"><span>Animations</span><strong>ON</strong></div>
-              </div>
-            </div>
-            <div class="settings-footer-actions">
-              <button class="btn-primary">💾 Save Settings</button>
-              <button class="btn-secondary">🔄 Reset to Default</button>
-              <button class="btn-secondary">📤 Export Config</button>
             </div>
           </section>
           }
@@ -887,6 +779,45 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .feb-item span { font-size: 0.5rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
     .feb-item strong { font-size: 0.75rem; color: #cba6f7; font-weight: 950; }
 
+    /* TECH SECTION WRAPPERS */
+    .tech-section { padding: 20px 24px; border-bottom: 1px solid #1f1f3a; }
+    .tech-section:last-child { border-bottom: none; }
+    .action-section { background: transparent; }
+    .pivot-section .pm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+    .pivot-section .pm-v { font-size: 0.7rem; font-weight: 800; color: #bac2de; padding: 8px 6px; background: #0b0b15; border-radius: 4px; text-align: center; }
+    .pivot-section .pm-v.res { color: #f38ba8; }
+    .pivot-section .pm-v.sup { color: #a6e3a1; }
+    .pivot-section .pm-v.center { background: rgba(137,180,250,0.1); border: 1px solid #89b4fa; color: #89b4fa; }
+
+    /* AI REASONING SECTION */
+    .ai-reasoning-section { background: rgba(137,180,250,0.02); }
+    .ai-reasoning-section .tile-header { margin-bottom: 14px; }
+    .air-group { margin-bottom: 14px; }
+    .air-group-label { font-size: 0.5rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+    .bullish-label { color: #a6e3a1; background: rgba(166,227,161,0.08); border: 1px solid rgba(166,227,161,0.2); }
+    .caution-label { color: #f9e2af; background: rgba(249,226,175,0.08); border: 1px solid rgba(249,226,175,0.2); }
+    .air-factor { padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; }
+    .bullish-factor { background: rgba(166,227,161,0.04); border-left: 2px solid rgba(166,227,161,0.4); }
+    .caution-factor { background: rgba(249,226,175,0.04); border-left: 2px solid rgba(249,226,175,0.4); }
+    .air-indicator { font-size: 0.68rem; font-weight: 800; color: #cdd6f4; margin-bottom: 3px; }
+    .bullish-factor .air-indicator { color: #a6e3a1; }
+    .caution-factor .air-indicator { color: #f9e2af; }
+    .air-explanation { font-size: 0.6rem; color: #6c7086; line-height: 1.4; }
+    .air-range { background: #0b0b15; border: 1px solid #1f1f3a; border-radius: 6px; padding: 10px 14px; margin-top: 12px; margin-bottom: 10px; }
+    .air-range-header { font-size: 0.5rem; color: #45475a; font-weight: 900; letter-spacing: 1px; margin-bottom: 8px; }
+    .air-range-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; font-size: 0.65rem; }
+    .air-range-row.up .air-dir { color: #a6e3a1; font-weight: 900; }
+    .air-range-row.down .air-dir { color: #f38ba8; font-weight: 900; }
+    .air-range-text { color: #9399b2; }
+    .air-data-line { font-size: 0.5rem; color: #45475a; font-weight: 700; font-family: monospace; letter-spacing: 0.5px; padding: 6px 0; border-top: 1px solid #1f1f3a; margin-top: 4px; }
+
+    /* RISK DUAL PANEL */
+    .risk-dual-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid #1f1f3a; }
+    .risk-panel-card { padding: 20px 18px; }
+    .risk-panel-card:first-child { border-right: 1px solid #1f1f3a; }
+    .risk-panel-card .tile-header { margin-bottom: 12px; }
+    .risk-panel-card .pic-desc { font-size: 0.62rem; color: #9399b2; margin: 0 0 10px; line-height: 1.4; }
+
     /* RESPONSIVE */
     @media (max-width: 1100px) {
       .terminal-grid { grid-template-columns: 1fr 1fr; }
@@ -975,7 +906,7 @@ export class InstrumentCardComponent implements OnChanges {
   private marketAnalyzerService = inject(MarketAnalyzerService);
 
   selectedTab: 'plan' | 'insight' = 'plan';
-  activeAnalysisTab: 'technical' | 'geopolitical' | 'risk' | 'scaling' | 'performance' | 'settings' = 'technical';
+  activeAnalysisTab: 'technical' | 'risk' = 'technical';
   showChart = false;
   isLoadingChart = false;
   chartData: ChartData[] = [];
@@ -1638,6 +1569,170 @@ export class InstrumentCardComponent implements OnChanges {
     const risk = parseFloat(this.getRRRisk());
     const winRate = (this.analysis.backtest_results?.win_rate || 50) / 100;
     return Math.max(0, reward * winRate - risk * (1 - winRate)).toFixed(2);
+  }
+
+  // ── AI Trade Reasoning ───────────────────────────────────────────────────────
+  getTradeDirection(): string {
+    return (this.analysis.trade_signal?.recommendation || 'neutral').toUpperCase();
+  }
+
+  getBullishFactors(): { indicator: string; value: string; explanation: string }[] {
+    const factors: { indicator: string; value: string; explanation: string }[] = [];
+    const a = this.analysis;
+
+    if (a.monthly_trend?.direction === 'bullish') {
+      factors.push({
+        indicator: 'Monthly Trend',
+        value: 'BULLISH',
+        explanation: `Price above MA (${a.monthly_trend.fast_ma?.toFixed(2)} / ${a.monthly_trend.slow_ma?.toFixed(2)}). Long-term uptrend intact.`
+      });
+    }
+    if (a.daily_strength?.signal === 'bullish') {
+      factors.push({
+        indicator: 'Daily Strength',
+        value: `RSI ${a.daily_strength.rsi?.toFixed(0)} | ADX ${a.daily_strength.adx?.toFixed(0)}`,
+        explanation: a.daily_strength.description || 'Daily momentum is bullish.'
+      });
+    }
+    if (a.daily_strength?.adx > 25) {
+      factors.push({
+        indicator: 'Trend Strength (ADX)',
+        value: `${a.daily_strength.adx?.toFixed(1)}`,
+        explanation: a.daily_strength.adx > 40 ? 'Strong trend — momentum is strongly directional.' : 'Trending market — directional move in progress.'
+      });
+    }
+    if (a.weekly_pullback?.detected && a.weekly_pullback?.near_support) {
+      factors.push({
+        indicator: 'Pullback to Support',
+        value: `~\$${a.weekly_pullback.support_level?.toFixed(2)}`,
+        explanation: `Price pulled back ${a.weekly_pullback.pullback_percent?.toFixed(1)}% and is near support — ideal entry zone.`
+      });
+    }
+    if (a.relative_strength?.is_outperforming) {
+      factors.push({
+        indicator: 'Relative Strength',
+        value: `Alpha +${a.relative_strength.alpha?.toFixed(2)}%`,
+        explanation: `Outperforming benchmark by ${a.relative_strength.alpha?.toFixed(2)}%. ${a.relative_strength.label}`
+      });
+    }
+    if (a.news_sentiment?.score && a.news_sentiment.score > 5) {
+      factors.push({
+        indicator: 'News Sentiment',
+        value: `+${a.news_sentiment.score} (${a.news_sentiment.label})`,
+        explanation: a.news_sentiment.sentiment_summary || 'Positive news flow supporting bullish bias.'
+      });
+    }
+    if (a.candle_patterns?.is_bullish === true && a.candle_patterns.pattern !== 'none') {
+      factors.push({
+        indicator: 'Candle Pattern',
+        value: a.candle_patterns.pattern,
+        explanation: a.candle_patterns.description || 'Bullish candle pattern detected.'
+      });
+    }
+    return factors;
+  }
+
+  getCautionFactors(): { indicator: string; value: string; explanation: string }[] {
+    const factors: { indicator: string; value: string; explanation: string }[] = [];
+    const a = this.analysis;
+
+    if (a.monthly_trend?.direction === 'bearish') {
+      factors.push({
+        indicator: 'Monthly Trend',
+        value: 'BEARISH',
+        explanation: 'Long-term trend is down — trading against macro momentum.'
+      });
+    }
+    if (a.monthly_trend?.direction === 'neutral') {
+      factors.push({
+        indicator: 'Monthly Trend',
+        value: 'NEUTRAL',
+        explanation: 'No clear long-term direction — trend-following edge reduced.'
+      });
+    }
+    if (a.daily_strength?.rsi > 70) {
+      factors.push({
+        indicator: 'RSI Overbought',
+        value: `RSI ${a.daily_strength.rsi?.toFixed(0)}`,
+        explanation: 'Price may be extended. Wait for consolidation or pullback before entry.'
+      });
+    }
+    if (a.daily_strength?.rsi < 30) {
+      factors.push({
+        indicator: 'RSI Oversold',
+        value: `RSI ${a.daily_strength.rsi?.toFixed(0)}`,
+        explanation: 'Selling pressure is intense. Confirm reversal signal before entering long.'
+      });
+    }
+    if (a.pullback_warning?.is_warning) {
+      factors.push({
+        indicator: 'Pullback Warning',
+        value: `Score ${a.pullback_warning.warning_score}`,
+        explanation: a.pullback_warning.description || 'Trap or pullback risk detected.'
+      });
+    }
+    if (a.fundamentals?.has_high_impact_events) {
+      factors.push({
+        indicator: 'High-Impact Events',
+        value: '⚠ PENDING',
+        explanation: `Economic events expected: ${a.fundamentals.events?.slice(0, 2).join(', ')}. Avoid large size.`
+      });
+    }
+    if (a.news_sentiment?.score && a.news_sentiment.score < -5) {
+      factors.push({
+        indicator: 'News Sentiment',
+        value: `${a.news_sentiment.score} (${a.news_sentiment.label})`,
+        explanation: a.news_sentiment.sentiment_summary || 'Negative news flow — headwind for longs.'
+      });
+    }
+    if (a.candle_patterns?.is_bullish === false && a.candle_patterns.pattern !== 'none') {
+      factors.push({
+        indicator: 'Candle Pattern',
+        value: a.candle_patterns.pattern,
+        explanation: a.candle_patterns.description || 'Bearish candle pattern — watch for reversal.'
+      });
+    }
+    return factors;
+  }
+
+  getRangeUp(): string {
+    const ti = this.analysis.technical_indicators;
+    const price = this.analysis.current_price;
+    if (ti?.pivot_points?.r1) {
+      const r1 = ti.pivot_points.r1;
+      const pct = (((r1 - price) / price) * 100).toFixed(1);
+      return `R1 \$${r1?.toFixed(2)} (+${pct}%) → R2 \$${ti.pivot_points.r2?.toFixed(2)}`;
+    }
+    const tp = this.analysis.volatility_risk?.take_profit;
+    return tp ? `Target \$${tp.toFixed(2)}` : 'See pivot levels above';
+  }
+
+  getRangeDown(): string {
+    const ti = this.analysis.technical_indicators;
+    const price = this.analysis.current_price;
+    if (ti?.pivot_points?.s1) {
+      const s1 = ti.pivot_points.s1;
+      const pct = (((price - s1) / price) * 100).toFixed(1);
+      return `S1 \$${s1?.toFixed(2)} (-${pct}%) → S2 \$${ti.pivot_points.s2?.toFixed(2)}`;
+    }
+    const sl = this.analysis.volatility_risk?.stop_loss;
+    return sl ? `Stop \$${sl.toFixed(2)}` : 'See pivot levels above';
+  }
+
+  getReasoningDataLine(): string {
+    const a = this.analysis;
+    const parts: string[] = [];
+    parts.push(`ADX=${a.daily_strength?.adx?.toFixed(0)}`);
+    parts.push(`RSI=${a.daily_strength?.rsi?.toFixed(0)}`);
+    parts.push(`Trend=${a.monthly_trend?.direction?.toUpperCase()}`);
+    parts.push(`Phase=${a.market_phase?.phase?.toUpperCase()}`);
+    if (a.daily_strength?.vwap_dist_pct != null) {
+      parts.push(`VWAP=${a.daily_strength.vwap_dist_pct?.toFixed(2)}%`);
+    }
+    if (a.news_sentiment?.score != null) {
+      parts.push(`News=${a.news_sentiment.score}`);
+    }
+    return parts.join(' | ');
   }
 
   private generateCurve(asArea: boolean): string {

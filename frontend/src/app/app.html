@@ -148,18 +148,19 @@
 
 
   <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
-    <div class="sidebar-panel">
+    <div class="sidebar-panel" [class.mobile-hidden]="mobileTab() !== 'watchlist'">
       <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
         (select)="selectedInstrument.set($event)">
       </app-watchlist-heatmap>
     </div>
 
-    <div class="detail-panel">
+    <div class="detail-panel" [class.mobile-hidden]="mobileTab() !== 'analysis'">
       @if (selectedInstrument()) {
       <div class="detail-view-inner">
         <app-instrument-card [analysis]="selectedInstrument()!"
           (refresh)="refreshInstrument($event)"
-          (modeChange)="switchStrategyMode($event)">
+          (modeChange)="switchStrategyMode($event)"
+          (click)="mobileTab.set('analysis')">
         </app-instrument-card>
       </div>
       } @else if (instruments().length > 0) {
@@ -171,15 +172,74 @@
       }
     </div>
 
-    <!-- Right Performance Panel -->
-    <div class="performance-panel">
+    <!-- Column 3: Context Intelligence Panel -->
+    <div class="performance-panel context-intelligence-panel" [class.mobile-context-active]="mobileTab() === 'context'">
       <div class="perf-panel-header">
-        <h3 class="perf-panel-title">PERFORMANCE & STATUS</h3>
+        <h3 class="perf-panel-title">CONTEXT INTELLIGENCE</h3>
       </div>
 
+      <!-- ECONOMIC EVENTS -->
+      @if (selectedInstrument(); as inst) {
+      <div class="ctx-card ctx-economic">
+        <div class="ctx-card-label">📅 ECONOMIC EVENTS</div>
+        @if (inst.fundamentals?.has_high_impact_events) {
+        <div class="ctx-event-alert">⚠️ HIGH-IMPACT EVENTS PENDING</div>
+        }
+        @if (inst.fundamentals?.events?.length) {
+        <div class="ctx-events-list">
+          @for (event of inst.fundamentals.events; track event) {
+          <div class="ctx-event-item" [class.high-impact]="inst.fundamentals.has_high_impact_events">
+            <span class="ctx-event-icon">{{ inst.fundamentals.has_high_impact_events ? '🔴' : '🟡' }}</span>
+            <span class="ctx-event-text">{{ event }}</span>
+          </div>
+          }
+        </div>
+        } @else {
+        <div class="ctx-no-events">No critical economic events scheduled.</div>
+        }
+        <div class="ctx-event-footer">{{ inst.fundamentals?.description }}</div>
+      </div>
+
+      <!-- MARKET INTELLIGENCE — NEWS SENTIMENT -->
+      <div class="ctx-card ctx-news">
+        <div class="ctx-card-label">📰 MARKET INTELLIGENCE</div>
+        <div class="ctx-sentiment-badge-row">
+          <div class="ctx-sentiment-badge" [class]="inst.news_sentiment?.label?.toLowerCase()">
+            {{ inst.news_sentiment?.label | uppercase }}
+          </div>
+          <span class="ctx-sentiment-score">Score: {{ inst.news_sentiment?.score }}</span>
+        </div>
+        <p class="ctx-sentiment-summary">{{ inst.news_sentiment?.sentiment_summary }}</p>
+        <div class="ctx-news-cards">
+          @for (item of inst.news_sentiment?.news_items?.slice(0, 4); track item.title) {
+          <a class="ctx-news-card" [href]="item.url" target="_blank" rel="noopener noreferrer">
+            <div class="ctx-news-card-top">
+              <span class="ctx-news-source">{{ item.source }}</span>
+              <span class="ctx-news-tag" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
+            </div>
+            <span class="ctx-news-title">{{ item.title }}</span>
+          </a>
+          }
+        </div>
+        @if ((inst.news_sentiment?.news_items?.length ?? 0) > 4) {
+        <div class="ctx-more-news">
+          <div class="ctx-more-news-header">MORE HEADLINES</div>
+          @for (item of inst.news_sentiment?.news_items?.slice(4, 8); track item.title) {
+          <a class="ctx-news-link" [href]="item.url" target="_blank" rel="noopener noreferrer">
+            <span class="ctx-nl-source">{{ item.source }}</span>
+            <span class="ctx-nl-title">{{ item.title }}</span>
+            <span class="ctx-nl-tag" [class]="item.sentiment_label.toLowerCase()">{{ item.sentiment_label }}</span>
+          </a>
+          }
+        </div>
+        }
+      </div>
+      }
+
+      <!-- PERFORMANCE SNAPSHOT -->
       @if (weeklyPerformance(); as perf) {
       <div class="perf-card" [class.positive]="perf.total_pnl_percent > 0">
-        <div class="perf-card-label">WEEKLY PNL</div>
+        <div class="perf-card-label">📊 WEEKLY PNL</div>
         <div class="perf-card-value" [class.positive]="perf.total_pnl_percent > 0" [class.negative]="perf.total_pnl_percent <= 0">
           {{ perf.total_pnl_percent > 0 ? '+' : '' }}{{ perf.total_pnl_percent }}%
         </div>
@@ -206,6 +266,7 @@
       </div>
       }
 
+      <!-- MARKET SUMMARY -->
       <div class="perf-card">
         <div class="perf-card-label">MARKET SUMMARY</div>
         <div class="perf-market-stats">
@@ -291,6 +352,23 @@
     }
     }
   </main>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-bottom-nav">
+    <button class="mbn-tab" [class.active]="mobileTab() === 'watchlist'" (click)="mobileTab.set('watchlist')">
+      <span class="mbn-icon">📋</span>
+      <span class="mbn-label">Watchlist</span>
+    </button>
+    <button class="mbn-tab" [class.active]="mobileTab() === 'analysis'"
+      (click)="mobileTab.set('analysis')">
+      <span class="mbn-icon">📊</span>
+      <span class="mbn-label">Analysis</span>
+    </button>
+    <button class="mbn-tab" [class.active]="mobileTab() === 'context'" (click)="mobileTab.set('context')">
+      <span class="mbn-icon">🌐</span>
+      <span class="mbn-label">Context</span>
+    </button>
+  </nav>
 
   @if (showSettings()) {
   <app-settings (close)="showSettings.set(false)" (updated)="runAnalysis()"></app-settings>
