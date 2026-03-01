@@ -107,49 +107,6 @@ export class App implements OnInit, OnDestroy {
     this.analysisSub?.unsubscribe();
   }
 
-  // Fallback theme toggle methods
-  fallbackThemeToggle(): void {
-    console.log('App: Fallback theme toggle clicked');
-    try {
-      const currentTheme = this.themeService.currentTheme();
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      
-      console.log('App: Switching from', currentTheme, 'to', newTheme);
-      
-      // Apply theme directly
-      this.applyThemeDirectly(newTheme);
-      
-      // Update service
-      this.themeService.setTheme(newTheme);
-      
-      console.log('App: Fallback theme changed to:', newTheme);
-    } catch (error) {
-      console.error('App: Error during fallback theme toggle:', error);
-    }
-  }
-
-  private applyThemeDirectly(theme: 'dark' | 'light'): void {
-    const root = document.documentElement;
-    
-    // Remove existing theme classes
-    root.classList.remove('light-theme', 'dark-theme');
-    
-    // Add new theme class
-    if (theme === 'light') {
-      root.classList.add('light-theme');
-    } else {
-      root.classList.add('dark-theme');
-    }
-    
-    console.log('App: Applied theme class', theme + '-theme');
-    console.log('App: Root classes now:', root.className);
-  }
-
-  getFallbackThemeIcon(): string {
-    const currentTheme = this.themeService.currentTheme();
-    return currentTheme === 'dark' ? '🌙' : '☀️';
-  }
-
   private startAutoRefresh() {
     // 1. Scheduler for Analysis
     this.refreshSubscription = interval(this.REFRESH_INTERVAL_SEC * 1000).subscribe(() => {

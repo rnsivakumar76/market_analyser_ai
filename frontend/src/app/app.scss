@@ -414,10 +414,17 @@
   filter: drop-shadow(0 0 8px rgba(137, 180, 250, 0.3));
 }
 
+.header-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+
 .brand-text {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .badge {
@@ -1073,25 +1080,23 @@
 .sidebar-panel {
   width: 400px;
   min-width: 400px;
-  border-right: 1px solid #313244;
+  border-right: 1px solid var(--border-primary);
   overflow-y: auto;
-  background: #11111b;
+  background: var(--sidebar-bg);
 
   &::-webkit-scrollbar {
     width: 6px;
   }
 
   &::-webkit-scrollbar-track {
-    background: #1e1e2e;
+    background: var(--bg-secondary);
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #45475a;
+    background: var(--bg-quaternary);
     border-radius: 4px;
   }
 }
-
-
 
 .summary-wrapper {
   border-radius: 12px;
@@ -1116,7 +1121,7 @@
     app-instrument-summary ::ng-deep .summary-card {
       border-color: #89b4fa;
       box-shadow: 0 4px 20px rgba(137, 180, 250, 0.15);
-      background: #1e1e2e;
+      background: var(--bg-primary);
     }
   }
 }
@@ -1125,7 +1130,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 24px 32px;
-  background: #181825;
+  background: var(--bg-primary);
 }
 
 .detail-view-inner {
@@ -1141,9 +1146,9 @@
   width: 260px;
   min-width: 260px;
   flex-shrink: 0;
-  border-left: 1px solid #313244;
+  border-left: 1px solid var(--border-primary);
   overflow-y: auto;
-  background: #11111b;
+  background: var(--sidebar-bg);
   padding: 16px 12px;
   display: flex;
   flex-direction: column;
