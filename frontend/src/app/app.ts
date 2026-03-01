@@ -58,6 +58,10 @@ export class App implements OnInit, OnDestroy {
   private secondsRemaining = 300;
 
   ngOnInit() {
+    // Ensure theme is initialized early
+    console.log('App: ngOnInit - ensuring theme is initialized');
+    this.themeService.setTheme(this.themeService.currentTheme());
+    
     // Check for auth token in URL (from Google callback)
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
