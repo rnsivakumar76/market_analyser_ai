@@ -1,5 +1,5 @@
 # WIREFRAMES & DESIGN — GUI 3.0 (Institutional Features)
-**Status:** DRAFT — Awaiting Confirmation  
+**Status:** CONFIRMED — Implementation in progress  
 **Branch:** `gui3.0`  
 **Previous version:** v3.0 (tag) on `main`
 
@@ -485,14 +485,14 @@ All new sections follow existing patterns:
 
 ---
 
-## Open Questions for Confirmation
+## Confirmed Decisions
 
-1. **Volume Profile** — Use 20-bucket or 50-bucket price bins? More buckets = more accurate but heavier computation.
-2. **Session VWAP** — Fetching 1h intraday data adds ~1 extra TwelveData API call per instrument. Accept the added latency or only compute for the selected instrument?
-3. **MAE** — Calculate on live backtest replay or use a simplified ATR-based estimate (faster, less precise)?
-4. **Liquidity Map** — Show only top 3 levels per side (clean) or all identified levels (verbose)?
-5. **Block Flow** — Show in Context Panel always, or only when an alert is active?
+1. **Volume Profile** — 50 buckets for long-term strategy, 20 buckets for short-term strategy.
+2. **Session VWAP** — Compute for currently selected instrument only (no extra batch calls).
+3. **MAE** — Live backtest replay for long-term strategy; ATR-based estimate for short-term strategy.
+4. **Liquidity Map** — Top 3 levels per side only.
+5. **Block Flow** — Always visible in Context Intelligence Panel.
 
 ---
 
-*Document created for gui3.0 branch. Confirm answers to Open Questions before implementation begins.*
+*Confirmed Mar 2026. Implementation proceeding in gui3.0 branch.*

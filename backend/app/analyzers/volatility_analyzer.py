@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from scipy.stats import percentileofscore
 from app.models import VolatilityAnalysis
 
 
@@ -80,6 +81,8 @@ def analyze_volatility_and_risk(
     # Standard risk-reward is usually TP_dist / SL_dist
     rr_ratio = atr_multiplier_tp / atr_multiplier_sl if atr_multiplier_sl > 0 else 0
 
+    atr_pct_rank, atr_regime, hv_14, hv_pct, regime_label = _calc_volatility_regime(data, atr)
+
     return VolatilityAnalysis(
         atr=float(round(atr, 4)),
         stop_loss=float(round(sl, 4)),
@@ -87,5 +90,57 @@ def analyze_volatility_and_risk(
         take_profit_level1=float(round(tp1, 4)),
         take_profit_level2=float(round(tp2, 4)),
         risk_reward_ratio=float(round(rr_ratio, 2)),
-        description=desc
+        description=desc,
+        atr_percentile_rank=atr_pct_rank,
+        atr_regime=atr_regime,
+        historical_volatility_14=hv_14,
+        hv_percentile=hv_pct,
+        volatility_regime_label=regime_label
     )
+
+
+def _calc_volatility_regime(data: pd.DataFrame, current_atr: float):
+    """Compute ATR percentile rank, 14-day HV, HV percentile, and regime label."""
+    try:
+        df = data.copy()
+
+        # Rolling 14-period ATR series for percentile rank
+        df['Prev_Close'] = df['Close'].shift(1)
+        df['TR'] = df[['High', 'Low', 'Close']].apply(
+            lambda r: max(r['High'] - r['Low'],
+                          abs(r['High'] - df.loc[r.name, 'Prev_Close']) if not pd.isna(df.loc[r.name, 'Prev_Close']) else 0,
+                          abs(r['Low']  - df.loc[r.name, 'Prev_Close']) if not pd.isna(df.loc[r.name, 'Prev_Close']) else 0),
+            axis=1
+        )
+        atr_series = df['TR'].rolling(14).mean().dropna()
+
+        atr_pct_rank = round(float(percentileofscore(atr_series.values, current_atr, kind='rank')), 1) if len(atr_series) > 10 else 50.0
+
+        # 14-day Historical Volatility (annualised std of log returns)
+        log_returns = np.log(df['Close'] / df['Close'].shift(1)).dropna()
+        hv_14 = 0.0
+        hv_pct = 50.0
+        if len(log_returns) >= 14:
+            current_hv = float(log_returns.tail(14).std() * np.sqrt(252) * 100)
+            hv_14 = round(current_hv, 2)
+            # Rolling 30-day HV series for percentile
+            hv_series = log_returns.rolling(14).std().dropna() * np.sqrt(252) * 100
+            hv_pct = round(float(percentileofscore(hv_series.values, current_hv, kind='rank')), 1)
+
+        # Regime classification based on ATR percentile
+        if atr_pct_rank <= 25:
+            regime = "LOW"
+            label = "Compressed"
+        elif atr_pct_rank <= 60:
+            regime = "NORMAL"
+            label = "Normal"
+        elif atr_pct_rank <= 80:
+            regime = "ELEVATED"
+            label = "Expanding"
+        else:
+            regime = "EXTREME"
+            label = "Extreme"
+
+        return atr_pct_rank, regime, hv_14, hv_pct, label
+    except Exception:
+        return 50.0, "NORMAL", 0.0, 50.0, "Normal"

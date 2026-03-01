@@ -551,7 +551,18 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         # Continue with whatever results we have (possibly empty)
 
     perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC": btc_bench}, strategy_settings)
-    correlation_results = calculate_correlations(data_map)
+
+    # Build combined data map including benchmarks for correlation
+    full_data_map = dict(data_map)
+    if benchmarks_data.get("DXY") is not None and not benchmarks_data["DXY"].empty:
+        full_data_map["DXY"] = benchmarks_data["DXY"]
+    if benchmarks_data.get("SPX_macro") is not None and not benchmarks_data["SPX_macro"].empty:
+        full_data_map["SPX"] = benchmarks_data["SPX_macro"]
+    if benchmarks_data.get("BTC_macro") is not None and not benchmarks_data["BTC_macro"].empty:
+        full_data_map["BTC"] = benchmarks_data["BTC_macro"]
+
+    correlation_results = calculate_correlations(full_data_map)
+    results = _attach_instrument_correlations(results, correlation_results)
     results = apply_position_sizing(results, correlation_results, strategy_settings)
     
     # NEW: Psychological Guardrail (Lockdown Logic)
@@ -566,6 +577,53 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     return results, perf_summary, correlation_results, guardrail
 
 import math
+
+
+def _attach_instrument_correlations(results, correlation_results):
+    """Extract per-instrument correlation vs DXY, SPX, BTC from full matrix and attach to each analysis."""
+    from .models import InstrumentCorrelations
+    labels = correlation_results.get('labels', [])
+    matrix = correlation_results.get('matrix', [])
+    if not labels or not matrix:
+        return results
+
+    BENCHMARK_KEYS = {'DXY': 'vs_dxy', 'SPX': 'vs_spx', 'BTC': 'vs_btc'}
+
+    updated = []
+    for analysis in results:
+        sym = analysis.symbol.upper()
+        if sym not in labels:
+            updated.append(analysis)
+            continue
+        s_idx = labels.index(sym)
+        corr_vals = {}
+        for bench, field in BENCHMARK_KEYS.items():
+            if bench in labels:
+                b_idx = labels.index(bench)
+                corr_vals[field] = round(float(matrix[s_idx][b_idx]), 2)
+
+        # Build interpretation
+        dxy_corr = corr_vals.get('vs_dxy')
+        spx_corr = corr_vals.get('vs_spx')
+        parts = []
+        if dxy_corr is not None:
+            lbl = "strong negative" if dxy_corr < -0.6 else "negative" if dxy_corr < -0.3 else "positive" if dxy_corr > 0.3 else "neutral"
+            parts.append(f"{lbl} DXY correlation ({dxy_corr:+.2f})")
+        if spx_corr is not None:
+            lbl = "strong positive" if spx_corr > 0.6 else "positive" if spx_corr > 0.3 else "negative" if spx_corr < -0.3 else "neutral"
+            parts.append(f"{lbl} SPX correlation ({spx_corr:+.2f})")
+        interpretation = "; ".join(parts) if parts else "Insufficient correlation data"
+
+        inst_corr = InstrumentCorrelations(
+            vs_dxy=corr_vals.get('vs_dxy'),
+            vs_spx=corr_vals.get('vs_spx'),
+            vs_btc=corr_vals.get('vs_btc'),
+            period_days=30,
+            interpretation=interpretation
+        )
+        updated.append(analysis.model_copy(update={"instrument_correlations": inst_corr}))
+    return updated
+
 
 def _scrub_nans(obj):
     """Recursively replaces NaN and Infinity with 0.0 to prevent Starlette JSON crashes."""

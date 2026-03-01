@@ -70,6 +70,29 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           <section class="t-tile intel-tile tab-content-tile">
             <div class="intel-column-stack">
 
+              <!-- SIGNAL CONFLICT BANNER -->
+              @if (analysis.trade_signal.signal_conflict && analysis.trade_signal.signal_conflict.conflict_type !== 'none') {
+              <div class="signal-conflict-banner" [class]="'conflict-' + analysis.trade_signal.signal_conflict.severity">
+                <div class="scb-header">
+                  <span class="scb-icon">{{ analysis.trade_signal.signal_conflict.severity === 'high' ? '⚡' : '⚠️' }}</span>
+                  <span class="scb-title">SIGNAL CONFLICT DETECTED</span>
+                  <span class="scb-badge">{{ analysis.trade_signal.signal_conflict.severity | uppercase }}</span>
+                </div>
+                <div class="scb-headline">{{ analysis.trade_signal.signal_conflict.headline }}</div>
+                <div class="scb-guidance">{{ analysis.trade_signal.signal_conflict.guidance }}</div>
+                @if (analysis.trade_signal.signal_conflict.trigger_price_up || analysis.trade_signal.signal_conflict.trigger_price_down) {
+                <div class="scb-triggers">
+                  @if (analysis.trade_signal.signal_conflict.trigger_price_up) {
+                    <span class="scb-trigger bullish">▲ BULL TRIGGER: \${{ analysis.trade_signal.signal_conflict.trigger_price_up?.toFixed(2) }}</span>
+                  }
+                  @if (analysis.trade_signal.signal_conflict.trigger_price_down) {
+                    <span class="scb-trigger bearish">▼ BEAR TRIGGER: \${{ analysis.trade_signal.signal_conflict.trigger_price_down?.toFixed(2) }}</span>
+                  }
+                </div>
+                }
+              </div>
+              }
+
               <!-- SECTION 1: STRATEGIC ACTION & SCALING -->
               <div class="tech-section action-section">
                 <div class="tile-header">🎯 STRATEGIC ACTION & SCALING</div>
@@ -296,10 +319,34 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                      <div class="ch-correlation">{{ getLevelCorrelation() }}</div>
                   </div>
                   <div class="ch-item" [class]="getCorrelationRiskCheck()">
-                     <div class="ch-left-data"><span class="ch-i">Market Correlation</span><span class="ch-v">{{ getCorrelationStatus() }}</span></div>
-                     <div class="ch-correlation">{{ getCorrelationRisk() }}</div>
+                     <div class="ch-left-data"><span class="ch-i">Volatility Regime</span><span class="ch-v">{{ analysis.volatility_risk.volatility_regime_label }}</span></div>
+                     <div class="ch-correlation">ATR {{ analysis.volatility_risk.atr_percentile_rank?.toFixed(0) }}th %ile · HV {{ analysis.volatility_risk.historical_volatility_14?.toFixed(1) }}%</div>
                   </div>
                 </div>
+
+                @if (analysis.instrument_correlations) {
+                <div class="corr-matrix-row">
+                  <div class="cm-label">30-DAY CORRELATIONS</div>
+                  <div class="cm-cells">
+                    @if (analysis.instrument_correlations.vs_dxy !== null && analysis.instrument_correlations.vs_dxy !== undefined) {
+                      <div class="cm-cell" [class]="getCorrCellClass(analysis.instrument_correlations.vs_dxy)">
+                        <span>vs DXY</span><strong>{{ analysis.instrument_correlations.vs_dxy > 0 ? '+' : '' }}{{ analysis.instrument_correlations.vs_dxy?.toFixed(2) }}</strong>
+                      </div>
+                    }
+                    @if (analysis.instrument_correlations.vs_spx !== null && analysis.instrument_correlations.vs_spx !== undefined) {
+                      <div class="cm-cell" [class]="getCorrCellClass(analysis.instrument_correlations.vs_spx)">
+                        <span>vs SPX</span><strong>{{ analysis.instrument_correlations.vs_spx > 0 ? '+' : '' }}{{ analysis.instrument_correlations.vs_spx?.toFixed(2) }}</strong>
+                      </div>
+                    }
+                    @if (analysis.instrument_correlations.vs_btc !== null && analysis.instrument_correlations.vs_btc !== undefined) {
+                      <div class="cm-cell" [class]="getCorrCellClass(analysis.instrument_correlations.vs_btc)">
+                        <span>vs BTC</span><strong>{{ analysis.instrument_correlations.vs_btc > 0 ? '+' : '' }}{{ analysis.instrument_correlations.vs_btc?.toFixed(2) }}</strong>
+                      </div>
+                    }
+                  </div>
+                  <div class="cm-interpretation">{{ analysis.instrument_correlations.interpretation }}</div>
+                </div>
+                }
               </div>
 
               <div class="risk-panel-card">
@@ -330,15 +377,46 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
 
             <div class="probability-box-v2">
-              <div class="pb2-header">PROBABILITY DEPTH (BACKTEST)</div>
+              <div class="pb2-header">📈 PROBABILITY & BACKTEST QUALITY</div>
               <div class="pb2-grid">
                 <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
                 <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results.profit_factor }}</strong></div>
+                <div class="pb2-stat"><span>SHARPE</span><strong [class]="analysis.backtest_results.sharpe_ratio >= 1 ? 'bullish' : 'bearish'">{{ analysis.backtest_results.sharpe_ratio?.toFixed(2) }}</strong></div>
+                <div class="pb2-stat"><span>EXPECTANCY</span><strong [class]="analysis.backtest_results.expectancy >= 0 ? 'bullish' : 'bearish'">{{ analysis.backtest_results.expectancy >= 0 ? '+' : '' }}{{ analysis.backtest_results.expectancy?.toFixed(2) }}%</strong></div>
+              </div>
+              <div class="pb2-grid pb2-grid-secondary">
+                <div class="pb2-stat"><span>MAX DD</span><strong class="bearish">{{ analysis.backtest_results.max_drawdown_pct?.toFixed(1) }}%</strong></div>
+                <div class="pb2-stat"><span>MAX STREAK</span><strong>{{ analysis.backtest_results.max_consecutive_losses }}L</strong></div>
+                <div class="pb2-stat"><span>SAMPLE</span><strong>n={{ analysis.backtest_results.sample_size }}</strong></div>
+                <div class="pb2-stat"><span>MAE</span><strong>{{ analysis.backtest_results.max_adverse_excursion_pct?.toFixed(1) }}% vs</strong></div>
               </div>
               <div class="bt-spark-v2">
                 <svg viewBox="0 0 200 40" preserveAspectRatio="none"><polyline [attr.points]="getEquityCurvePoints()" class="spark-line" /></svg>
               </div>
             </div>
+
+            @if (analysis.fundamentals?.risk_reduction_active || analysis.fundamentals?.pre_event_caution) {
+            <div class="pre-event-alert" [class]="analysis.fundamentals.risk_reduction_active ? 'pea-active' : 'pea-caution'">
+              <div class="pea-header">
+                <span>{{ analysis.fundamentals.risk_reduction_active ? '🔴' : '🟡' }}</span>
+                <span class="pea-title">{{ analysis.fundamentals.risk_reduction_active ? 'RISK REDUCTION ACTIVE' : 'PRE-EVENT CAUTION' }}</span>
+                @if (analysis.fundamentals.minutes_to_next_event) {
+                  <span class="pea-countdown">{{ getEventCountdown(analysis.fundamentals.minutes_to_next_event) }}</span>
+                }
+              </div>
+              <div class="pea-body">
+                {{ analysis.fundamentals.risk_reduction_active
+                   ? 'High-impact event within 60 min. Position size auto-capped at 50%.'
+                   : 'High-impact event within 24h. Consider reducing size to 75%.' }}
+              </div>
+              @if (analysis.fundamentals.event_timestamps?.length) {
+                <div class="pea-event">{{ analysis.fundamentals.event_timestamps[0].event }}</div>
+              }
+              <div class="pea-multiplier">
+                Size Multiplier: <strong>×{{ analysis.fundamentals.recommended_position_multiplier?.toFixed(2) }}</strong>
+              </div>
+            </div>
+            }
 
             <div class="verdict-banner-final" [class]="getOverallCheckClass()">
                 {{ getTradeVerdict() }}
@@ -818,6 +896,58 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .risk-panel-card .tile-header { margin-bottom: 12px; }
     .risk-panel-card .pic-desc { font-size: 0.62rem; color: #9399b2; margin: 0 0 10px; line-height: 1.4; }
 
+    /* SIGNAL CONFLICT BANNER */
+    .signal-conflict-banner { margin-bottom: 20px; border-radius: 8px; padding: 14px 18px; border: 1px solid; }
+    .conflict-high { background: rgba(243,139,168,0.06); border-color: rgba(243,139,168,0.4); }
+    .conflict-medium { background: rgba(249,226,175,0.06); border-color: rgba(249,226,175,0.3); }
+    .scb-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .scb-icon { font-size: 1rem; }
+    .scb-title { font-size: 0.55rem; font-weight: 950; letter-spacing: 1.5px; color: #cdd6f4; flex: 1; }
+    .scb-badge { font-size: 0.5rem; font-weight: 900; padding: 2px 6px; border-radius: 3px; }
+    .conflict-high .scb-badge { background: rgba(243,139,168,0.2); color: #f38ba8; }
+    .conflict-medium .scb-badge { background: rgba(249,226,175,0.2); color: #f9e2af; }
+    .scb-headline { font-size: 0.7rem; font-weight: 800; color: #cdd6f4; margin-bottom: 6px; line-height: 1.3; }
+    .conflict-high .scb-headline { color: #f38ba8; }
+    .conflict-medium .scb-headline { color: #f9e2af; }
+    .scb-guidance { font-size: 0.62rem; color: #9399b2; line-height: 1.5; margin-bottom: 10px; }
+    .scb-triggers { display: flex; gap: 10px; margin-top: 6px; }
+    .scb-trigger { font-size: 0.6rem; font-weight: 900; padding: 4px 10px; border-radius: 4px; }
+    .scb-trigger.bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .scb-trigger.bearish { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+
+    /* CORRELATION MATRIX ROW */
+    .corr-matrix-row { margin-top: 14px; padding-top: 14px; border-top: 1px solid #1f1f3a; }
+    .cm-label { font-size: 0.5rem; color: #45475a; font-weight: 900; letter-spacing: 1.2px; margin-bottom: 8px; }
+    .cm-cells { display: flex; gap: 8px; margin-bottom: 8px; }
+    .cm-cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 6px; border-radius: 6px; border: 1px solid #1f1f3a; background: #0b0b15; }
+    .cm-cell span { font-size: 0.5rem; color: #45475a; font-weight: 700; text-transform: uppercase; }
+    .cm-cell strong { font-size: 0.8rem; font-weight: 950; }
+    .cm-cell.corr-strong-pos strong { color: #a6e3a1; }
+    .cm-cell.corr-pos strong { color: #89dceb; }
+    .cm-cell.corr-neutral strong { color: #9399b2; }
+    .cm-cell.corr-neg strong { color: #fab387; }
+    .cm-cell.corr-strong-neg strong { color: #f38ba8; }
+    .cm-interpretation { font-size: 0.58rem; color: #6c7086; line-height: 1.4; }
+
+    /* SECONDARY BACKTEST GRID */
+    .pb2-grid-secondary { margin-top: 6px; padding-top: 8px; border-top: 1px solid #1f1f3a; }
+
+    /* PRE-EVENT ALERT BANNER */
+    .pre-event-alert { margin: 16px 0; padding: 12px 16px; border-radius: 8px; border: 1px solid; }
+    .pea-active { background: rgba(243,139,168,0.07); border-color: rgba(243,139,168,0.5); }
+    .pea-caution { background: rgba(249,226,175,0.07); border-color: rgba(249,226,175,0.4); }
+    .pea-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .pea-title { font-size: 0.55rem; font-weight: 950; letter-spacing: 1.5px; flex: 1; }
+    .pea-active .pea-title { color: #f38ba8; }
+    .pea-caution .pea-title { color: #f9e2af; }
+    .pea-countdown { font-size: 0.6rem; font-weight: 900; padding: 2px 8px; border-radius: 4px; }
+    .pea-active .pea-countdown { background: rgba(243,139,168,0.15); color: #f38ba8; }
+    .pea-caution .pea-countdown { background: rgba(249,226,175,0.15); color: #f9e2af; }
+    .pea-body { font-size: 0.62rem; color: #9399b2; line-height: 1.5; margin-bottom: 6px; }
+    .pea-event { font-size: 0.6rem; color: #cdd6f4; font-weight: 700; margin-bottom: 6px; }
+    .pea-multiplier { font-size: 0.58rem; color: #6c7086; }
+    .pea-multiplier strong { color: #cba6f7; }
+
     /* RESPONSIVE */
     @media (max-width: 1100px) {
       .terminal-grid { grid-template-columns: 1fr 1fr; }
@@ -864,6 +994,23 @@ export class InstrumentCardComponent implements OnChanges {
     if (hour >= 13 && hour < 21) return 'NEW YORK';
     if (hour >= 23 || hour < 8) return 'ASIA';
     return 'TRANSITION';
+  }
+
+  getEventCountdown(minutes: number | undefined | null): string {
+    if (!minutes) return '';
+    if (minutes < 60) return `${minutes}m`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  getCorrCellClass(val: number | undefined | null): string {
+    if (val === null || val === undefined) return 'corr-neutral';
+    if (val >= 0.6) return 'corr-strong-pos';
+    if (val >= 0.3) return 'corr-pos';
+    if (val > -0.3) return 'corr-neutral';
+    if (val > -0.6) return 'corr-neg';
+    return 'corr-strong-neg';
   }
 
   getNextEvent(): string {

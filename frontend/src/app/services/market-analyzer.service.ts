@@ -145,6 +145,24 @@ export interface TradeSignal {
   pyramiding_plan: string;
   scaling_plan: string;
   executive_summary: string;
+  signal_conflict?: SignalConflict;
+}
+
+export interface SignalConflict {
+  conflict_type: 'adx_direction_mismatch' | 'mtf_disagreement' | 'none';
+  severity: 'high' | 'medium' | 'none';
+  headline: string;
+  guidance: string;
+  trigger_price_up?: number;
+  trigger_price_down?: number;
+}
+
+export interface InstrumentCorrelations {
+  vs_dxy?: number;
+  vs_spx?: number;
+  vs_btc?: number;
+  period_days: number;
+  interpretation: string;
 }
 
 export interface VolatilityAnalysis {
@@ -155,12 +173,28 @@ export interface VolatilityAnalysis {
   take_profit_level2?: number;
   risk_reward_ratio: number;
   description: string;
+  atr_percentile_rank: number;
+  atr_regime: 'LOW' | 'NORMAL' | 'ELEVATED' | 'EXTREME';
+  historical_volatility_14: number;
+  hv_percentile: number;
+  volatility_regime_label: string;
+}
+
+export interface EventEntry {
+  event: string;
+  time_utc?: string;
+  impact: string;
 }
 
 export interface FundamentalsAnalysis {
   has_high_impact_events: boolean;
   events: string[];
   description: string;
+  event_timestamps: EventEntry[];
+  risk_reduction_active: boolean;
+  recommended_position_multiplier: number;
+  pre_event_caution: boolean;
+  minutes_to_next_event?: number;
 }
 
 export interface BacktestAnalysis {
@@ -170,6 +204,12 @@ export interface BacktestAnalysis {
   avg_win: number;
   avg_loss: number;
   description: string;
+  sharpe_ratio: number;
+  max_drawdown_pct: number;
+  max_consecutive_losses: number;
+  max_adverse_excursion_pct: number;
+  sample_size: number;
+  expectancy: number;
 }
 
 export interface StrategySettings {
@@ -271,6 +311,7 @@ export interface InstrumentAnalysis {
   strategy_mode: StrategyMode;
   intermarket_context?: IntermarketContext;
   session_context?: SessionContext;
+  instrument_correlations?: InstrumentCorrelations;
 }
 
 export interface WeeklyPerformance {

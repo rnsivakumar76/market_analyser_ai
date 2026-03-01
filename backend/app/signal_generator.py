@@ -1,8 +1,8 @@
-from typing import List
+from typing import List, Optional
 from .models import (
     TrendAnalysis, PullbackAnalysis, StrengthAnalysis, 
     TradeSignal, Signal, CandleAnalysis, StrategySettings,
-    FundamentalsAnalysis, RelativeStrengthAnalysis
+    FundamentalsAnalysis, RelativeStrengthAnalysis, SignalConflict
 )
 
 
@@ -266,6 +266,14 @@ def generate_trade_signal(
 
     executive_summary = " ".join(summary_parts)
 
+    signal_conflict = _detect_signal_conflict(
+        recommendation=recommendation,
+        strength=strength,
+        trend=trend,
+        settings=settings,
+        tech_indicators=tech_indicators
+    )
+
     return TradeSignal(
         recommendation=recommendation,
         score=score,
@@ -276,5 +284,79 @@ def generate_trade_signal(
         psychological_guard=psychological_guard,
         pyramiding_plan=pyramiding_plan,
         scaling_plan=scaling_plan,
-        executive_summary=executive_summary
+        executive_summary=executive_summary,
+        signal_conflict=signal_conflict
+    )
+
+
+def _detect_signal_conflict(
+    recommendation: Signal,
+    strength,
+    trend: TrendAnalysis,
+    settings,
+    tech_indicators
+) -> Optional[SignalConflict]:
+    """Detect and explain contradictions between ADX momentum and directional signals."""
+    adx = strength.adx if strength else 0
+    adx_threshold = settings.adx_threshold if settings else 25
+    strong_adx = adx >= 35
+
+    trigger_up = None
+    trigger_down = None
+    if tech_indicators and tech_indicators.pivot_points:
+        trigger_up = tech_indicators.pivot_points.r1
+        trigger_down = tech_indicators.pivot_points.s1
+
+    # Case 1: Strong ADX but direction is NEUTRAL (most common institutional conflict)
+    if strong_adx and recommendation == Signal.NEUTRAL:
+        up_str = f"${trigger_up:.2f}" if trigger_up else "resistance"
+        down_str = f"${trigger_down:.2f}" if trigger_down else "support"
+        return SignalConflict(
+            conflict_type="adx_direction_mismatch",
+            severity="high",
+            headline=f"ADX={adx:.0f} confirms LOCKED TREND — but directional bias is NEUTRAL",
+            guidance=(
+                f"Strong trend momentum exists but direction is unconfirmed. "
+                f"Watch: break above {up_str} to confirm BULLISH, "
+                f"or break below {down_str} to confirm BEARISH. "
+                f"Do not enter until breakout is confirmed."
+            ),
+            trigger_price_up=trigger_up,
+            trigger_price_down=trigger_down
+        )
+
+    # Case 2: MTF disagreement — daily signal fights monthly trend
+    if trend.direction == Signal.BULLISH and strength.signal == Signal.BEARISH:
+        return SignalConflict(
+            conflict_type="mtf_disagreement",
+            severity="medium",
+            headline="MTF Conflict: Monthly BULLISH vs Daily BEARISH momentum",
+            guidance=(
+                "Daily momentum is pulling back against the long-term uptrend. "
+                "This is a potential dip-buy setup — wait for daily to stabilise "
+                "before adding exposure. Avoid chasing the dip."
+            ),
+            trigger_price_up=trigger_up,
+            trigger_price_down=trigger_down
+        )
+
+    if trend.direction == Signal.BEARISH and strength.signal == Signal.BULLISH:
+        return SignalConflict(
+            conflict_type="mtf_disagreement",
+            severity="medium",
+            headline="MTF Conflict: Monthly BEARISH vs Daily BULLISH momentum",
+            guidance=(
+                "Daily bounce is occurring inside a broader downtrend. "
+                "This is a dangerous 'dead cat bounce' scenario. "
+                "Avoid buying into this move unless monthly trend reverses."
+            ),
+            trigger_price_up=trigger_up,
+            trigger_price_down=trigger_down
+        )
+
+    return SignalConflict(
+        conflict_type="none",
+        severity="none",
+        headline="",
+        guidance=""
     )
