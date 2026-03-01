@@ -131,6 +131,145 @@ export class UserManualComponent {
       `
     },
     {
+      id: 'terminology',
+      title: 'Trading Terminology Guide',
+      icon: '📚',
+      content: `
+        <h4>Technical Indicators & Terms</h4>
+        <div class="term-section">
+          <strong>ADX (Average Directional Index)</strong>
+          <p>Measures trend strength on a scale of 0-100. Values above 25 indicate a trending market, while below 25 suggests ranging/choppy conditions. ADX is non-directional - it only shows strength, not direction.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>RSI (Relative Strength Index)</strong>
+          <p>Momentum oscillator that measures the speed and change of price movements on a scale of 0-100. Readings above 70 suggest overbought conditions, below 30 suggest oversold conditions. Used to identify potential reversals.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>ATR (Average True Range)</strong>
+          <p>Measures market volatility by calculating the average range between high and low prices over a set period. Used for position sizing and stop-loss placement. Higher ATR = higher volatility.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>MACD (Moving Average Convergence Divergence)</strong>
+          <p>Trend-following momentum indicator showing the relationship between two moving averages of an asset's price. The histogram shows the distance between MACD and signal line, indicating momentum strength.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Bollinger Bands</strong>
+          <p>Volatility indicator consisting of a middle band (simple moving average) and two outer bands set at 2 standard deviations. Bands widen during high volatility and narrow during low volatility.</p>
+        </div>
+        
+        <h4>Market Structure & Patterns</h4>
+        <div class="term-section">
+          <strong>Pullback</strong>
+          <p>A temporary reversal in the overall trend. In an uptrend, it's a downward movement before the price resumes its upward move. Pullbacks provide better entry opportunities than chasing breakouts.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Support & Resistance</strong>
+          <p>Support: Price level where buying pressure overcomes selling pressure, preventing further price decline.<br>
+          Resistance: Price level where selling pressure overcomes buying pressure, preventing further price increase.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Pivot Points</strong>
+          <p>Technical analysis indicator that determines potential support and resistance levels based on previous day's high, low, and close prices. Key levels: S1, S2 (support), R1, R2 (resistance), and main pivot.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Fibonacci Retracements</strong>
+          <p>Horizontal lines that indicate where support and resistance are likely to occur based on Fibonacci ratios (23.6%, 38.2%, 50%, 61.8%). Used to identify potential reversal levels after price movements.</p>
+        </div>
+        
+        <h4>Volume & Liquidity</h4>
+        <div class="term-section">
+          <strong>Volume Profile</strong>
+          <p>Shows the amount of volume traded at specific price levels over a period. Key levels include POC (Point of Control - highest volume), VAH (Value Area High), and VAL (Value Area Low).</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>VWAP (Volume Weighted Average Price)</strong>
+          <p>Trading benchmark that gives the average price an asset has traded at throughout the day, based on both volume and price. Used by institutions to assess entry/exit quality.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Liquidity</strong>
+          <p>The degree to which an asset can be quickly bought or sold without affecting its price. High liquidity means tight spreads and stable prices, low liquidity means wide spreads and volatile prices.</p>
+        </div>
+        
+        <h4>Risk Management Metrics</h4>
+        <div class="term-section">
+          <strong>Sharpe Ratio</strong>
+          <p>Measures risk-adjusted return. Higher values indicate better returns for the risk taken. Ratio > 1 is considered good, > 2 is very good.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Maximum Drawdown</strong>
+          <p>The maximum observed loss from a peak to a trough of a portfolio before a new peak is attained. Measures the largest potential loss in a given period.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>MAE (Maximum Adverse Excursion)</strong>
+          <p>The maximum loss experienced during a trade before it either hits the target or stop loss. Helps assess typical risk exposure in winning trades.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Expectancy</strong>
+          <p>The average amount expected to be won or lost per trade. Formula: (Win Rate × Average Win) - (Loss Rate × Average Loss). Positive expectancy indicates a profitable strategy.</p>
+        </div>
+        
+        <h4>Market Correlation</h4>
+        <div class="term-section">
+          <strong>Beta</strong>
+          <p>Measures an asset's volatility in relation to the overall market. Beta > 1 means more volatile than market, < 1 means less volatile.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Correlation Coefficient</strong>
+          <p>Statistical measure ranging from -1 to +1 indicating how two assets move in relation to each other. +1 means perfect positive correlation, -1 means perfect negative correlation, 0 means no correlation.</p>
+        </div>
+        
+        <h4>Trading Sessions</h4>
+        <div class="term-section">
+          <strong>Session VWAP</strong>
+          <p>VWAP calculated for specific trading sessions (Asia, London, New York). Helps identify intraday support/resistance and assess price performance relative to each session's average.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Stop Hunt</strong>
+          <p>Price action that moves rapidly to key levels where stop-loss orders are clustered, triggering those stops before reversing in the original direction. Common at round numbers and key technical levels.</p>
+        </div>
+        
+        <h4>Strategy Terms</h4>
+        <div class="term-section">
+          <strong>Multi-Timeframe Analysis</strong>
+          <p>Analyzing an asset across different timeframes (monthly, weekly, daily, hourly) to get a comprehensive view of the trend and identify optimal entry/exit points.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Risk-Reward Ratio</strong>
+          <p>The ratio of potential profit to potential loss on a trade. A 1:2 ratio means risking $1 to potentially make $2. Higher ratios are generally preferred.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Position Sizing</strong>
+          <p>Determining the appropriate number of shares/contracts to trade based on account size, risk tolerance, and volatility. Critical for proper risk management.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Breakout</strong>
+          <p>When price moves above a resistance level or below a support level with increased volume, suggesting the start of a new trend.</p>
+        </div>
+        
+        <div class="term-section">
+          <strong>Fakeout</strong>
+          <p>A false breakout where price moves beyond a key level but quickly reverses back, trapping traders who entered on the breakout.</p>
+        </div>
+      `
+    },
+    {
       id: 'backtesting',
       title: 'Backtesting Methodology',
       icon: '⏱️',

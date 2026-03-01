@@ -133,6 +133,36 @@
             line-height: 1.7;
             font-size: 1rem;
 
+            h4 {
+                color: #818cf8;
+                font-size: 1.2rem;
+                margin-top: 32px;
+                margin-bottom: 16px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .term-section {
+                margin-bottom: 24px;
+                padding: 16px;
+                background: rgba(255, 255, 255, 0.02);
+                border-radius: 8px;
+                border-left: 3px solid #6366f1;
+
+                strong {
+                    color: #f8fafc;
+                    font-weight: 600;
+                    display: block;
+                    margin-bottom: 8px;
+                }
+
+                p {
+                    margin: 0;
+                    font-size: 0.95rem;
+                    line-height: 1.6;
+                }
+            }
+
             ul {
                 margin-top: 20px;
                 padding-left: 20px;
