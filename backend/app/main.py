@@ -459,8 +459,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     
     # Performance Context: Intervals for scan
     from .models import StrategyMode
-    bench_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
-    exec_interval = "1d" if mode == StrategyMode.LONG_TERM else "1h"
+    bench_interval = "1month" if mode == StrategyMode.LONG_TERM else "1day"
+    exec_interval = "1day" if mode == StrategyMode.LONG_TERM else "1h"
     exec_days = 500 if mode == StrategyMode.LONG_TERM else 20
 
     # 4. Optimized Benchmarks: Fetch once and share (BATCHED)
@@ -474,7 +474,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         logger.info("Fetching fresh global benchmarks via BATCH...")
         from .twelvedata_fetcher import TwelveDataFetcher
         shared_fetcher = TwelveDataFetcher()
-        bench_batch = ["SPX", "BTC", "DX-Y.NYB", "TNX"]
+        bench_batch = ["SPX", "BTC", "DXY", "TNX"]
         
         # BATCH FETCH Benchmarks using a single shared fetcher to respect rate limits
         b_macro = shared_fetcher.fetch_batch_data(bench_batch, interval=bench_interval, days=1000)
@@ -485,7 +485,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             "BTC_macro": b_macro.get("BTC"),
             "SPX_exec": b_exec.get("SPX"),
             "BTC_exec": b_exec.get("BTC"),
-            "DXY": b_macro.get("DX-Y.NYB"),
+            "DXY": b_macro.get("DXY"),
             "US10Y": b_macro.get("TNX")
         }
         _BENCHMARK_CACHE = {"timestamp": now, "data": benchmarks_data}
@@ -766,7 +766,7 @@ async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(g
     # Fetch Benchmarks in parallel
     with ThreadPoolExecutor(max_workers=3) as executor:
         f_spy = executor.submit(fetch_historical_data, "SPX", days=1000, interval=("1mo" if mode == StrategyMode.LONG_TERM else "1d"))
-        f_dxy = executor.submit(fetch_historical_data, "DX-Y.NYB", days=30, interval="1d")
+        f_dxy = executor.submit(fetch_historical_data, "DXY", days=30, interval="1d")
         f_tnx = executor.submit(fetch_historical_data, "TNX", days=30, interval="1d")
         
         spy_df = f_spy.result()

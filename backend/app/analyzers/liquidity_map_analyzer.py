@@ -40,7 +40,7 @@ def _cluster_levels(levels: List[float], tolerance_pct: float = 0.005) -> List[f
     clusters = []
     current = [levels[0]]
     for lvl in levels[1:]:
-        if (lvl - current[-1]) / current[-1] <= tolerance_pct:
+        if current[-1] == 0 or (lvl - current[-1]) / current[-1] <= tolerance_pct:
             current.append(lvl)
         else:
             clusters.append(float(np.mean(current)))
@@ -59,6 +59,8 @@ def calculate_liquidity_map(
     """
     try:
         if df is None or len(df) < 30:
+            return None
+        if not current_price or current_price <= 0:
             return None
 
         data = df.tail(200).copy()
@@ -83,11 +85,11 @@ def calculate_liquidity_map(
         def build_levels(prices: List[float], level_type: str) -> List[LiquidityLevel]:
             result = []
             for p in prices[:_TOP_N]:
-                dist_pct = abs(p - current_price) / current_price * 100
+                dist_pct = abs(p - current_price) / current_price * 100 if current_price else 0
                 # Estimate strength by how many swings cluster here
                 touches = sum(
                     1 for raw in (swing_highs if level_type == "resistance" else swing_lows)
-                    if abs(raw - p) / p <= 0.008
+                    if p and abs(raw - p) / p <= 0.008
                 )
                 strength = "strong" if touches >= 3 else "moderate" if touches >= 2 else "weak"
                 result.append(LiquidityLevel(
