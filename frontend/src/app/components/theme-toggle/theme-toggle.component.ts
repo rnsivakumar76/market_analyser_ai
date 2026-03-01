@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, AfterViewInit } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ThemeService } from '../../services/theme.service';
 
@@ -8,40 +8,68 @@ import { ThemeService } from '../../services/theme.service';
   imports: [CommonModule],
   template: `
     <button class="theme-toggle-btn" (click)="toggleTheme()" [title]="getToggleTitle()">
-      <span class="theme-icon">{{ themeService.getThemeIcon() }}</span>
-      <span class="theme-label">{{ themeService.getThemeLabel() }}</span>
+      <span class="theme-icon">{{ getThemeIcon() }}</span>
+      <span class="theme-label">{{ getThemeLabel() }}</span>
     </button>
-    <!-- Debug info -->
-    <div style="position: absolute; top: -100px; left: 0; font-size: 10px; color: red;">
-      DEBUG: Theme toggle rendered
-    </div>
   `,
   styleUrls: ['./theme-toggle.component.scss']
 })
-export class ThemeToggleComponent implements OnInit, AfterViewInit {
+export class ThemeToggleComponent {
   @Output() themeChanged = new EventEmitter<'dark' | 'light'>();
 
   constructor(public themeService: ThemeService) {
     console.log('ThemeToggleComponent: Initialized');
   }
 
-  ngOnInit() {
-    console.log('ThemeToggleComponent: ngOnInit called');
-  }
-
-  ngAfterViewInit() {
-    console.log('ThemeToggleComponent: ngAfterViewInit called - component should be visible');
-  }
-
   toggleTheme(): void {
-    console.log('ThemeToggleComponent: Toggle button clicked - method called');
+    console.log('ThemeToggleComponent: Toggle button clicked');
     try {
-      this.themeService.toggleTheme();
-      this.themeChanged.emit(this.themeService.currentTheme());
-      console.log('ThemeToggleComponent: Theme changed to:', this.themeService.currentTheme());
+      // Direct theme toggle
+      const currentTheme = this.themeService.currentTheme();
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      console.log('ThemeToggleComponent: Switching from', currentTheme, 'to', newTheme);
+      
+      // Apply theme directly
+      this.applyThemeDirectly(newTheme);
+      
+      // Update service
+      this.themeService.setTheme(newTheme);
+      
+      // Emit change
+      this.themeChanged.emit(newTheme);
+      
+      console.log('ThemeToggleComponent: Theme changed to:', newTheme);
     } catch (error) {
       console.error('ThemeToggleComponent: Error during toggle:', error);
     }
+  }
+
+  private applyThemeDirectly(theme: 'dark' | 'light'): void {
+    const root = document.documentElement;
+    
+    // Remove existing theme classes
+    root.classList.remove('light-theme', 'dark-theme');
+    
+    // Add new theme class
+    if (theme === 'light') {
+      root.classList.add('light-theme');
+    } else {
+      root.classList.add('dark-theme');
+    }
+    
+    console.log('ThemeToggleComponent: Applied theme class', theme + '-theme');
+    console.log('ThemeToggleComponent: Root classes now:', root.className);
+  }
+
+  getThemeIcon(): string {
+    const currentTheme = this.themeService.currentTheme();
+    return currentTheme === 'dark' ? '🌙' : '☀️';
+  }
+
+  getThemeLabel(): string {
+    const currentTheme = this.themeService.currentTheme();
+    return currentTheme === 'dark' ? 'DARK' : 'LIGHT';
   }
 
   getToggleTitle(): string {
