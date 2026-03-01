@@ -55,7 +55,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         <!-- 2.5 AI EXECUTIVE SUMMARY (NEW) -->
         <div class="ai-executive-synthesis" [class]="getSignalClass()">
            <div class="synthesis-header">🤖 AI EXECUTIVE SUMMARY</div>
-           <p class="synthesis-text">{{ analysis.trade_signal.executive_summary }}</p>
+           <p class="synthesis-text">{{ getFilteredSummary() }}</p>
            <div class="synthesis-tags">
               @for (reason of analysis.trade_signal.reasons; track reason) {
                 <span class="syn-tag" [class]="getReasonImpactClass(reason)"># {{ reason }}</span>
@@ -1282,6 +1282,25 @@ export class InstrumentCardComponent implements OnChanges {
 
   onRefresh() {
     this.refresh.emit(this.analysis.symbol);
+  }
+
+  getFilteredSummary(): string {
+    const text = this.analysis?.trade_signal?.executive_summary ?? '';
+    return text
+      .split(/(?<=[.!?])\s+/)
+      .filter(sentence => {
+        const lower = sentence.toLowerCase();
+        return !(
+          lower.includes('warning:') ||
+          (lower.includes('economic') && (lower.includes('event') || lower.includes('news'))) ||
+          lower.includes('high-impact event') ||
+          lower.includes('volatility is expected') ||
+          lower.includes('pre-event') ||
+          lower.includes('reduce position') && lower.includes('event')
+        );
+      })
+      .join(' ')
+      .trim();
   }
 
   isWaitAction(): boolean {
