@@ -293,11 +293,14 @@ export class App implements OnInit, OnDestroy {
     const isTimeoutError = this.isTimeoutError(error);
     const isNetworkError = this.isNetworkError(error);
 
+    // Get detailed CloudWatch analysis if applicable
+    const cloudWatchAnalysis = isCloudWatchError ? this.analyzeCloudWatchError(error) : null;
+
     if (this.isInitialStartup) {
       this.schedulerHealthStatus.set('critical');
       
-      if (isCloudWatchError) {
-        this.schedulerHealthMessage.set('CloudWatch analysis service unavailable - Check AWS configuration');
+      if (cloudWatchAnalysis) {
+        this.schedulerHealthMessage.set(`${cloudWatchAnalysis.service}: ${cloudWatchAnalysis.issue}`);
       } else if (isTimeoutError) {
         this.schedulerHealthMessage.set('Analysis timeout - Backend may be overloaded');
       } else if (isNetworkError) {
@@ -318,8 +321,8 @@ export class App implements OnInit, OnDestroy {
     } else if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
       this.schedulerHealthStatus.set('critical');
       
-      if (isCloudWatchError) {
-        this.schedulerHealthMessage.set(`CloudWatch errors (${this.consecutiveFailures}x) - Analysis service down`);
+      if (cloudWatchAnalysis) {
+        this.schedulerHealthMessage.set(`${cloudWatchAnalysis.service} errors (${this.consecutiveFailures}x): ${cloudWatchAnalysis.issue}`);
       } else if (isTimeoutError) {
         this.schedulerHealthMessage.set(`Analysis timeouts (${this.consecutiveFailures}x) - Backend overloaded`);
       } else if (isNetworkError) {
@@ -330,8 +333,8 @@ export class App implements OnInit, OnDestroy {
     } else if (this.consecutiveFailures === 1) {
       this.schedulerHealthStatus.set('warning');
       
-      if (isCloudWatchError) {
-        this.schedulerHealthMessage.set('CloudWatch service issues detected');
+      if (cloudWatchAnalysis) {
+        this.schedulerHealthMessage.set(`${cloudWatchAnalysis.service} issue: ${cloudWatchAnalysis.issue}`);
       } else if (isTimeoutError) {
         this.schedulerHealthMessage.set('Analysis timeout - Retrying...');
       } else if (isNetworkError) {
@@ -342,7 +345,7 @@ export class App implements OnInit, OnDestroy {
     }
 
     // Log detailed error information for debugging
-    this.logDetailedError(error, this.consecutiveFailures);
+    this.logDetailedError(error, this.consecutiveFailures, cloudWatchAnalysis);
   }
 
   private extractErrorMessage(error: any): string {
@@ -364,9 +367,61 @@ export class App implements OnInit, OnDestroy {
       'function timeout',
       'resource not found',
       'access denied',
-      'credentials'
+      'credentials',
+      'task timed out',
+      'lambda timeout',
+      'cold start',
+      'memory limit',
+      'concurrency limit',
+      'throttling',
+      'rate limit',
+      'service unavailable',
+      'internal server error',
+      'bad gateway',
+      'gateway timeout'
     ];
     return cloudWatchIndicators.some(indicator => message.includes(indicator));
+  }
+
+  private analyzeCloudWatchError(error: any): { service: string; issue: string; severity: 'high' | 'medium' | 'low' } {
+    const message = this.extractErrorMessage(error).toLowerCase();
+    
+    // Lambda-specific issues
+    if (message.includes('lambda') || message.includes('function timeout') || message.includes('task timed out')) {
+      if (message.includes('timeout')) {
+        return { service: 'AWS Lambda', issue: 'Function timeout - Analysis taking too long', severity: 'high' };
+      } else if (message.includes('memory')) {
+        return { service: 'AWS Lambda', issue: 'Memory limit exceeded', severity: 'high' };
+      } else if (message.includes('cold start')) {
+        return { service: 'AWS Lambda', issue: 'Cold start delay', severity: 'medium' };
+      }
+    }
+    
+    // API Gateway issues
+    if (message.includes('api gateway') || message.includes('gateway')) {
+      if (message.includes('timeout')) {
+        return { service: 'API Gateway', issue: 'Gateway timeout - Backend overloaded', severity: 'high' };
+      } else if (message.includes('bad gateway')) {
+        return { service: 'API Gateway', issue: 'Bad gateway - Lambda not responding', severity: 'high' };
+      }
+    }
+    
+    // General AWS service issues
+    if (message.includes('service unavailable') || message.includes('internal server error')) {
+      return { service: 'AWS Services', issue: 'Service temporarily unavailable', severity: 'medium' };
+    }
+    
+    // Throttling/Rate limiting
+    if (message.includes('throttling') || message.includes('rate limit') || message.includes('concurrency')) {
+      return { service: 'AWS Lambda', issue: 'Throttling - Too many concurrent requests', severity: 'medium' };
+    }
+    
+    // Credentials/Permissions
+    if (message.includes('access denied') || message.includes('credentials')) {
+      return { service: 'AWS IAM', issue: 'Access permissions or credentials issue', severity: 'high' };
+    }
+    
+    return { service: 'AWS', issue: 'Unknown AWS service error', severity: 'medium' };
   }
 
   private isTimeoutError(error: any): boolean {
@@ -397,7 +452,7 @@ export class App implements OnInit, OnDestroy {
     return networkIndicators.some(indicator => message.includes(indicator));
   }
 
-  private logDetailedError(error: any, failureCount: number): void {
+  private logDetailedError(error: any, failureCount: number, cloudWatchAnalysis?: any): void {
     const errorInfo = {
       timestamp: new Date().toISOString(),
       failureCount: failureCount,
@@ -406,6 +461,7 @@ export class App implements OnInit, OnDestroy {
       isCloudWatch: this.isCloudWatchError(error),
       isTimeout: this.isTimeoutError(error),
       isNetwork: this.isNetworkError(error),
+      cloudWatchAnalysis: cloudWatchAnalysis,
       userAgent: navigator.userAgent,
       url: window.location.href
     };

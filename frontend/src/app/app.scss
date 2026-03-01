@@ -1,3 +1,58 @@
+/* CloudWatch Analysis Section */
+.cloudwatch-analysis {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--surface-tertiary);
+  border-radius: 6px;
+  border-left: 4px solid var(--warning);
+
+  h5 {
+    margin: 0 0 12px 0;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .cloudwatch-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .cloudwatch-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--surface-secondary);
+      border-radius: 4px;
+
+      .cloudwatch-label {
+        font-weight: 500;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+      }
+
+      .cloudwatch-value {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.9rem;
+
+        &.severity-high {
+          color: var(--error);
+        }
+
+        &.severity-medium {
+          color: var(--warning);
+        }
+
+        &.severity-low {
+          color: var(--success);
+        }
+      }
+    }
+  }
+}
+
 /* Error Diagnostics Modal */
 .diagnostics-modal {
   position: fixed;

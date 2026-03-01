@@ -203,6 +203,28 @@
                 </span>
               </div>
             </div>
+            
+            @if (error.cloudWatchAnalysis) {
+            <div class="cloudwatch-analysis">
+              <h5>CloudWatch Analysis</h5>
+              <div class="cloudwatch-details">
+                <div class="cloudwatch-item">
+                  <span class="cloudwatch-label">Service:</span>
+                  <span class="cloudwatch-value">{{ error.cloudWatchAnalysis.service }}</span>
+                </div>
+                <div class="cloudwatch-item">
+                  <span class="cloudwatch-label">Issue:</span>
+                  <span class="cloudwatch-value">{{ error.cloudWatchAnalysis.issue }}</span>
+                </div>
+                <div class="cloudwatch-item">
+                  <span class="cloudwatch-label">Severity:</span>
+                  <span class="cloudwatch-value" [class]="'severity-' + error.cloudWatchAnalysis.severity">
+                    {{ error.cloudWatchAnalysis.severity.toUpperCase() }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            }
           </div>
           
           <div class="error-section">
