@@ -26,6 +26,11 @@
 
       <div class="action-divider"></div>
 
+      <!-- Theme Toggle -->
+      <app-theme-toggle></app-theme-toggle>
+
+      <div class="action-divider"></div>
+
       @if (psychologicalGuardrail(); as guard) {
       <div class="shield-indicator" [class.restricted]="guard.status === 'restricted'" [title]="guard.message">
         <span class="shield-icon">{{ guard.status === 'active' ? '🛡️' : '🚨' }}</span>

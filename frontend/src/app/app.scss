@@ -1,7 +1,10 @@
+/* Import theme system */
+@import './styles/theme.scss';
+
 .dashboard {
   min-height: 100vh;
-  background: #11111b;
-  color: #cdd6f4;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -10,15 +13,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 16px 32px;
-  background: #1e1e2e;
-  border-bottom: 1px solid #313244;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
 }
 
 .header h1 {
   font-size: 1.5rem;
   font-weight: 900;
   margin: 0;
-  background: linear-gradient(135deg, #89b4fa, #cba6f7);
+  background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -56,7 +59,7 @@
 }
 
 .subtitle {
-  color: #6c7086;
+  color: var(--text-tertiary);
   margin-top: 2px;
   font-size: 0.78rem;
   letter-spacing: 0.5px;
@@ -93,12 +96,12 @@
 .user-name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #cdd6f4;
+  color: var(--text-primary);
 }
 
 .logout-link {
   font-size: 0.75rem;
-  color: #f38ba8;
+  color: var(--error);
   background: none;
   border: none;
   padding: 0;
@@ -116,7 +119,7 @@
 .action-divider {
   width: 1px;
   height: 32px;
-  background: #313244;
+  background: var(--border-primary);
   margin: 0 12px;
 }
 
