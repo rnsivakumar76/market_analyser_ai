@@ -107,7 +107,8 @@ def analyze_instrument_lazy(
     pre_execution_df: Any = None,
     pre_expert_df: Any = None,
     dxy_df: Any = None,
-    us10y_df: Any = None
+    us10y_df: Any = None,
+    news_api_key: str = ''
 ) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
     from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price
@@ -225,7 +226,7 @@ def analyze_instrument_lazy(
     )
     
     tech_indicators = analyze_technical_indicators(execution_data)
-    news_sentiment = analyze_news_sentiment(symbol)
+    news_sentiment = analyze_news_sentiment(symbol, api_key=news_api_key)
     session_ctx = analyze_session_context(execution_data)
 
     # NEW: Expert Day Trader Logic (15m/short-term specific)
@@ -380,7 +381,7 @@ def analyze_instrument_lazy(
 SENT_ALERTS = set()
 
 async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = None):
-    from .config_loader import load_config, get_instruments, get_analysis_params, get_alert_config, get_strategy_config
+    from .config_loader import load_config, get_instruments, get_analysis_params, get_alert_config, get_strategy_config, get_newsapi_key
     from .models import StrategySettings, Signal, StrategyMode
     from .data_fetcher import fetch_historical_data
     from .analyzers import (
@@ -430,6 +431,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     
     params = get_analysis_params(config)
     alert_config = get_alert_config(config)
+    newsapi_key = get_newsapi_key(config)
     
     try:
         strategy_settings = StrategySettings(**get_strategy_config(config))
@@ -543,7 +545,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 pre_execution_df=exec_batch.get(sym),
                 pre_expert_df=expert_batch.get(sym),
                 dxy_df=benchmarks_data.get("DXY"),
-                us10y_df=benchmarks_data.get("US10Y")
+                us10y_df=benchmarks_data.get("US10Y"),
+                news_api_key=newsapi_key
             )
             return sym, analysis, hist_data
         except Exception as e:

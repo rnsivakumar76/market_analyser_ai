@@ -82,6 +82,11 @@ def get_alert_config(config: Dict[str, Any]) -> Dict[str, Any]:
     return config.get('alerts', {})
 
 
+def get_newsapi_key(config: Dict[str, Any]) -> str:
+    """Extract NewsAPI key from config."""
+    return config.get('newsapi', {}).get('api_key', '')
+
+
 def get_strategy_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """Extract strategy settings from config."""
     return config.get('strategy', {

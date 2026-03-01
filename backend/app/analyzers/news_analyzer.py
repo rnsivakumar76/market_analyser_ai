@@ -77,20 +77,77 @@ def fetch_rss_news(symbol: str) -> List[Dict[str, str]]:
 
     return news_items[:10]
 
-def analyze_news_sentiment(symbol: str) -> NewsSentiment:
-    """Analyze sentiment of recent news for a symbol with basic caching."""
+# NewsAPI search term mapping per symbol
+_NEWSAPI_SEARCH_MAP = {
+    'XAU': 'gold price commodities',
+    'XAG': 'silver price commodities',
+    'WTI': 'crude oil price WTI',
+    'SPX': 'S&P 500 stock market',
+    'BTC': 'bitcoin cryptocurrency',
+    'ETH': 'ethereum cryptocurrency',
+    'EUR': 'euro dollar forex',
+    'GBP': 'british pound forex',
+    'JPY': 'dollar yen forex',
+    'DXY': 'US dollar index',
+    'NAS': 'nasdaq stock market',
+    'DOW': 'dow jones stock market',
+}
+
+
+def fetch_newsapi_news(symbol: str, api_key: str) -> List[Dict[str, str]]:
+    """Fetch news from NewsAPI.org. Requires valid API key."""
+    search_term = _NEWSAPI_SEARCH_MAP.get(symbol.upper(), symbol)
+    url = (
+        f"https://newsapi.org/v2/everything"
+        f"?q={requests.utils.quote(search_term)}"
+        f"&sortBy=publishedAt&pageSize=10&language=en"
+        f"&apiKey={api_key}"
+    )
+    headers = {'User-Agent': 'Mozilla/5.0 (compatible; MarketAnalyser/1.0)'}
+    news_items = []
+    try:
+        response = requests.get(url, headers=headers, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            for article in data.get('articles', []):
+                title = article.get('title', '')
+                if title and len(title) > 10 and title != '[Removed]':
+                    news_items.append({
+                        'title':  title.strip(),
+                        'source': article.get('source', {}).get('name', 'NewsAPI'),
+                        'url':    article.get('url', url)
+                    })
+        else:
+            logger.warning(f"NewsAPI returned {response.status_code} for {symbol}: {response.text[:200]}")
+    except Exception as e:
+        logger.error(f"NewsAPI fetch failed for {symbol}: {e}")
+    return news_items[:10]
+
+
+def analyze_news_sentiment(symbol: str, api_key: str = '') -> NewsSentiment:
+    """Analyze sentiment of recent news for a symbol with basic caching.
+    Uses NewsAPI if api_key provided, falls back to Yahoo Finance RSS.
+    """
     global _news_cache
-    
+
     symbol = symbol.upper()
     now = time.time()
-    
+
     # Check cache
     if symbol in _news_cache:
         cached_time, cached_sentiment = _news_cache[symbol]
         if now - cached_time < _CACHE_TTL:
             return cached_sentiment
 
-    news_data = fetch_rss_news(symbol)
+    # Prefer NewsAPI when key is present and not a placeholder
+    use_newsapi = bool(api_key and api_key.strip() and api_key != 'YOUR_NEWSAPI_KEY_HERE')
+    if use_newsapi:
+        news_data = fetch_newsapi_news(symbol, api_key)
+        if not news_data:
+            logger.warning(f"NewsAPI returned no results for {symbol}, falling back to RSS")
+            news_data = fetch_rss_news(symbol)
+    else:
+        news_data = fetch_rss_news(symbol)
     
     if not news_data:
         sentiment = NewsSentiment(
