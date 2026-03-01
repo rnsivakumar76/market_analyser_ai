@@ -329,7 +329,24 @@ def analyze_instrument_lazy(
     # Selection of daily data for backtesting (1Y perspective)
     backtest_source = execution_data if mode == StrategyMode.LONG_TERM else macro_data
     backtest = get_backtest_results(symbol, backtest_source, params, settings=strategy_settings)
-    
+
+    # P6: Volume Profile (50-bucket LT, 20-bucket ST)
+    from .analyzers.volume_profile_analyzer import calculate_volume_profile
+    volume_profile = calculate_volume_profile(execution_data, mode=mode)
+
+    # P7: Session VWAP (intraday data — use expert_df 15min or exec hourly)
+    from .analyzers.session_vwap_analyzer import calculate_session_vwap
+    vwap_source = pre_expert_df if pre_expert_df is not None and len(pre_expert_df) > 5 else pre_execution_df
+    session_vwap = calculate_session_vwap(vwap_source, current_price)
+
+    # P8: Liquidity Map (top 3 per side)
+    from .analyzers.liquidity_map_analyzer import calculate_liquidity_map
+    liquidity_map = calculate_liquidity_map(execution_data, current_price)
+
+    # P9: Block Flow Detector
+    from .analyzers.block_flow_analyzer import detect_block_flow
+    block_flow = detect_block_flow(execution_data, current_price)
+
     return InstrumentAnalysis(
         symbol=symbol,
         name=name,
@@ -352,7 +369,11 @@ def analyze_instrument_lazy(
         expert_trade_plan=expert_plan,
         strategy_mode=mode,
         intermarket_context=intermarket,
-        session_context=session_ctx
+        session_context=session_ctx,
+        volume_profile=volume_profile,
+        session_vwap=session_vwap,
+        liquidity_map=liquidity_map,
+        block_flow=block_flow
     ), execution_data
 
 # In-memory store for sent alerts

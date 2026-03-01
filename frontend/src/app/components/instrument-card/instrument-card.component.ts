@@ -288,6 +288,46 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
               </div>
 
+              <!-- P6: VOLUME PROFILE -->
+              @if (analysis.volume_profile) {
+              <div class="intel-block">
+                <div class="tile-header">📦 VOLUME PROFILE</div>
+                <div class="vp-key-levels">
+                  <div class="vp-lvl poc"><span>POC</span><strong>\${{ analysis.volume_profile.poc.toFixed(2) }}</strong></div>
+                  <div class="vp-lvl vah"><span>VAH</span><strong class="bullish">\${{ analysis.volume_profile.vah.toFixed(2) }}</strong></div>
+                  <div class="vp-lvl val"><span>VAL</span><strong class="bearish">\${{ analysis.volume_profile.val.toFixed(2) }}</strong></div>
+                </div>
+                <div class="vp-sparkline">
+                  @for (bucket of getTopVPBuckets(); track bucket.price_low) {
+                    <div class="vp-bar-row">
+                      <div class="vp-price">\${{ bucket.price_low.toFixed(0) }}</div>
+                      <div class="vp-bar-track">
+                        <div class="vp-bar-fill" [class.poc-bar]="bucket.is_poc" [style.width.%]="bucket.pct_of_max"></div>
+                      </div>
+                    </div>
+                  }
+                </div>
+                <p class="vp-interpretation">{{ analysis.volume_profile.interpretation }}</p>
+              </div>
+              }
+
+              <!-- P7: SESSION VWAP -->
+              @if (analysis.session_vwap) {
+              <div class="intel-block">
+                <div class="tile-header">📐 SESSION VWAP</div>
+                <div class="vwap-grid">
+                  <div class="vwap-cell"><span>VWAP</span><strong>\${{ analysis.session_vwap.vwap.toFixed(2) }}</strong></div>
+                  <div class="vwap-cell"><span>UPPER</span><strong class="bullish">\${{ analysis.session_vwap.upper_band.toFixed(2) }}</strong></div>
+                  <div class="vwap-cell"><span>LOWER</span><strong class="bearish">\${{ analysis.session_vwap.lower_band.toFixed(2) }}</strong></div>
+                  <div class="vwap-cell"><span>DIST</span><strong [class]="analysis.session_vwap.distance_pct >= 0 ? 'bullish' : 'bearish'">{{ analysis.session_vwap.distance_pct >= 0 ? '+' : '' }}{{ analysis.session_vwap.distance_pct.toFixed(2) }}%</strong></div>
+                </div>
+                <div class="vwap-position-badge" [class]="getVWAPPositionClass()">
+                  {{ analysis.session_vwap.position }}
+                </div>
+                <p class="vwap-interpretation">{{ analysis.session_vwap.interpretation }}</p>
+              </div>
+              }
+
             </div>
           </section>
           }
@@ -415,6 +455,67 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <div class="pea-multiplier">
                 Size Multiplier: <strong>×{{ analysis.fundamentals.recommended_position_multiplier?.toFixed(2) }}</strong>
               </div>
+            </div>
+            }
+
+            <!-- P8: LIQUIDITY MAP -->
+            @if (analysis.liquidity_map) {
+            <div class="liquidity-map-section">
+              <div class="tile-header">🗺️ LIQUIDITY MAP</div>
+              <div class="lm-dual">
+                <div class="lm-col">
+                  <div class="lm-col-header bearish">RESISTANCE</div>
+                  @for (lvl of analysis.liquidity_map.resistance_levels; track lvl.price) {
+                    <div class="lm-level" [class]="'lm-' + lvl.strength">
+                      <span class="lm-price bearish">\${{ lvl.price.toFixed(2) }}</span>
+                      <span class="lm-dist">+{{ lvl.distance_pct.toFixed(1) }}%</span>
+                      <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
+                    </div>
+                  }
+                </div>
+                <div class="lm-col">
+                  <div class="lm-col-header bullish">SUPPORT</div>
+                  @for (lvl of analysis.liquidity_map.support_levels; track lvl.price) {
+                    <div class="lm-level" [class]="'lm-' + lvl.strength">
+                      <span class="lm-price bullish">\${{ lvl.price.toFixed(2) }}</span>
+                      <span class="lm-dist">-{{ lvl.distance_pct.toFixed(1) }}%</span>
+                      <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+              <p class="lm-interpretation">{{ analysis.liquidity_map.interpretation }}</p>
+            </div>
+            }
+
+            <!-- P9: BLOCK FLOW DETECTOR (always in Risk tab) -->
+            @if (analysis.block_flow) {
+            <div class="block-flow-section" [class]="analysis.block_flow.detected ? 'bf-active' : 'bf-quiet'">
+              <div class="tile-header">🐋 BLOCK FLOW DETECTOR</div>
+              @if (!analysis.block_flow.detected) {
+                <p class="bf-quiet-msg">{{ analysis.block_flow.interpretation }}</p>
+              }
+              @if (analysis.block_flow.detected) {
+                <div class="bf-summary">
+                  <div class="bf-direction" [class]="'bf-dir-' + analysis.block_flow.net_direction">
+                    {{ analysis.block_flow.net_direction | uppercase }} FLOW
+                  </div>
+                  <div class="bf-counts">
+                    <span class="bullish">{{ analysis.block_flow.bull_blocks }}🟢 Bull</span>
+                    <span class="bearish">{{ analysis.block_flow.bear_blocks }}🔴 Bear</span>
+                  </div>
+                </div>
+                <div class="bf-events">
+                  @for (ev of analysis.block_flow.events.slice().reverse().slice(0, 3); track ev.timestamp) {
+                    <div class="bf-event" [class]="'bf-' + ev.direction">
+                      <span class="bf-ts">{{ ev.timestamp }}</span>
+                      <span class="bf-p" [class]="ev.direction">\${{ ev.price.toFixed(2) }}</span>
+                      <span class="bf-vol">{{ ev.volume_ratio }}x vol</span>
+                    </div>
+                  }
+                </div>
+                <p class="bf-interpretation">{{ analysis.block_flow.interpretation }}</p>
+              }
             </div>
             }
 
@@ -948,6 +1049,66 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .pea-multiplier { font-size: 0.58rem; color: #6c7086; }
     .pea-multiplier strong { color: #cba6f7; }
 
+    /* VOLUME PROFILE */
+    .vp-key-levels { display: flex; gap: 8px; margin-bottom: 14px; }
+    .vp-lvl { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px; background: #0b0b15; border-radius: 6px; border: 1px solid #1f1f3a; }
+    .vp-lvl span { font-size: 0.5rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
+    .vp-lvl strong { font-size: 0.75rem; font-weight: 950; margin-top: 3px; color: #cdd6f4; }
+    .vp-lvl.poc { border-color: #cba6f7; }
+    .vp-lvl.poc strong { color: #cba6f7; }
+    .vp-sparkline { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; max-height: 140px; overflow-y: auto; }
+    .vp-bar-row { display: flex; align-items: center; gap: 6px; }
+    .vp-price { font-size: 0.45rem; color: #45475a; width: 40px; text-align: right; font-family: monospace; }
+    .vp-bar-track { flex: 1; height: 6px; background: #0b0b15; border-radius: 3px; overflow: hidden; }
+    .vp-bar-fill { height: 100%; background: rgba(137,180,250,0.35); border-radius: 3px; transition: width 0.3s; }
+    .vp-bar-fill.poc-bar { background: #cba6f7; }
+    .vp-interpretation { font-size: 0.6rem; color: #6c7086; line-height: 1.4; margin: 0; }
+
+    /* SESSION VWAP */
+    .vwap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+    .vwap-cell { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; background: #0b0b15; border-radius: 6px; border: 1px solid #1f1f3a; }
+    .vwap-cell span { font-size: 0.45rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
+    .vwap-cell strong { font-size: 0.7rem; font-weight: 950; margin-top: 3px; }
+    .vwap-position-badge { display: inline-block; font-size: 0.55rem; font-weight: 900; padding: 3px 10px; border-radius: 4px; margin-bottom: 8px; letter-spacing: 1px; }
+    .vwap-position-badge.above { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .vwap-position-badge.below { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .vwap-position-badge.extended { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+    .vwap-interpretation { font-size: 0.6rem; color: #6c7086; line-height: 1.4; margin: 0; }
+
+    /* LIQUIDITY MAP */
+    .liquidity-map-section { padding: 20px; border-top: 1px solid #1f1f3a; }
+    .lm-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+    .lm-col-header { font-size: 0.5rem; font-weight: 950; letter-spacing: 1.5px; padding: 4px 8px; border-radius: 3px; margin-bottom: 8px; }
+    .lm-col-header.bearish { background: rgba(243,139,168,0.1); color: #f38ba8; }
+    .lm-col-header.bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; }
+    .lm-level { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 5px; margin-bottom: 4px; background: #0b0b15; border: 1px solid #1f1f3a; }
+    .lm-price { font-size: 0.68rem; font-weight: 900; flex: 1; }
+    .lm-dist { font-size: 0.55rem; color: #6c7086; }
+    .lm-badge { font-size: 0.45rem; font-weight: 900; padding: 2px 5px; border-radius: 3px; text-transform: uppercase; }
+    .strength-strong .lm-badge { background: rgba(249,226,175,0.2); color: #f9e2af; }
+    .strength-moderate .lm-badge { background: rgba(137,180,250,0.1); color: #89b4fa; }
+    .strength-weak .lm-badge { background: rgba(69,71,90,0.3); color: #6c7086; }
+    .lm-interpretation { font-size: 0.6rem; color: #6c7086; line-height: 1.4; margin: 0; }
+
+    /* BLOCK FLOW */
+    .block-flow-section { padding: 20px; border-top: 1px solid #1f1f3a; }
+    .bf-quiet { opacity: 0.7; }
+    .bf-quiet-msg { font-size: 0.62rem; color: #6c7086; line-height: 1.4; margin: 8px 0 0; }
+    .bf-summary { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+    .bf-direction { font-size: 0.6rem; font-weight: 950; padding: 4px 12px; border-radius: 5px; letter-spacing: 1px; }
+    .bf-dir-bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .bf-dir-bearish { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .bf-dir-neutral { background: rgba(69,71,90,0.3); color: #9399b2; border: 1px solid #313244; }
+    .bf-counts { display: flex; gap: 10px; font-size: 0.6rem; font-weight: 700; }
+    .bf-events { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .bf-event { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 5px; background: #0b0b15; border: 1px solid #1f1f3a; }
+    .bf-bullish { border-left: 2px solid rgba(166,227,161,0.5); }
+    .bf-bearish { border-left: 2px solid rgba(243,139,168,0.5); }
+    .bf-ts { font-size: 0.5rem; color: #45475a; font-family: monospace; }
+    .bf-p { font-size: 0.65rem; font-weight: 800; flex: 1; }
+    .bf-vol { font-size: 0.55rem; color: #cba6f7; font-weight: 700; }
+    .bf-interpretation { font-size: 0.58rem; color: #6c7086; line-height: 1.4; margin: 0; }
+
     /* RESPONSIVE */
     @media (max-width: 1100px) {
       .terminal-grid { grid-template-columns: 1fr 1fr; }
@@ -994,6 +1155,27 @@ export class InstrumentCardComponent implements OnChanges {
     if (hour >= 13 && hour < 21) return 'NEW YORK';
     if (hour >= 23 || hour < 8) return 'ASIA';
     return 'TRANSITION';
+  }
+
+  getTopVPBuckets() {
+    const vp = this.analysis.volume_profile;
+    if (!vp?.buckets?.length) return [];
+    const buckets = [...vp.buckets];
+    const sorted = buckets.sort((a, b) => {
+      const midA = (a.price_low + a.price_high) / 2;
+      const midB = (b.price_low + b.price_high) / 2;
+      return midA - midB;
+    });
+    const step = Math.max(1, Math.floor(sorted.length / 12));
+    const sampled = sorted.filter((_, i) => i % step === 0 || sorted[i].is_poc);
+    return sampled.slice(-12);
+  }
+
+  getVWAPPositionClass(): string {
+    const pos = this.analysis.session_vwap?.position || '';
+    if (pos.includes('EXTENDED')) return 'extended';
+    if (pos.includes('ABOVE')) return 'above';
+    return 'below';
   }
 
   getEventCountdown(minutes: number | undefined | null): string {

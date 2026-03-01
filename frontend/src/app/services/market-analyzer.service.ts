@@ -312,6 +312,69 @@ export interface InstrumentAnalysis {
   intermarket_context?: IntermarketContext;
   session_context?: SessionContext;
   instrument_correlations?: InstrumentCorrelations;
+  volume_profile?: VolumeProfile;
+  session_vwap?: SessionVWAP;
+  liquidity_map?: LiquidityMap;
+  block_flow?: BlockFlowDetection;
+}
+
+export interface VolumeProfileBucket {
+  price_low: number;
+  price_high: number;
+  volume: number;
+  pct_of_max: number;
+  is_poc: boolean;
+}
+
+export interface VolumeProfile {
+  poc: number;
+  vah: number;
+  val: number;
+  num_buckets: number;
+  buckets: VolumeProfileBucket[];
+  interpretation: string;
+}
+
+export interface SessionVWAP {
+  vwap: number;
+  upper_band: number;
+  lower_band: number;
+  distance_pct: number;
+  position: string;
+  bar_count: number;
+  interpretation: string;
+}
+
+export interface LiquidityLevel {
+  price: number;
+  distance_pct: number;
+  level_type: string;
+  strength: string;
+  touches: number;
+}
+
+export interface LiquidityMap {
+  resistance_levels: LiquidityLevel[];
+  support_levels: LiquidityLevel[];
+  interpretation: string;
+}
+
+export interface BlockFlowEvent {
+  bar_index: number;
+  timestamp: string;
+  price: number;
+  volume_ratio: number;
+  direction: string;
+  body_ratio: number;
+}
+
+export interface BlockFlowDetection {
+  detected: boolean;
+  events: BlockFlowEvent[];
+  net_direction: string;
+  bull_blocks: number;
+  bear_blocks: number;
+  interpretation: string;
 }
 
 export interface WeeklyPerformance {

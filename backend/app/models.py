@@ -239,6 +239,65 @@ class NewsSentiment(BaseModel):
     news_items: List[NewsItem]
 
 
+class VolumeProfileBucket(BaseModel):
+    price_low: float
+    price_high: float
+    volume: float
+    pct_of_max: float
+    is_poc: bool = False
+
+
+class VolumeProfile(BaseModel):
+    poc: float
+    vah: float
+    val: float
+    num_buckets: int
+    buckets: List[VolumeProfileBucket] = []
+    interpretation: str = ""
+
+
+class SessionVWAP(BaseModel):
+    vwap: float
+    upper_band: float
+    lower_band: float
+    distance_pct: float
+    position: str
+    bar_count: int
+    interpretation: str = ""
+
+
+class LiquidityLevel(BaseModel):
+    price: float
+    distance_pct: float
+    level_type: str
+    strength: str = "moderate"
+    touches: int = 0
+
+
+class LiquidityMap(BaseModel):
+    resistance_levels: List[LiquidityLevel] = []
+    support_levels: List[LiquidityLevel] = []
+    interpretation: str = ""
+
+
+class BlockFlowEvent(BaseModel):
+    bar_index: int
+    timestamp: str
+    price: float
+    volume_ratio: float
+    direction: str
+    body_ratio: float
+
+
+class BlockFlowDetection(BaseModel):
+    detected: bool
+    events: List[BlockFlowEvent] = []
+    net_direction: str = "neutral"
+    bull_blocks: int = 0
+    bear_blocks: int = 0
+    interpretation: str = ""
+
+
 class InstrumentAnalysis(BaseModel):
     symbol: str
     name: str
@@ -265,6 +324,10 @@ class InstrumentAnalysis(BaseModel):
     intermarket_context: Optional['IntermarketContext'] = None
     session_context: Optional[SessionContext] = None
     instrument_correlations: Optional[InstrumentCorrelations] = None
+    volume_profile: Optional[VolumeProfile] = None
+    session_vwap: Optional[SessionVWAP] = None
+    liquidity_map: Optional[LiquidityMap] = None
+    block_flow: Optional[BlockFlowDetection] = None
 
 
 class PerformanceSummary(BaseModel):
