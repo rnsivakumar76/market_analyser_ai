@@ -760,167 +760,207 @@
   gap: 20px;
 }
 
-.empty-state {
+/* ─── RIGHT INTELLIGENCE PANEL (3rd Column) ───────────────────────── */
+.performance-panel {
+  width: 260px;
+  min-width: 260px;
+  flex-shrink: 0;
+  border-left: 1px solid #313244;
+  overflow-y: auto;
+  background: #11111b;
+  padding: 16px 12px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 40px;
-  text-align: center;
-  color: #a6adc8;
+  gap: 10px;
 
-  .empty-icon {
-    font-size: 4rem;
-    margin-bottom: 24px;
-    opacity: 0.5;
-    animation: float 3s ease-in-out infinite;
+  &::-webkit-scrollbar {
+    width: 4px;
   }
 
-  h2 {
-    color: #cdd6f4;
-    font-size: 1.5rem;
-    margin-bottom: 12px;
+  &::-webkit-scrollbar-track {
+    background: #1e1e2e;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #45475a;
+    border-radius: 4px;
   }
 }
 
-.lockdown-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(17, 17, 27, 0.6);
-  pointer-events: all;
-  animation: fade-in 0.5s ease-out;
+.perf-panel-header {
+  padding: 0 4px 10px;
+  border-bottom: 1px solid #1f1f3a;
 }
 
-.lockdown-content {
+.perf-panel-title {
+  font-size: 0.55rem;
+  font-weight: 900;
+  color: #45475a;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.perf-card {
   background: #1e1e2e;
-  border: 1px solid #f38ba8;
-  border-radius: 24px;
-  padding: 48px;
-  max-width: 600px;
-  width: 90%;
-  text-align: center;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(243, 139, 168, 0.1);
-  animation: slide-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid #313244;
+  border-radius: 10px;
+  padding: 14px;
 
-  .lockdown-icon {
-    font-size: 4rem;
-    margin-bottom: 24px;
-    filter: drop-shadow(0 0 20px rgba(243, 139, 168, 0.3));
+  &.positive {
+    border-color: rgba(166, 227, 161, 0.25);
   }
 
-  h2 {
-    color: #f38ba8;
-    font-size: 1.75rem;
-    font-weight: 800;
-    letter-spacing: 2px;
-    margin-bottom: 16px;
-  }
+  &.shield-card {
+    border-color: rgba(166, 227, 161, 0.2);
 
-  .lockdown-message {
-    font-size: 1.1rem;
-    line-height: 1.6;
-    color: #cdd6f4;
-    margin-bottom: 32px;
-  }
-
-  .lockdown-stats {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    margin-bottom: 32px;
-    padding: 24px;
-    background: rgba(17, 17, 27, 0.5);
-    border-radius: 16px;
-    border: 1px solid #313244;
-
-    .stat {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-
-      .label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        color: #6c7086;
-        font-weight: 700;
-      }
-
-      .value {
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: #cdd6f4;
-
-        &.bad {
-          color: #f38ba8;
-        }
-      }
+    &.restricted {
+      border-color: rgba(243, 139, 168, 0.4);
+      background: rgba(243, 139, 168, 0.03);
     }
   }
 
-  .lockdown-hint {
-    font-size: 0.85rem;
-    color: #6c7086;
-    font-style: italic;
+  &.system-card {
+    border-color: #1f1f3a;
   }
 }
 
-@keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
-
-  100% {
-    transform: translateY(0px);
-  }
+.perf-card-label {
+  font-size: 0.5rem;
+  font-weight: 900;
+  color: #45475a;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
+.perf-card-value {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: #cdd6f4;
+  margin-bottom: 10px;
+  line-height: 1;
 
-  to {
-    opacity: 1;
-  }
+  &.positive { color: #a6e3a1; }
+  &.negative { color: #f38ba8; }
 }
 
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.perf-card-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #1f1f3a;
 }
 
-@keyframes shield-pulse {
-  0%, 100% { box-shadow: 0 0 6px rgba(243, 139, 168, 0.3); }
-  50% { box-shadow: 0 0 14px rgba(243, 139, 168, 0.6); }
+.pcs-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-@keyframes text-pulse {
-  from { opacity: 0.7; }
-  to { opacity: 1; }
+.pcs-label {
+  font-size: 0.44rem;
+  color: #45475a;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* ─── RESPONSIVE: Desktop only — hide bottom-perf (shown in right panel) */
+.pcs-value {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #cdd6f4;
+
+  &.good { color: #a6e3a1; }
+  &.bad { color: #f38ba8; }
+}
+
+.perf-market-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.pms-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+
+  &.bullish .pms-count { color: #a6e3a1; }
+  &.bearish .pms-count { color: #f38ba8; }
+  &.highlight .pms-count { color: #89b4fa; }
+}
+
+.pms-icon { font-size: 0.8rem; color: #45475a; }
+.pms-count { font-size: 1.1rem; font-weight: 900; color: #cdd6f4; }
+.pms-label { font-size: 0.44rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
+
+.pms-instruments {
+  font-size: 0.58rem;
+  color: #45475a;
+  text-align: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #1f1f3a;
+}
+
+.shield-status-display {
+  font-size: 0.85rem;
+  font-weight: 900;
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-align: center;
+  margin: 8px 0;
+
+  &.active { background: rgba(166, 227, 161, 0.08); color: #a6e3a1; }
+  &.restricted { background: rgba(243, 139, 168, 0.1); color: #f38ba8; }
+}
+
+.shield-details {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #1f1f3a;
+}
+
+.sys-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid #1f1f3a;
+
+  &:last-child { border-bottom: none; }
+}
+
+.sys-label {
+  font-size: 0.45rem;
+  color: #45475a;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sys-value {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #9399b2;
+
+  &.syncing { color: #f9e2af; animation: text-pulse 1s infinite alternate; }
+}
+
+/* ─── RESPONSIVE: Desktop only — right panel visible, hide bottom-bar duplicates */
 @media (min-width: 1025px) {
   .bottom-perf {
+    display: none;
+  }
+
+  .bottom-bar .stat,
+  .bottom-bar .bar-divider {
     display: none;
   }
 }

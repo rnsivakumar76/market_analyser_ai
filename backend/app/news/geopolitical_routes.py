@@ -9,14 +9,14 @@ from typing import Dict, List, Optional, Union, Any
 from datetime import datetime, timedelta
 import logging
 
-from .geopolitical_lambda_safe import LambdaSafeSentimentAnalyzer
+from .geopolitical_lambda_safe import LambdaSafeGeopoliticalAnalyzer
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/geopolitical", tags=["geopolitical"])
 
 # Global analyzer instance
-geopolitical_analyzer = LambdaSafeSentimentAnalyzer()
+geopolitical_analyzer = LambdaSafeGeopoliticalAnalyzer()
 
 class GeopoliticalRequest(BaseModel):
     regions: Optional[List[str]] = None
