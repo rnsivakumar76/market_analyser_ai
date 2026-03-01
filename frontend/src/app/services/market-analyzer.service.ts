@@ -254,6 +254,27 @@ export interface NewsSentiment {
   news_items: NewsItem[];
 }
 
+export interface GeoIndicatorCheck {
+  name: string;
+  value: number;
+  status: 'confirming' | 'neutral' | 'diverging';
+  description: string;
+}
+
+export interface GeopoliticalRisk {
+  detected: boolean;
+  risk_score: number;
+  risk_level: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+  keywords_found: string[];
+  event_categories: string[];
+  expected_impact: string;
+  impact_confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  indicator_confirmation: 'CONFIRMED' | 'EARLY' | 'DIVERGING' | 'NONE';
+  indicators: GeoIndicatorCheck[];
+  ai_narrative: string;
+  action_bias: string;
+}
+
 export interface ChartData {
   time: string;
   open: number;
@@ -317,6 +338,7 @@ export interface InstrumentAnalysis {
   session_vwap?: SessionVWAP;
   liquidity_map?: LiquidityMap;
   block_flow?: BlockFlowDetection;
+  geopolitical_risk?: GeopoliticalRisk;
 }
 
 export interface VolumeProfileBucket {

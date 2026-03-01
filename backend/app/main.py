@@ -348,6 +348,16 @@ def analyze_instrument_lazy(
     from .analyzers.block_flow_analyzer import detect_block_flow
     block_flow = detect_block_flow(execution_data, current_price)
 
+    # P10: Geopolitical Risk — cross-validate news keywords with indicators
+    from .analyzers.geo_risk_analyzer import analyze_geopolitical_risk
+    geopolitical_risk = analyze_geopolitical_risk(
+        symbol=symbol,
+        news_sentiment=news_sentiment,
+        strength=strength,
+        volatility=volatility,
+        trade_signal=trade_signal,
+    )
+
     return InstrumentAnalysis(
         symbol=symbol,
         name=name,
@@ -374,7 +384,8 @@ def analyze_instrument_lazy(
         volume_profile=volume_profile,
         session_vwap=session_vwap,
         liquidity_map=liquidity_map,
-        block_flow=block_flow
+        block_flow=block_flow,
+        geopolitical_risk=geopolitical_risk,
     ), execution_data
 
 # In-memory store for sent alerts

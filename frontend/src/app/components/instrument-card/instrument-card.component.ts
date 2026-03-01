@@ -435,6 +435,67 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
             }
 
+            <!-- P10: GEOPOLITICAL RISK INTELLIGENCE -->
+            @if (analysis.geopolitical_risk?.detected) {
+            <div class="geo-risk-section" [class]="'geo-' + analysis.geopolitical_risk!.risk_level.toLowerCase()">
+              <div class="geo-risk-header">
+                <div class="geo-risk-title">
+                  <span class="geo-risk-icon">🌍</span>
+                  <span>GEOPOLITICAL RISK INTELLIGENCE</span>
+                </div>
+                <div class="geo-risk-score-badge" [class]="'geo-score-' + analysis.geopolitical_risk!.risk_level.toLowerCase()">
+                  <span class="geo-score-val">{{ analysis.geopolitical_risk!.risk_score }}</span>
+                  <span class="geo-score-label">/100</span>
+                  <span class="geo-risk-level">{{ analysis.geopolitical_risk!.risk_level }}</span>
+                </div>
+              </div>
+
+              <div class="geo-keywords">
+                @for (kw of analysis.geopolitical_risk!.keywords_found; track kw) {
+                  <span class="geo-kw-tag">{{ kw }}</span>
+                }
+              </div>
+
+              <div class="geo-impact-row">
+                <div class="geo-impact-cell">
+                  <span class="geo-cell-label">EXPECTED IMPACT</span>
+                  <span class="geo-cell-val" [class]="getGeoImpactClass(analysis.geopolitical_risk!.expected_impact)">
+                    {{ analysis.geopolitical_risk!.expected_impact | uppercase }}
+                  </span>
+                </div>
+                <div class="geo-impact-cell">
+                  <span class="geo-cell-label">CONFIDENCE</span>
+                  <span class="geo-cell-val">{{ analysis.geopolitical_risk!.impact_confidence }}</span>
+                </div>
+                <div class="geo-impact-cell">
+                  <span class="geo-cell-label">PRICE ACTION</span>
+                  <span class="geo-cell-val" [class]="getGeoConfirmationClass(analysis.geopolitical_risk!.indicator_confirmation)">
+                    {{ analysis.geopolitical_risk!.indicator_confirmation }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="geo-indicators">
+                @for (ind of analysis.geopolitical_risk!.indicators; track ind.name) {
+                  <div class="geo-ind-row" [class]="'geo-ind-' + ind.status">
+                    <span class="geo-ind-icon">{{ ind.status === 'confirming' ? '✅' : ind.status === 'diverging' ? '❌' : '⚠️' }}</span>
+                    <div class="geo-ind-content">
+                      <span class="geo-ind-name">{{ ind.name }}</span>
+                      <span class="geo-ind-desc">{{ ind.description }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="geo-narrative">{{ analysis.geopolitical_risk!.ai_narrative }}</div>
+
+              <div class="geo-action-bias" [class]="getGeoActionClass(analysis.geopolitical_risk!.action_bias)">
+                <span class="geo-action-label">ACTION BIAS</span>
+                <span class="geo-action-val">{{ analysis.geopolitical_risk!.action_bias }}</span>
+              </div>
+            </div>
+            }
+
           </section>
           }
 
@@ -1092,6 +1153,65 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .bf-vol { font-size: 0.55rem; color: #cba6f7; font-weight: 700; }
     .bf-interpretation { font-size: 0.58rem; color: #6c7086; line-height: 1.4; margin: 0; }
 
+    /* GEOPOLITICAL RISK INTELLIGENCE */
+    .geo-risk-section { padding: 20px; border-top: 1px solid #1f1f3a; border-left: 4px solid #6c7086; }
+    .geo-risk-section.geo-low      { border-left-color: #a6e3a1; background: rgba(166,227,161,0.03); }
+    .geo-risk-section.geo-moderate { border-left-color: #f9e2af; background: rgba(249,226,175,0.04); }
+    .geo-risk-section.geo-high     { border-left-color: #fab387; background: rgba(250,179,135,0.05); }
+    .geo-risk-section.geo-critical { border-left-color: #f38ba8; background: rgba(243,139,168,0.06); }
+
+    .geo-risk-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .geo-risk-title  { display: flex; align-items: center; gap: 6px; font-size: 0.55rem; font-weight: 950; letter-spacing: 1.5px; color: #89b4fa; }
+    .geo-risk-icon   { font-size: 0.9rem; }
+
+    .geo-risk-score-badge { display: flex; align-items: baseline; gap: 3px; padding: 4px 10px; border-radius: 20px; background: rgba(137,180,250,0.1); border: 1px solid rgba(137,180,250,0.2); }
+    .geo-score-val   { font-size: 1.1rem; font-weight: 900; color: #cdd6f4; }
+    .geo-score-label { font-size: 0.55rem; color: #6c7086; }
+    .geo-risk-level  { font-size: 0.5rem; font-weight: 950; letter-spacing: 1.5px; padding: 2px 6px; border-radius: 3px; margin-left: 4px; }
+    .geo-low    .geo-risk-level { background: rgba(166,227,161,0.15); color: #a6e3a1; }
+    .geo-moderate .geo-risk-level { background: rgba(249,226,175,0.15); color: #f9e2af; }
+    .geo-high   .geo-risk-level { background: rgba(250,179,135,0.15); color: #fab387; }
+    .geo-critical .geo-risk-level { background: rgba(243,139,168,0.15); color: #f38ba8; }
+
+    .geo-keywords { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .geo-kw-tag { font-size: 0.48rem; font-weight: 700; letter-spacing: 0.8px; padding: 3px 8px; border-radius: 3px; background: rgba(203,166,247,0.1); border: 1px solid rgba(203,166,247,0.25); color: #cba6f7; text-transform: uppercase; }
+
+    .geo-impact-row  { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+    .geo-impact-cell { background: rgba(30,30,46,0.6); border: 1px solid #313244; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .geo-cell-label  { font-size: 0.45rem; font-weight: 950; letter-spacing: 1.5px; color: #6c7086; }
+    .geo-cell-val    { font-size: 0.65rem; font-weight: 800; color: #cdd6f4; }
+    .geo-cell-val.bullish { color: #a6e3a1; }
+    .geo-cell-val.bearish { color: #f38ba8; }
+    .geo-cell-val.neutral { color: #f9e2af; }
+    .geo-cell-val.geo-confirmed { color: #a6e3a1; }
+    .geo-cell-val.geo-diverging  { color: #f38ba8; }
+    .geo-cell-val.geo-early      { color: #f9e2af; }
+    .geo-cell-val.geo-none       { color: #6c7086; }
+
+    .geo-indicators { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .geo-ind-row     { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 6px; border: 1px solid transparent; }
+    .geo-ind-confirming { background: rgba(166,227,161,0.05); border-color: rgba(166,227,161,0.2); }
+    .geo-ind-diverging  { background: rgba(243,139,168,0.05); border-color: rgba(243,139,168,0.2); }
+    .geo-ind-neutral    { background: rgba(249,226,175,0.04); border-color: rgba(249,226,175,0.15); }
+    .geo-ind-icon    { font-size: 0.75rem; flex-shrink: 0; margin-top: 1px; }
+    .geo-ind-content { display: flex; flex-direction: column; gap: 2px; }
+    .geo-ind-name    { font-size: 0.5rem; font-weight: 950; letter-spacing: 1px; color: #89b4fa; }
+    .geo-ind-desc    { font-size: 0.58rem; color: #a6adc8; line-height: 1.35; }
+
+    .geo-narrative { font-size: 0.62rem; color: #cdd6f4; line-height: 1.6; padding: 10px 12px; background: rgba(17,17,27,0.5); border-radius: 6px; border-left: 3px solid #89b4fa; margin-bottom: 12px; }
+
+    .geo-action-bias { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 6px; }
+    .geo-action-trade   { background: rgba(166,227,161,0.1); border: 1px solid rgba(166,227,161,0.3); }
+    .geo-action-reduce  { background: rgba(243,139,168,0.1); border: 1px solid rgba(243,139,168,0.3); }
+    .geo-action-wait    { background: rgba(249,226,175,0.08); border: 1px solid rgba(249,226,175,0.25); }
+    .geo-action-monitor { background: rgba(137,180,250,0.07); border: 1px solid rgba(137,180,250,0.2); }
+    .geo-action-label { font-size: 0.45rem; font-weight: 950; letter-spacing: 1.5px; color: #6c7086; }
+    .geo-action-val   { font-size: 0.6rem; font-weight: 900; letter-spacing: 0.5px; }
+    .geo-action-trade   .geo-action-val { color: #a6e3a1; }
+    .geo-action-reduce  .geo-action-val { color: #f38ba8; }
+    .geo-action-wait    .geo-action-val { color: #f9e2af; }
+    .geo-action-monitor .geo-action-val { color: #89b4fa; }
+
     /* RESPONSIVE */
     @media (max-width: 1100px) {
       .terminal-grid { grid-template-columns: 1fr 1fr; }
@@ -1302,6 +1422,30 @@ export class InstrumentCardComponent implements OnChanges {
   isWaitAction(): boolean {
     const action = this.analysis?.trade_signal?.action_plan?.toLowerCase() ?? '';
     return action.includes('wait') || action.includes('observe') || action.includes('sideline') || action.includes('neutral');
+  }
+
+  getGeoImpactClass(impact: string): string {
+    const i = impact.toLowerCase();
+    if (i.includes('bullish')) return 'bullish';
+    if (i.includes('bearish')) return 'bearish';
+    return 'neutral';
+  }
+
+  getGeoConfirmationClass(confirmation: string): string {
+    switch (confirmation) {
+      case 'CONFIRMED': return 'geo-confirmed';
+      case 'DIVERGING':  return 'geo-diverging';
+      case 'EARLY':      return 'geo-early';
+      default:           return 'geo-none';
+    }
+  }
+
+  getGeoActionClass(bias: string): string {
+    const b = bias.toUpperCase();
+    if (b.includes('TRADE WITH')) return 'geo-action-trade';
+    if (b.includes('REDUCE'))     return 'geo-action-reduce';
+    if (b.includes('WAIT'))       return 'geo-action-wait';
+    return 'geo-action-monitor';
   }
 
   // CSS Class Helpers

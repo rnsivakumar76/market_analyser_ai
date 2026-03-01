@@ -240,6 +240,27 @@ class NewsSentiment(BaseModel):
     news_items: List[NewsItem]
 
 
+class GeoIndicatorCheck(BaseModel):
+    name: str
+    value: float
+    status: str  # 'confirming' | 'neutral' | 'diverging'
+    description: str
+
+
+class GeopoliticalRisk(BaseModel):
+    detected: bool
+    risk_score: int  # 0–100
+    risk_level: str  # 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL'
+    keywords_found: List[str]
+    event_categories: List[str]
+    expected_impact: str  # 'bullish' | 'bearish' | 'usd_bullish' | 'neutral' | 'mixed'
+    impact_confidence: str  # 'HIGH' | 'MEDIUM' | 'LOW'
+    indicator_confirmation: str  # 'CONFIRMED' | 'EARLY' | 'DIVERGING' | 'NONE'
+    indicators: List[GeoIndicatorCheck]
+    ai_narrative: str
+    action_bias: str
+
+
 class VolumeProfileBucket(BaseModel):
     price_low: float
     price_high: float
@@ -329,6 +350,7 @@ class InstrumentAnalysis(BaseModel):
     session_vwap: Optional[SessionVWAP] = None
     liquidity_map: Optional[LiquidityMap] = None
     block_flow: Optional[BlockFlowDetection] = None
+    geopolitical_risk: Optional[GeopoliticalRisk] = None
 
 
 class PerformanceSummary(BaseModel):
