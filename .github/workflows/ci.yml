@@ -34,6 +34,42 @@ jobs:
           flake8 app/ --max-line-length=120 --ignore=E501,W503,E302 \
             --exclude=__pycache__,.git || true
 
+  test-calculations:
+    name: Calculation Tests (Backend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-cov --quiet
+          pip install -r backend/requirements.txt --quiet
+
+      - name: Run calculation tests
+        run: |
+          cd backend
+          python -m pytest tests/test_calculations.py tests/test_analyzers.py \
+            -v --tb=short \
+            --cov=app/analyzers \
+            --cov-report=term-missing \
+            --cov-fail-under=60
+        env:
+          PYTHONPATH: .
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend/htmlcov/
+          retention-days: 7
+
   validate-terraform:
     name: Validate Terraform
     runs-on: ubuntu-latest
