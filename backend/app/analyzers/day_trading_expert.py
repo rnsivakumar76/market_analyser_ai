@@ -100,7 +100,8 @@ def generate_expert_trade_plan(
     or_data: Dict, 
     rvol: float, 
     technical: Any, 
-    advice: str
+    advice: str,
+    signal_direction: str = "neutral"
 ) -> Dict[str, Any]:
     """
     Generates a concrete 'Battle Plan' for the day trader.
@@ -117,18 +118,30 @@ def generate_expert_trade_plan(
     if rvol > 2.0:
         plan.append(f"HIGH CONVICTION: RVOL is {rvol}x. Institutions are active.")
     
-    # 3. Pivot Targets — use ORB direction to set targets, not price vs pivot
+    # 3. Pivot Targets — contextualize ORB direction with overall signal direction
     if technical and technical.pivot_points:
         p = technical.pivot_points
         orb_direction = or_data.get("broken")
-        if orb_direction == "bullish":
-            plan.append(f"TARGETS: Aim for R1 ({p.r1}) then R2 ({p.r2}).")
+        is_bullish_signal = signal_direction == "bullish"
+        is_bearish_signal = signal_direction == "bearish"
+
+        if orb_direction == "bullish" and is_bearish_signal:
+            # ORB up but signal is bearish — intraday bounce into resistance, fade opportunity
+            plan.append(f"CAUTION: Bullish ORB against bearish signal. R1 ({p.r1:.2f}) is resistance to fade — watch for rejection.")
+        elif orb_direction == "bearish" and is_bullish_signal:
+            # ORB down but signal is bullish — price pulling back to entry zone, not a short signal
+            plan.append(f"PULLBACK IN PROGRESS: Price heading to entry zone near S1 ({p.s1:.2f}). Watch for long reversal at support.")
+        elif orb_direction == "bullish":
+            plan.append(f"TARGETS: Aim for R1 ({p.r1:.2f}) then R2 ({p.r2:.2f}).")
         elif orb_direction == "bearish":
-            plan.append(f"TARGETS: Aim for S1 ({p.s1}) then S2 ({p.s2}).")
+            plan.append(f"TARGETS: Aim for S1 ({p.s1:.2f}) then S2 ({p.s2:.2f}).")
         elif price > p.pivot:
-            plan.append(f"TARGETS: Aim for R1 ({p.r1}) then R2 ({p.r2}).")
+            plan.append(f"TARGETS: Aim for R1 ({p.r1:.2f}) then R2 ({p.r2:.2f}).")
         else:
-            plan.append(f"TARGETS: Aim for S1 ({p.s1}) then S2 ({p.s2}).")
+            plan.append(f"TARGETS: Aim for S1 ({p.s1:.2f}) then S2 ({p.s2:.2f}).")
+
+        if technical.fibonacci and orb_direction == "bearish" and is_bullish_signal:
+            plan.append(f"KEY ENTRY: Fib 38.2% at {technical.fibonacci.ret_382:.2f} is the ideal long trigger zone.")
             
     # 4. Expert Advice
     if advice:

@@ -244,7 +244,7 @@ def analyze_instrument_lazy(
             yield_chg = float((us10y_df['Close'].iloc[-1] - us10y_df['Close'].iloc[-2]) / us10y_df['Close'].iloc[-2] * 100)
             
         advice = analyze_commodity_specifics(symbol, dxy_chg, yield_chg)
-        expert_plan = generate_expert_trade_plan(symbol, current_price, or_data, rvol, tech_indicators, advice)
+        expert_plan = generate_expert_trade_plan(symbol, current_price, or_data, rvol, tech_indicators, advice, signal_direction=trend.direction.value)
     
     # NEW: Intermarket Context (DXY / Yields)
     intermarket = analyze_intermarket_context(symbol, dxy_df, us10y_df)
