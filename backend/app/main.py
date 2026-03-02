@@ -248,8 +248,18 @@ def analyze_instrument_lazy(
     
     # NEW: Intermarket Context (DXY / Yields)
     intermarket = analyze_intermarket_context(symbol, dxy_df, us10y_df)
-    
-    volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value)
+
+    # Derive ideal entry price for pending setups so stop/target anchor to entry zone
+    ideal_entry = None
+    if tech_indicators and tech_indicators.pivot_points and tech_indicators.fibonacci:
+        pp = tech_indicators.pivot_points
+        fib = tech_indicators.fibonacci
+        if trend.direction.value == "bullish" and pp.s1 and fib.ret_382:
+            ideal_entry = min(pp.s1, fib.ret_382)
+        elif trend.direction.value == "bearish" and pp.r1 and fib.ret_618:
+            ideal_entry = max(pp.r1, fib.ret_618)
+
+    volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value, entry_price=ideal_entry)
     fundamentals = analyze_fundamentals(symbol)
     
     # NEW: Relative Strength Analysis (Alpha vs Beta)

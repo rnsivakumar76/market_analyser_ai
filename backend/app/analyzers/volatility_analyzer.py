@@ -38,9 +38,14 @@ def analyze_volatility_and_risk(
     current_price: float, 
     signal_direction: str,
     atr_multiplier_sl: float = 1.5,
-    atr_multiplier_tp: float = 3.0
+    atr_multiplier_tp: float = 3.0,
+    entry_price: float = None
 ) -> VolatilityAnalysis:
-    """Analyze volatility, calculate stop loss and take profit."""
+    """Analyze volatility, calculate stop loss and take profit.
+    
+    If entry_price is provided (e.g. a pending pullback level), stop/target are
+    anchored at entry_price rather than current_price for accurate R/R display.
+    """
     
     atr = calculate_atr(data, period=14)
     
@@ -53,29 +58,33 @@ def analyze_volatility_and_risk(
             description="Insufficient data for Volatility/ATR calculation."
         )
 
+    # Use entry_price as the anchor when a pending entry level is known;
+    # otherwise fall back to current_price (immediate/market entry).
+    anchor = entry_price if (entry_price and entry_price > 0) else current_price
+
     # Calculate stop loss and take profit levels (Institutional Scaling Model)
     # TP1: 1.0x ATR (Initial de-risk)
     # TP2: 2.0x ATR (Core target)
     # TP3: 3.0x ATR (Runner)
     
     if signal_direction == "bullish":
-        sl = current_price - (atr * atr_multiplier_sl)
-        tp1 = current_price + (atr * 1.0)
-        tp2 = current_price + (atr * 2.0)
-        tp3 = current_price + (atr * atr_multiplier_tp)
+        sl = anchor - (atr * atr_multiplier_sl)
+        tp1 = anchor + (atr * 1.0)
+        tp2 = anchor + (atr * 2.0)
+        tp3 = anchor + (atr * atr_multiplier_tp)
         desc = f"Bullish setup: Stop Loss at {sl:.2f}. Scaling Targets: TP1 (De-risk) at {tp1:.2f}, TP2 at {tp2:.2f}, Final TP at {tp3:.2f}."
     elif signal_direction == "bearish":
-        sl = current_price + (atr * atr_multiplier_sl)
-        tp1 = current_price - (atr * 1.0)
-        tp2 = current_price - (atr * 2.0)
-        tp3 = current_price - (atr * atr_multiplier_tp)
+        sl = anchor + (atr * atr_multiplier_sl)
+        tp1 = anchor - (atr * 1.0)
+        tp2 = anchor - (atr * 2.0)
+        tp3 = anchor - (atr * atr_multiplier_tp)
         desc = f"Bearish setup: Stop Loss at {sl:.2f}. Scaling Targets: TP1 (De-risk) at {tp1:.2f}, TP2 at {tp2:.2f}, Final TP at {tp3:.2f}."
     else:
         # Neutral - hypothetical symmetric bounds
-        sl = current_price - (atr * atr_multiplier_sl)
-        tp1 = current_price + (atr * 1.0)
-        tp2 = current_price + (atr * 2.0)
-        tp3 = current_price + (atr * atr_multiplier_tp)
+        sl = anchor - (atr * atr_multiplier_sl)
+        tp1 = anchor + (atr * 1.0)
+        tp2 = anchor + (atr * 2.0)
+        tp3 = anchor + (atr * atr_multiplier_tp)
         desc = f"Neutral market. ATR is {atr:.2f}. Expect daily swings between {sl:.2f} and {tp3:.2f}."
 
     # Standard risk-reward is usually TP_dist / SL_dist

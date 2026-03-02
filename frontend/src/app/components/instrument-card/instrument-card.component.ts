@@ -2029,10 +2029,7 @@ export class InstrumentCardComponent implements OnChanges {
 
   // ── Visual R/R Diagram Helpers ──────────────────────────────────────────────
   private isShortTrade(): boolean {
-    const vr = this.analysis.volatility_risk;
-    if (!vr) return false;
-    const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
-    return vr.stop_loss > entry;
+    return this.analysis.trade_signal?.recommendation?.toLowerCase() === 'bearish';
   }
 
   getRRReward(): string {
