@@ -1,6 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
+from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -97,3 +98,53 @@ def or_data_bullish():
 def or_data_none():
     """ORB data: no breakout yet."""
     return {"or_high": 72.0, "or_low": 70.5, "broken": "none"}
+
+
+@pytest.fixture
+def strategy_settings_default():
+    """Default StrategySettings used across multiple tests."""
+    from app.models import StrategySettings
+    return StrategySettings()
+
+
+@pytest.fixture
+def bullish_trend():
+    from app.models import TrendAnalysis, Signal
+    return TrendAnalysis(
+        direction=Signal.BULLISH, fast_ma=100.0, slow_ma=90.0,
+        price_above_fast_ma=True, price_above_slow_ma=True, description="test"
+    )
+
+
+@pytest.fixture
+def bearish_trend():
+    from app.models import TrendAnalysis, Signal
+    return TrendAnalysis(
+        direction=Signal.BEARISH, fast_ma=90.0, slow_ma=100.0,
+        price_above_fast_ma=False, price_above_slow_ma=False, description="test"
+    )
+
+
+@pytest.fixture
+def xau_ohlcv_daily():
+    """300 days of XAU/USD daily data in an uptrend, suitable for LONG_TERM analysis."""
+    np.random.seed(99)
+    dates = pd.date_range(start="2025-01-01", periods=300, freq="D")
+    base = np.linspace(1800, 2100, 300) + np.random.normal(0, 12, 300)
+    return pd.DataFrame({
+        "Open":   base - 4,
+        "High":   base + 14,
+        "Low":    base - 14,
+        "Close":  base + 2,
+        "Volume": np.random.randint(2000, 8000, 300),
+    }, index=dates)
+
+
+@pytest.fixture
+def mock_twelvedata_fetcher():
+    """TwelveDataFetcher with all network calls mocked out."""
+    with patch("app.twelvedata_fetcher.TDClient") as MockClient:
+        MockClient.return_value = MagicMock()
+        from app.twelvedata_fetcher import TwelveDataFetcher
+        f = TwelveDataFetcher(api_key="TEST_KEY_FAKE")
+        yield f
