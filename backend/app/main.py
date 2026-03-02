@@ -152,26 +152,34 @@ def analyze_instrument_lazy(
     # 1. Macro Data (High latency, low change)
     if pre_macro_df is not None: macro_data = pre_macro_df
     else:
-        macro_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
+        macro_interval = "1month" if mode == StrategyMode.LONG_TERM else "1day"
         macro_days = 1000 if mode == StrategyMode.LONG_TERM else 500
         macro_data = get_cached_history(symbol, macro_interval, macro_days)
         if macro_data is None:
+            logger.info(f"[FETCH] {symbol} macro ({macro_interval}, {macro_days}d) - cache miss, fetching...")
             macro_data = fetch_historical_data(symbol, days=macro_days, interval=macro_interval)
             set_cached_history(symbol, macro_interval, macro_days, macro_data)
+            logger.info(f"[FETCH] {symbol} macro: {'OK' if macro_data is not None and not macro_data.empty else 'EMPTY'} ({len(macro_data) if macro_data is not None and not macro_data.empty else 0} bars)")
+        else:
+            logger.info(f"[FETCH] {symbol} macro: cache hit ({len(macro_data)} bars)")
 
     # 2. Pullback Data
     if pre_pullback_df is not None: pullback_data = pre_pullback_df
     else:
-        pull_interval = "1wk" if mode == StrategyMode.LONG_TERM else "4h"
+        pull_interval = "1week" if mode == StrategyMode.LONG_TERM else "4h"
         pull_days = 250 if mode == StrategyMode.LONG_TERM else 120
         pullback_data = get_cached_history(symbol, pull_interval, pull_days)
         if pullback_data is None:
+            logger.info(f"[FETCH] {symbol} pullback ({pull_interval}, {pull_days}d) - cache miss, fetching...")
             pullback_data = fetch_historical_data(symbol, days=pull_days, interval=pull_interval)
             set_cached_history(symbol, pull_interval, pull_days, pullback_data)
+            logger.info(f"[FETCH] {symbol} pullback: {'OK' if pullback_data is not None and not pullback_data.empty else 'EMPTY'} ({len(pullback_data) if pullback_data is not None and not pullback_data.empty else 0} bars)")
+        else:
+            logger.info(f"[FETCH] {symbol} pullback: cache hit ({len(pullback_data)} bars)")
 
     # 3. Execution Data (Low latency, high change - Always Fresh)
     if pre_execution_df is not None: execution_data = pre_execution_df
-    else: execution_data = fetch_historical_data(symbol, days=(500 if mode == StrategyMode.LONG_TERM else 300), interval=("1d" if mode == StrategyMode.LONG_TERM else "1h"))
+    else: execution_data = fetch_historical_data(symbol, days=(500 if mode == StrategyMode.LONG_TERM else 300), interval=("1day" if mode == StrategyMode.LONG_TERM else "1h"))
 
     if mode == StrategyMode.LONG_TERM:
         macro_label = "Institutional (Long-Term)"
@@ -277,7 +285,7 @@ def analyze_instrument_lazy(
         bench_data = fetch_historical_data(
             bench_sym, 
             days=(500 if mode == StrategyMode.LONG_TERM else 20), 
-            interval=("1d" if mode == StrategyMode.LONG_TERM else "1h")
+            interval=("1day" if mode == StrategyMode.LONG_TERM else "1h")
         )
     
     rs_analysis = analyze_relative_strength(
@@ -447,7 +455,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 logger.warning(f"Failed to reconstruct models from cache: {e}")
                 # Fall back to fresh analysis
 
-    logger.info(f"Running parallel market scan for user: {user_id} ({mode.value})...")
+    t_scan_start = time.time()
+    logger.info(f"[SCAN_START] user={user_id} mode={mode.value} timestamp={datetime.now(timezone.utc).isoformat()}")
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
     logger.info(f"Loaded {len(instruments)} instruments for user {user_id}")
@@ -480,10 +489,11 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     now = time.time()
     
     if now - _BENCHMARK_CACHE["timestamp"] < _BENCH_TTL and _BENCHMARK_CACHE["data"] is not None:
-        logger.info("Using cached global benchmarks (macro/yields)")
+        cache_age = round(now - _BENCHMARK_CACHE["timestamp"], 0)
+        logger.info(f"[BENCHMARKS] Cache hit (age={cache_age}s, TTL={_BENCH_TTL}s)")
         benchmarks_data = _BENCHMARK_CACHE["data"]
     else:
-        logger.info("Fetching fresh global benchmarks via BATCH...")
+        logger.info(f"[BENCHMARKS] Cache miss or expired — fetching fresh via BATCH (bench={bench_interval}, exec={exec_interval})")
         from .twelvedata_fetcher import TwelveDataFetcher
         shared_fetcher = TwelveDataFetcher()
         bench_batch = ["SPX", "BTC", "DXY", "TNX"]
@@ -500,6 +510,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             "DXY": b_macro.get("DXY"),
             "US10Y": b_macro.get("TNX")
         }
+        bench_summary = {k: ('OK' if v is not None and not v.empty else 'MISSING') for k, v in benchmarks_data.items()}
+        logger.info(f"[BENCHMARKS] Fetch result: {bench_summary}")
         _BENCHMARK_CACHE = {"timestamp": now, "data": benchmarks_data}
 
     spy_bench = Signal.NEUTRAL
@@ -518,14 +530,15 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         shared_fetcher = TwelveDataFetcher()
         
     sym_list = [inst['symbol'] for inst in instruments]
-    logger.info(f"Triggering Tiered Parallel Fetches for {len(sym_list)} instruments...")
+    exec_fetch_interval = "1day" if mode == StrategyMode.LONG_TERM else "1h"
+    logger.info(f"[INSTRUMENTS] Fetching execution data for {sym_list} @ {exec_fetch_interval}")
     
     with ThreadPoolExecutor(max_workers=2) as batch_executor: # Reduced workers to 2 to prevent rate-limit "bursts"
         # Always fetch Live Execution data (Daily/Hourly)
         f_exec = batch_executor.submit(
             shared_fetcher.fetch_batch_data, 
             sym_list, 
-            interval=("1day" if mode == StrategyMode.LONG_TERM else "1h"), 
+            interval=exec_fetch_interval, 
             days=500 if mode == StrategyMode.LONG_TERM else 300
         )
         
@@ -543,6 +556,9 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         # (Alternatively, we can fetch them only if Cache is empty)
         exec_batch = f_exec.result()
         expert_batch = f_expert.result() if f_expert else {}
+        logger.info(f"[INSTRUMENTS] Exec batch fetched: {list(exec_batch.keys())} (missing: {[s for s in sym_list if s not in exec_batch]})")
+        if expert_batch:
+            logger.info(f"[INSTRUMENTS] Expert 15min batch: {list(expert_batch.keys())}")
         
         # We'll allow the analyzer to use whatever history it has from previous runs or fall back
         macro_batch = {}
@@ -553,6 +569,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
 
     def process_instrument(inst):
         sym = inst['symbol'].upper()
+        t_inst = time.time()
         try:
             # Improved Crypto Detection (Whitelisted for BTC)
             is_crypto = any(sub in sym for sub in ["BTC", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
@@ -571,9 +588,13 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 us10y_df=benchmarks_data.get("US10Y"),
                 news_api_key=newsapi_key
             )
+            elapsed_inst = round(time.time() - t_inst, 2)
+            signal_rec = analysis.trade_signal.recommendation if analysis and analysis.trade_signal else 'N/A'
+            price = analysis.current_price if analysis else 'N/A'
+            logger.info(f"[ANALYSIS] {sym}: price={price}, signal={signal_rec}, elapsed={elapsed_inst}s")
             return sym, analysis, hist_data
         except Exception as e:
-            logger.error(f"Error analyzing {sym}: {e}")
+            logger.error(f"[ANALYSIS] {sym} FAILED after {round(time.time()-t_inst,2)}s: {e}")
             return sym, None, None
 
     # Parallelize analysis only (data is already fetched)
@@ -620,7 +641,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         max_losing_streak=3
     )
 
-    logger.info(f"Analysis complete. Status: {guardrail.status}. Returning results for: {[a.symbol for a in results]}")
+    total_elapsed = round(time.time() - t_scan_start, 2)
+    logger.info(f"[SCAN_COMPLETE] user={user_id} mode={mode.value} instruments={[a.symbol for a in results]} guardrail={guardrail.status} total_elapsed={total_elapsed}s")
     return results, perf_summary, correlation_results, guardrail
 
 import math
@@ -777,9 +799,9 @@ async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(g
 
     # Fetch Benchmarks in parallel
     with ThreadPoolExecutor(max_workers=3) as executor:
-        f_spy = executor.submit(fetch_historical_data, "SPX", days=1000, interval=("1mo" if mode == StrategyMode.LONG_TERM else "1d"))
-        f_dxy = executor.submit(fetch_historical_data, "DXY", days=30, interval="1d")
-        f_tnx = executor.submit(fetch_historical_data, "TNX", days=30, interval="1d")
+        f_spy = executor.submit(fetch_historical_data, "SPX", days=1000, interval=("1month" if mode == StrategyMode.LONG_TERM else "1day"))
+        f_dxy = executor.submit(fetch_historical_data, "DXY", days=30, interval="1day")
+        f_tnx = executor.submit(fetch_historical_data, "TNX", days=30, interval="1day")
         
         spy_df = f_spy.result()
         dxy_df = f_dxy.result()

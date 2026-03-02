@@ -51,6 +51,17 @@ class TwelveDataFetcher:
                 time.sleep(wait_time)
             TwelveDataFetcher._last_call_time = time.time()
             
+    # Interval aliases — normalize Yahoo/pandas style to TwelveData format
+    _INTERVAL_ALIASES = {
+        '1d':  '1day',
+        '1w':  '1week',
+        '1wk': '1week',
+        '1mo': '1month',
+        '1m':  '1month',
+        'd':   '1day',
+        'w':   '1week',
+    }
+
     # Primary tickers (Spot Rates / Indices)
     PRIMARY_MAPPINGS = {
         'XAU': 'XAU/USD', 
@@ -58,6 +69,8 @@ class TwelveDataFetcher:
         'WTI': 'WTI/USD',
         'SPX': 'SPX', 
         'BTC': 'BTC/USD',
+        'DXY': 'DXY',
+        'TNX': 'TNX',
     }
 
     # Fallback tickers (ETFs) for restricted API keys
@@ -66,8 +79,13 @@ class TwelveDataFetcher:
         'XAG': 'SLV',
         'WTI': 'USO',
         'BTC': 'BITO',
-        'SPX': 'SPY'
+        'SPX': 'SPY',
+        'DXY': 'UUP',
     }
+
+    def _normalize_interval(self, interval: str) -> str:
+        """Converts Yahoo/pandas-style interval strings to TwelveData format."""
+        return self._INTERVAL_ALIASES.get(interval.lower(), interval)
 
     def get_symbol_mapping(self, symbol: str) -> str:
         """Maps internal symbols to primary Twelve Data tickers."""
@@ -84,7 +102,10 @@ class TwelveDataFetcher:
         """
         if not symbols: return {}
         
+        interval = self._normalize_interval(interval)
         results = {}
+        t_start = time.time()
+        logger.info(f"[BATCH_FETCH] START: {len(symbols)} symbols={symbols} interval={interval} days={days}")
         outputsize = min(days * 24 if "h" in interval else days, 5000)
 
         def _fetch_chunked(symbols_to_fetch: List[str], get_td_ticker_fn) -> None:
@@ -102,6 +123,7 @@ class TwelveDataFetcher:
             CHUNK_SIZE = 20 # Increased from 8 to reduce total calls (Standard batch limit is 30)
             for i in range(0, len(requested_td_symbols), CHUNK_SIZE):
                 chunk = requested_td_symbols[i:i + CHUNK_SIZE]
+                prev_keys = set(results.keys())
                 try:
                     self._rate_limit_wait()
                     ts = self.client.time_series(
@@ -141,6 +163,10 @@ class TwelveDataFetcher:
                                     results[orig_sym] = self._normalize_df(df_sym)
                 except Exception as chunk_e:
                     logger.warning(f"Batch chunk failed: {chunk_e}")
+                else:
+                    new_keys = [k for k in results if k not in prev_keys]
+                    if new_keys:
+                        logger.info(f"[BATCH_FETCH] Chunk OK: got {new_keys}")
 
         try:
             # 1. First Pass: Fetch Primary Symbols (Spot Rates)
@@ -149,13 +175,17 @@ class TwelveDataFetcher:
             # 2. Second Pass: Fetch Fallbacks (ETFs) ONLY for failed symbols
             missing_symbols = [s for s in symbols if s not in results]
             if missing_symbols:
-                logger.info(f"Missing primary data for {missing_symbols}. Attempting ETF fallbacks...")
+                logger.info(f"[BATCH_FETCH] Primary missing {missing_symbols}. Trying ETF fallbacks...")
                 _fetch_chunked(missing_symbols, self.get_fallback_mapping)
-            
+
+            elapsed = round(time.time() - t_start, 2)
+            still_missing = [s for s in symbols if s not in results]
+            logger.info(f"[BATCH_FETCH] DONE in {elapsed}s: fetched={list(results.keys())} missing={still_missing}")
             return results
 
         except Exception as e:
-            logger.error(f"Global Batch fetch failed: {e}. Falling back to serial.")
+            elapsed = round(time.time() - t_start, 2)
+            logger.error(f"[BATCH_FETCH] Global failure after {elapsed}s: {e}. Falling back to serial.")
             return self._fallback_serial(symbols, interval, days)
 
     def _fallback_serial(self, symbols: List[str], interval: str, days: int) -> Dict[str, pd.DataFrame]:
@@ -185,6 +215,7 @@ class TwelveDataFetcher:
 
     def _fetch_single(self, td_symbol: str, interval: str, days: int) -> pd.DataFrame:
         """Low-level single fetch call."""
+        interval = self._normalize_interval(interval)
         self._rate_limit_wait()
         ts = self.client.time_series(
             symbol=td_symbol, 

@@ -40,7 +40,8 @@ def _cluster_levels(levels: List[float], tolerance_pct: float = 0.005) -> List[f
     clusters = []
     current = [levels[0]]
     for lvl in levels[1:]:
-        if current[-1] == 0 or (lvl - current[-1]) / current[-1] <= tolerance_pct:
+        ref = current[-1]
+        if abs(ref) < 1e-10 or (lvl - ref) / ref <= tolerance_pct:
             current.append(lvl)
         else:
             clusters.append(float(np.mean(current)))
@@ -70,11 +71,18 @@ def calculate_liquidity_map(
         swing_lows = _find_swing_lows(data['Low'], lookback)
 
         # Also include round-number levels (psychological)
-        price_range = data['High'].max() - data['Low'].min()
-        step = 10 ** (len(str(int(current_price))) - 2)
-        round_low = int(data['Low'].min() / step) * step
-        round_high = int(data['High'].max() / step + 1) * step
-        round_numbers = [round_low + i * step for i in range(int((round_high - round_low) / step) + 1)]
+        price_digits = len(str(int(abs(current_price)))) if int(abs(current_price)) > 0 else 1
+        step = 10 ** (price_digits - 2)
+        if step <= 0:
+            step = 1
+        low_min = float(data['Low'].min())
+        high_max = float(data['High'].max())
+        if not np.isfinite(low_min) or not np.isfinite(high_max):
+            return None
+        round_low = int(low_min / step) * step
+        round_high = int(high_max / step + 1) * step
+        level_count = int((round_high - round_low) / step) if step > 0 else 0
+        round_numbers = [round_low + i * step for i in range(max(0, level_count) + 1)]
 
         all_resistance = swing_highs + [r for r in round_numbers if r > current_price]
         all_support = swing_lows + [r for r in round_numbers if r < current_price]
@@ -121,6 +129,9 @@ def calculate_liquidity_map(
             interpretation=interpretation
         )
 
+    except ZeroDivisionError as e:
+        logger.error(f"Liquidity map calculation failed: float division by zero (price={current_price}, bars={len(df) if df is not None else 0})")
+        return None
     except Exception as e:
-        logger.error(f"Liquidity map calculation failed: {e}")
+        logger.error(f"Liquidity map calculation failed: {e} (price={current_price}, bars={len(df) if df is not None else 0})")
         return None
