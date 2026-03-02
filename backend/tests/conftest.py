@@ -77,6 +77,7 @@ def technical_analysis_bullish(pivot_points_bullish, fibonacci_bullish):
         least_resistance_line="up",
         trend_breakout="none",
         breakout_confidence=0.0,
+        description="Bullish structure above pivot. S1=68.00, R1=72.50.",
     )
 
 
