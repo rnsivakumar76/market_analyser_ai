@@ -171,7 +171,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               @if (analysis.expert_trade_plan) {
               <div class="tech-section expert-battle-section">
                 <div class="expert-intel-block" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
-                  <div class="tile-header">🎖️ EXPERT BATTLE PLAN</div>
+                  <div class="expert-header-row">
+                    <div class="tile-header">🎖️ EXPERT BATTLE PLAN</div>
+                    <span class="plan-age" [class.plan-age--stale]="isPlanStale()">🕐 {{ getAnalysisAge() }}</span>
+                  </div>
                   <p class="expert-plan-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
                   <div class="expert-metrics">
                     <div class="em-pill"><span>RVOL</span><strong>{{ analysis.expert_trade_plan.rvol }}x</strong></div>
@@ -713,7 +716,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .expert-tile { background: linear-gradient(135deg, rgba(137, 180, 250, 0.03), transparent); }
     .expert-tile.high-intent { border-top: 3px solid #fab387; background: rgba(250, 179, 135, 0.05); }
     .expert-main { display: flex; flex-direction: column; gap: 16px; }
-    .expert-plan-text { font-size: 1.1rem; color: #cdd6f4; line-height: 1.4; font-weight: 500; }
+    .expert-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .plan-age { font-size: 0.6rem; font-weight: 700; color: #585b70; letter-spacing: 0.3px; }
+    .plan-age--stale { color: #f38ba8; }
+    .expert-plan-text { font-size: 1.1rem; color: #cdd6f4; line-height: 1.4; font-weight: 500; margin-top: 0; }
     .expert-badges { display: flex; gap: 8px; }
     .expert-badge { padding: 4px 10px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; display: flex; gap: 8px; align-items: center; }
     .eb-v { font-size: 0.85rem; font-weight: 950; color: #89b4fa; }
@@ -1722,6 +1728,24 @@ export class InstrumentCardComponent implements OnChanges {
     return Math.max(0, Math.min(100, percent));
   }
 
+
+  getAnalysisAge(): string {
+    if (!this.analysis.last_updated) return 'N/A';
+    const updated = new Date(this.analysis.last_updated);
+    const diffMs = Date.now() - updated.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ${diffMin % 60}m ago`;
+    return updated.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  isPlanStale(): boolean {
+    if (!this.analysis.last_updated) return false;
+    const diffMin = Math.floor((Date.now() - new Date(this.analysis.last_updated).getTime()) / 60000);
+    return diffMin > 30;
+  }
 
   getVWAPClass(): string {
     const dist = this.analysis.daily_strength.vwap_dist_pct;
