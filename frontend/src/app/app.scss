@@ -1100,6 +1100,50 @@
   }
 }
 
+/* ─── SIDEBAR TABS ──────────────────────────────────────────────── */
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--sidebar-bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.stab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--text-tertiary, #6c7086);
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: var(--text-secondary, #a6adc8);
+    background: rgba(137, 180, 250, 0.04);
+  }
+
+  &.active {
+    color: #89b4fa;
+    border-bottom-color: #89b4fa;
+    background: rgba(137, 180, 250, 0.06);
+  }
+
+  .stab-icon {
+    font-size: 0.75rem;
+  }
+}
+
 .summary-wrapper {
   border-radius: 12px;
   transition: all 0.2s ease;
@@ -1899,6 +1943,12 @@
   .rrd-container                      { background: #f8fafc !important; border-color: #e2e8f0 !important; }
   .terminal-gauge-section             { background: #f8fafc !important; border-color: #e2e8f0 !important; }
   .expert-intel-block                 { background: #eef2ff !important; border-color: #c7d2fe !important; }
+
+  /* Sidebar tabs light theme */
+  .sidebar-tabs                       { background: #f8fafc !important; border-bottom-color: #e2e8f0 !important; }
+  .stab                               { color: #64748b !important; }
+  .stab:hover                         { background: rgba(59, 130, 246, 0.04) !important; color: #334155 !important; }
+  .stab.active                        { color: #3b82f6 !important; border-bottom-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.06) !important; }
 
   /* ORB Dashboard light theme */
   .orb-panel                          { background: #f8fafc !important; border-top-color: #e2e8f0 !important; }

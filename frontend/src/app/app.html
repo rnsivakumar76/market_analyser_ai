@@ -326,12 +326,26 @@
 
   <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
     <div class="sidebar-panel" [class.mobile-hidden]="mobileTab() !== 'watchlist'">
-      <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
-        (select)="selectedInstrument.set($event)">
-      </app-watchlist-heatmap>
-      <app-orb-dashboard [instruments]="instruments()"
-        (select)="selectedInstrument.set($event)">
-      </app-orb-dashboard>
+      <!-- Sidebar Tab Bar -->
+      <div class="sidebar-tabs">
+        <button class="stab" [class.active]="sidebarTab() === 'heatmap'" (click)="sidebarTab.set('heatmap')">
+          <span class="stab-icon">🟩</span> HEATMAP
+        </button>
+        <button class="stab" [class.active]="sidebarTab() === 'orb'" (click)="sidebarTab.set('orb')">
+          <span class="stab-icon">⏰</span> ORB MONITOR
+        </button>
+      </div>
+
+      @if (sidebarTab() === 'heatmap') {
+        <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
+          (select)="selectedInstrument.set($event)">
+        </app-watchlist-heatmap>
+      }
+      @if (sidebarTab() === 'orb') {
+        <app-orb-dashboard [instruments]="instruments()"
+          (select)="selectedInstrument.set($event)">
+        </app-orb-dashboard>
+      }
     </div>
 
     <div class="detail-panel" [class.mobile-hidden]="mobileTab() !== 'analysis'">
