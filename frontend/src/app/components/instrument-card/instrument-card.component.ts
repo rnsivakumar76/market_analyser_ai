@@ -186,6 +186,29 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               </div>
               }
 
+              <!-- MARKET MOMENTUM READ -->
+              <div class="tech-section momentum-read-section">
+                <div class="tile-header">📊 MARKET MOMENTUM READ</div>
+                <div class="mmr-grid">
+                  <div class="mmr-item">
+                    <span class="mmr-lbl">ADX</span>
+                    <strong class="mmr-val">{{ analysis.daily_strength.adx.toFixed(0) }}</strong>
+                    <span class="mmr-interp" [class]="getADXClass()">{{ getADXInterpretation() }}</span>
+                  </div>
+                  <div class="mmr-item">
+                    <span class="mmr-lbl">RSI</span>
+                    <strong class="mmr-val">{{ analysis.daily_strength.rsi.toFixed(0) }}</strong>
+                    <span class="mmr-interp" [class]="getRSIClass()">{{ getRSIInterpretation() }}</span>
+                  </div>
+                  <div class="mmr-item">
+                    <span class="mmr-lbl">IMPACT</span>
+                    <strong class="mmr-val" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</strong>
+                    <span class="mmr-interp">{{ getTechnicalRecommendation() }}</span>
+                  </div>
+                </div>
+                <div class="mmr-combined-read">{{ getMarketMomentumRead() }}</div>
+              </div>
+
               <!-- SECTION 2: PIVOT MATRIX & EXTENSIONS -->
               <div class="tech-section pivot-section">
                 <div class="tile-header">📐 PIVOT MATRIX & EXTENSIONS</div>
@@ -202,6 +225,29 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                    <div class="feb-item"><span>1.272 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1272 }}</strong></div>
                    <div class="feb-item"><span>1.618 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1618 }}</strong></div>
                 </div>
+                <!-- Pivot Interpretation -->
+                @if (analysis.technical_indicators?.pivot_points) {
+                <div class="pivot-interpretation">
+                  <div class="pi-bias-row">
+                    <span class="pi-badge" [class]="getPivotBias()">{{ getPricePosition() }}</span>
+                    <span class="pi-align-tag" [class]="getPivotSignalAlignClass()">{{ getPivotSignalAlign() }}</span>
+                  </div>
+                  <p class="pi-read-text">{{ getPivotTradeRead() }}</p>
+                  <div class="pi-key-levels">
+                    <div class="pi-kl res">
+                      <span>NEXT RESISTANCE</span>
+                      <strong>\${{ getNearestResistance() }}</strong>
+                    </div>
+                    <div class="pi-kl sup">
+                      <span>NEAREST SUPPORT</span>
+                      <strong>\${{ getNearestSupport() }}</strong>
+                    </div>
+                  </div>
+                  @if (getFibZoneRead()) {
+                    <div class="pi-fib-note">{{ getFibZoneRead() }}</div>
+                  }
+                </div>
+                }
               </div>
 
 
@@ -976,6 +1022,51 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .feb-item span { font-size: 0.5rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
     .feb-item strong { font-size: 0.75rem; color: #cba6f7; font-weight: 950; }
 
+    /* PIVOT INTERPRETATION */
+    .pivot-interpretation { margin-top: 16px; padding-top: 14px; border-top: 1px solid #1f1f3a; }
+    .pi-bias-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .pi-badge { font-size: 0.55rem; font-weight: 950; letter-spacing: 1px; padding: 3px 10px; border-radius: 4px; }
+    .pi-badge.bullish { background: rgba(166,227,161,0.12); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .pi-badge.bearish { background: rgba(243,139,168,0.12); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .pi-badge.neutral { background: rgba(137,180,250,0.1); color: #89b4fa; border: 1px solid rgba(137,180,250,0.25); }
+    .pi-align-tag { font-size: 0.52rem; font-weight: 900; letter-spacing: 0.5px; }
+    .pi-align-tag.aligned { color: #a6e3a1; }
+    .pi-align-tag.conflicting { color: #f38ba8; }
+    .pi-align-tag.neutral { color: #f9e2af; }
+    .pi-read-text { font-size: 0.68rem; color: #a6adc8; line-height: 1.6; margin: 0 0 12px; padding: 10px 12px; background: rgba(17,17,27,0.5); border-left: 3px solid #585b70; border-radius: 0 6px 6px 0; }
+    .pi-key-levels { display: flex; gap: 10px; margin-bottom: 10px; }
+    .pi-kl { flex: 1; padding: 8px 10px; border-radius: 6px; display: flex; flex-direction: column; gap: 3px; }
+    .pi-kl span { font-size: 0.44rem; font-weight: 950; letter-spacing: 1px; text-transform: uppercase; }
+    .pi-kl strong { font-size: 0.8rem; font-weight: 950; }
+    .pi-kl.res { background: rgba(243,139,168,0.06); border: 1px solid rgba(243,139,168,0.2); }
+    .pi-kl.res span { color: #585b70; }
+    .pi-kl.res strong { color: #f38ba8; }
+    .pi-kl.sup { background: rgba(166,227,161,0.06); border: 1px solid rgba(166,227,161,0.2); }
+    .pi-kl.sup span { color: #585b70; }
+    .pi-kl.sup strong { color: #a6e3a1; }
+    .pi-fib-note { font-size: 0.62rem; color: #cba6f7; background: rgba(203,166,247,0.06); border: 1px solid rgba(203,166,247,0.15); border-radius: 6px; padding: 8px 12px; line-height: 1.5; }
+
+    /* MARKET MOMENTUM READ */
+    .momentum-read-section { background: rgba(137,180,250,0.02); }
+    .mmr-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
+    .mmr-item { display: flex; flex-direction: column; gap: 4px; background: #0b0b15; border-radius: 6px; padding: 10px; border: 1px solid #1f1f3a; }
+    .mmr-lbl { font-size: 0.44rem; font-weight: 950; color: #45475a; letter-spacing: 1px; text-transform: uppercase; }
+    .mmr-val { font-size: 1.1rem; font-weight: 950; color: #cdd6f4; line-height: 1; }
+    .mmr-val.strong { color: #fab387; }
+    .mmr-val.trending { color: #89b4fa; }
+    .mmr-val.weak { color: #6c7086; }
+    .mmr-val.high { color: #f38ba8; }
+    .mmr-val.medium { color: #f9e2af; }
+    .mmr-val.low { color: #6c7086; }
+    .mmr-interp { font-size: 0.52rem; font-weight: 900; letter-spacing: 0.3px; }
+    .mmr-interp.strong { color: #fab387; }
+    .mmr-interp.trending { color: #89b4fa; }
+    .mmr-interp.weak { color: #6c7086; }
+    .mmr-interp.bullish { color: #a6e3a1; }
+    .mmr-interp.bearish { color: #f38ba8; }
+    .mmr-interp.neutral { color: #f9e2af; }
+    .mmr-combined-read { font-size: 0.65rem; color: #a6adc8; line-height: 1.6; padding: 10px 12px; background: rgba(137,180,250,0.04); border-left: 3px solid #89b4fa; border-radius: 0 6px 6px 0; }
+
     /* TECH SECTION WRAPPERS */
     .tech-section { padding: 20px 24px; border-bottom: 1px solid #1f1f3a; }
     .tech-section:last-child { border-bottom: none; }
@@ -1728,6 +1819,141 @@ export class InstrumentCardComponent implements OnChanges {
     return Math.max(0, Math.min(100, percent));
   }
 
+
+  // ── Pivot Interpretation Methods ──────────────────────────────────────────
+  getPivotBias(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 'neutral';
+    const price = this.analysis.current_price;
+    if (price > pp.r1) return 'bullish';
+    if (price > pp.pivot) return 'bullish';
+    return 'bearish';
+  }
+
+  getPricePosition(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 'N/A';
+    const price = this.analysis.current_price;
+    if (price > pp.r3) return 'ABOVE R3';
+    if (price > pp.r2) return 'ABOVE R2';
+    if (price > pp.r1) return 'ABOVE R1';
+    if (price > pp.pivot) return 'ABOVE PIVOT';
+    if (price > pp.s1) return 'BELOW PIVOT';
+    if (price > pp.s2) return 'AT S1 ZONE';
+    if (price > pp.s3) return 'AT S2 ZONE';
+    return 'BELOW S3';
+  }
+
+  getPivotSignalAlign(): string {
+    const bias = this.getPivotBias();
+    const signal = this.analysis.trade_signal.recommendation;
+    if (bias === signal) return '✓ ALIGNED';
+    if (signal === 'neutral') return '— NEUTRAL SIGNAL';
+    return '⚠ CONFLICTING';
+  }
+
+  getPivotSignalAlignClass(): string {
+    const align = this.getPivotSignalAlign();
+    if (align.startsWith('✓')) return 'aligned';
+    if (align.startsWith('⚠')) return 'conflicting';
+    return 'neutral';
+  }
+
+  getNearestResistance(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 'N/A';
+    const price = this.analysis.current_price;
+    if (price < pp.pivot) return pp.pivot.toFixed(2);
+    if (price < pp.r1) return pp.r1.toFixed(2);
+    if (price < pp.r2) return pp.r2.toFixed(2);
+    return pp.r3.toFixed(2);
+  }
+
+  getNearestSupport(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 'N/A';
+    const price = this.analysis.current_price;
+    if (price > pp.pivot) return pp.pivot.toFixed(2);
+    if (price > pp.s1) return pp.s1.toFixed(2);
+    if (price > pp.s2) return pp.s2.toFixed(2);
+    return pp.s3.toFixed(2);
+  }
+
+  getPivotTradeRead(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return '';
+    const price = this.analysis.current_price;
+    const signal = this.analysis.trade_signal.recommendation;
+    const { pivot, s1, s2, r1, r2, r3 } = pp;
+
+    if (price > r2) {
+      return `Price is extended above R2 ($${r2.toFixed(2)}). Consider taking partial profits. A pullback to R1 ($${r1.toFixed(2)}) is healthy — re-enter if trend holds.`;
+    }
+    if (price > r1) {
+      return `Strong bullish momentum above R1 ($${r1.toFixed(2)}). Hold longs and target R2 ($${r2.toFixed(2)}). Trail stop-loss to just below R1 to protect gains.`;
+    }
+    if (price > pivot) {
+      if (signal === 'bearish') {
+        return `Price is above Pivot ($${pivot.toFixed(2)}) but signal is bearish — caution. Wait for price to break below Pivot before considering shorts. Target S1 ($${s1.toFixed(2)}).`;
+      }
+      return `Price above Pivot ($${pivot.toFixed(2)}) confirms bullish bias. Target R1 ($${r1.toFixed(2)}) on continuation. Stop-loss below S1 ($${s1.toFixed(2)}) on long entries.`;
+    }
+    if (price > s1) {
+      if (signal === 'bullish') {
+        return `Price below Pivot ($${pivot.toFixed(2)}) — wait for reclaim before going long. A Pivot break above would target R1 ($${r1.toFixed(2)}). S1 ($${s1.toFixed(2)}) is your downside risk.`;
+      }
+      return `Bearish bias below Pivot ($${pivot.toFixed(2)}). S1 ($${s1.toFixed(2)}) is current support. A break below S1 opens S2 ($${s2.toFixed(2)}) as next target.`;
+    }
+    if (price > s2) {
+      return `Price at S1 support zone ($${s1.toFixed(2)}) — critical make-or-break level. A bounce here targets Pivot ($${pivot.toFixed(2)}). A close below S1 signals further decline to S2 ($${s2.toFixed(2)}).`;
+    }
+    return `Price below S2 ($${s2.toFixed(2)}) — extended bearish move. High risk for new longs. Wait for S2 reclaim and stabilization before considering long positions.`;
+  }
+
+  getFibZoneRead(): string {
+    const fib = this.analysis.technical_indicators?.fibonacci;
+    if (!fib) return '';
+    const price = this.analysis.current_price;
+    const r382 = fib.ret_382, r618 = fib.ret_618, e1618 = fib.ext_1618;
+    if (!r382 || !r618) return '';
+    const pct = (v: number) => Math.abs((price - v) / price) * 100;
+    if (pct(r382) < 0.5) return `🎯 At Fib 38.2% ($${r382.toFixed(2)}) — ideal pullback entry zone in an uptrend.`;
+    if (pct(r618) < 0.5) return `⚡ At Fib 61.8% ($${r618.toFixed(2)}) — the golden ratio. Last major support before reversal risk increases significantly.`;
+    if (e1618 && price > e1618) return `📈 Beyond 1.618 extension ($${e1618.toFixed(2)}) — highly extended. Manage risk and consider partial profit-taking.`;
+    if (price < r382 && price > r618) return `In consolidation zone between 38.2% ($${r382.toFixed(2)}) and 61.8% ($${r618.toFixed(2)}) retracement. Wait for directional breakout.`;
+    return '';
+  }
+
+  // ── Market Momentum Read Methods ──────────────────────────────────────────
+  getADXClass(): string {
+    const adx = this.analysis.daily_strength.adx;
+    if (adx > 50) return 'strong';
+    if (adx > 25) return 'trending';
+    return 'weak';
+  }
+
+  getRSIClass(): string {
+    const rsi = this.analysis.daily_strength.rsi;
+    if (rsi > 70) return 'bearish';
+    if (rsi > 60) return 'bullish';
+    if (rsi < 30) return 'bullish';
+    if (rsi < 40) return 'bearish';
+    return 'neutral';
+  }
+
+  getMarketMomentumRead(): string {
+    const adx = this.analysis.daily_strength.adx;
+    const rsi = this.analysis.daily_strength.rsi;
+    const signal = this.analysis.trade_signal.recommendation;
+
+    if (adx > 50 && rsi > 65) return `Strong trending market with elevated momentum. Trend-following entries are favored — avoid counter-trend trades.`;
+    if (adx > 50 && rsi < 35) return `Strong trend but RSI is exhausted. A short-term bounce is likely. Wait for RSI to reset above 40 before entering in trend direction.`;
+    if (adx > 50 && rsi > 70) return `Powerful trend but overbought conditions (RSI ${rsi.toFixed(0)}). Wait for a pullback to enter — chasing at this level risks a sharp reversal.`;
+    if (adx > 25 && signal === 'bullish') return `Trending market (ADX ${adx.toFixed(0)}) supporting the bullish signal. RSI at ${rsi.toFixed(0)} — momentum is ${rsi > 50 ? 'positive' : 'building'}. Entry on pullback preferred.`;
+    if (adx > 25 && signal === 'bearish') return `Trending market (ADX ${adx.toFixed(0)}) supporting the bearish signal. RSI at ${rsi.toFixed(0)} — ${rsi < 50 ? 'downside momentum in play' : 'watch for RSI confirmation below 50'}.`;
+    if (adx < 20) return `Low trend strength (ADX ${adx.toFixed(0)}) — market is ranging. Reduce position size and avoid breakout strategies until ADX rises above 25.`;
+    return `Developing trend (ADX ${adx.toFixed(0)}), RSI ${rsi.toFixed(0)}. Monitor for confirmation before committing full position size.`;
+  }
 
   getAnalysisAge(): string {
     if (!this.analysis.last_updated) return 'N/A';
