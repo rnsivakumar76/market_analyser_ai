@@ -329,6 +329,9 @@
       <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
         (select)="selectedInstrument.set($event)">
       </app-watchlist-heatmap>
+      <app-orb-dashboard [instruments]="instruments()"
+        (select)="selectedInstrument.set($event)">
+      </app-orb-dashboard>
     </div>
 
     <div class="detail-panel" [class.mobile-hidden]="mobileTab() !== 'analysis'">

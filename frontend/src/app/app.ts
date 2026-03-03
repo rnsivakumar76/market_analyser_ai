@@ -9,6 +9,7 @@ import { UserManualComponent } from './components/user-manual/user-manual.compon
 import { LoginComponent } from './components/login/login.component';
 import { AuthService, User } from './services/auth.service';
 import { WatchlistHeatmapComponent } from './components/watchlist-heatmap/watchlist-heatmap.component';
+import { OrbDashboardComponent } from './components/orb-dashboard/orb-dashboard.component';
 import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component';
 import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
 import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
@@ -20,7 +21,7 @@ import { interval, Subscription, timer } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, ThemeToggleComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, OrbDashboardComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, ThemeToggleComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

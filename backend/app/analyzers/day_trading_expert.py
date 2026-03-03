@@ -150,5 +150,8 @@ def generate_expert_trade_plan(
     return {
         "battle_plan": " | ".join(plan) if plan else "Wait for Session Open/Clear Breakout.",
         "rvol": rvol,
-        "is_high_intent": rvol > 1.8
+        "is_high_intent": rvol > 1.8,
+        "or_high": or_data.get("or_high", 0.0),
+        "or_low": or_data.get("or_low", 0.0),
+        "or_broken": or_data.get("broken", "none"),
     }

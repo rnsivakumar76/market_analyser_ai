@@ -304,6 +304,9 @@ export interface ExpertTradePlan {
   battle_plan: string;
   rvol: number;
   is_high_intent: boolean;
+  or_high: number;
+  or_low: number;
+  or_broken: 'bullish' | 'bearish' | 'none';
 }
 
 export type StrategyMode = 'long_term' | 'short_term';

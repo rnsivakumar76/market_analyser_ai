@@ -1899,4 +1899,14 @@
   .rrd-container                      { background: #f8fafc !important; border-color: #e2e8f0 !important; }
   .terminal-gauge-section             { background: #f8fafc !important; border-color: #e2e8f0 !important; }
   .expert-intel-block                 { background: #eef2ff !important; border-color: #c7d2fe !important; }
+
+  /* ORB Dashboard light theme */
+  .orb-panel                          { background: #f8fafc !important; border-top-color: #e2e8f0 !important; }
+  .orb-row                            { background: rgba(0,0,0,0.02) !important; }
+  .orb-row.orb-bull                   { background: rgba(16, 185, 129, 0.05) !important; border-left-color: rgba(16, 185, 129, 0.5) !important; }
+  .orb-row.orb-bear                   { background: rgba(239, 68, 68, 0.05) !important; border-left-color: rgba(239, 68, 68, 0.5) !important; }
+  .orb-sym                            { color: #0f172a !important; }
+  .orb-price                          { color: #64748b !important; }
+  .orb-footer                         { border-top-color: #e2e8f0 !important; }
+  .orb-footer .orb-stat span          { color: #94a3b8 !important; }
 }
