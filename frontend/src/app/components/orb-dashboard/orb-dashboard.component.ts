@@ -9,16 +9,8 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
   template: `
     <div class="orb-panel">
       <div class="orb-header">
-        <div class="orb-title-row">
-          <span class="orb-icon">⏰</span>
-          <span class="orb-title">ORB MONITOR</span>
-          <span class="orb-subtitle">Opening Range Breakout</span>
-        </div>
-        <div class="orb-legend">
-          <span class="leg bull">▲ BULL</span>
-          <span class="leg bear">▼ BEAR</span>
-          <span class="leg none">— WAIT</span>
-        </div>
+        <span class="orb-title">⏰ ORB MONITOR</span>
+        <span class="orb-subtitle">Opening Range Breakout Alerts</span>
       </div>
 
       @if (orbInstruments().length === 0) {
@@ -27,53 +19,27 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
           <p>ORB data available in <strong>Short-Term</strong> mode only</p>
         </div>
       } @else {
-        <div class="orb-list">
+        <div class="orb-grid">
           @for (item of orbInstruments(); track item.symbol) {
-            <div class="orb-row"
-                 [class.orb-bull]="item.plan.or_broken === 'bullish'"
-                 [class.orb-bear]="item.plan.or_broken === 'bearish'"
-                 [class.orb-none]="item.plan.or_broken === 'none'"
-                 [class.high-intent]="item.plan.is_high_intent"
+            <div class="orb-card"
+                 [class]="getCardClass(item)"
                  (click)="select.emit(item.analysis)">
 
-              <!-- Direction Badge -->
-              <div class="orb-dir" [class]="getDirClass(item.plan.or_broken)">
-                {{ getDirIcon(item.plan.or_broken) }}
-              </div>
-
-              <!-- Symbol & Name -->
-              <div class="orb-sym-block">
+              <!-- Left: Symbol + Price -->
+              <div class="orb-left">
                 <span class="orb-sym">{{ item.symbol }}</span>
                 <span class="orb-price">\${{ item.analysis.current_price | number:'1.2-2' }}</span>
               </div>
 
-              <!-- OR Range -->
-              <div class="orb-range-block">
-                <div class="orb-range-row">
-                  <span class="orb-range-lbl">H</span>
-                  <span class="orb-range-val res">\${{ item.plan.or_high | number:'1.2-2' }}</span>
-                </div>
-                <div class="orb-range-row">
-                  <span class="orb-range-lbl">L</span>
-                  <span class="orb-range-val sup">\${{ item.plan.or_low | number:'1.2-2' }}</span>
-                </div>
-              </div>
-
-              <!-- OR Range Width % -->
-              <div class="orb-width-block">
-                <span class="orb-width-val">{{ getORBWidth(item.plan) }}</span>
-                <span class="orb-width-lbl">RANGE</span>
-              </div>
-
-              <!-- RVOL + Intent -->
-              <div class="orb-rvol-block">
-                <span class="orb-rvol-val" [class.hot]="item.plan.rvol >= 1.8">
-                  {{ item.plan.rvol }}x
+              <!-- Right: Status Text + RVOL -->
+              <div class="orb-right">
+                <span class="orb-status-label" [class]="getStatusClass(item.plan.or_broken)">
+                  {{ getStatusText(item.plan.or_broken) }}
+                  @if (item.plan.is_high_intent) { 🔥 }
                 </span>
-                <span class="orb-rvol-lbl">RVOL</span>
-                @if (item.plan.is_high_intent) {
-                  <span class="orb-fire">🔥</span>
-                }
+                <span class="orb-rvol" [class.rvol-hot]="item.plan.rvol >= 1.8">
+                  RVOL {{ item.plan.rvol }}x
+                </span>
               </div>
 
             </div>
@@ -82,17 +48,17 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
         <!-- Summary Footer -->
         <div class="orb-footer">
-          <div class="orb-stat">
-            <strong class="bull-text">{{ bullCount() }}</strong>
-            <span>Breakout ↑</span>
+          <div class="orb-stat bull-text">
+            <strong>{{ bullCount() }}</strong>
+            <span>BREAKOUT ↑</span>
           </div>
-          <div class="orb-stat">
-            <strong class="bear-text">{{ bearCount() }}</strong>
-            <span>Breakdown ↓</span>
+          <div class="orb-stat bear-text">
+            <strong>{{ bearCount() }}</strong>
+            <span>BREAKDOWN ↓</span>
           </div>
-          <div class="orb-stat">
-            <strong class="intent-text">{{ intentCount() }}</strong>
-            <span>High Intent 🔥</span>
+          <div class="orb-stat intent-text">
+            <strong>{{ intentCount() }}</strong>
+            <span>HIGH INTENT 🔥</span>
           </div>
         </div>
       }
@@ -100,24 +66,17 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
   `,
   styles: [`
     .orb-panel {
-      border-top: 1px solid var(--border-primary, #1f1f3a);
       background: var(--sidebar-bg, #11111b);
-      padding: 14px 16px 10px;
+      padding: 12px 14px 10px;
     }
 
     /* Header */
     .orb-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      align-items: baseline;
+      gap: 8px;
       margin-bottom: 10px;
     }
-    .orb-title-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .orb-icon { font-size: 0.8rem; }
     .orb-title {
       font-size: 0.65rem;
       font-weight: 900;
@@ -125,110 +84,71 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       color: #6c7086;
     }
     .orb-subtitle {
-      font-size: 0.55rem;
+      font-size: 0.5rem;
       color: #45475a;
       font-weight: 600;
     }
-    .orb-legend {
-      display: flex;
-      gap: 8px;
-    }
-    .leg {
-      font-size: 0.55rem;
-      font-weight: 800;
-    }
-    .leg.bull { color: #a6e3a1; }
-    .leg.bear { color: #f38ba8; }
-    .leg.none { color: #45475a; }
 
     /* Empty state */
     .orb-empty {
       text-align: center;
       padding: 20px 10px;
-      color: #45475a;
     }
     .orb-empty-icon { font-size: 1.5rem; display: block; margin-bottom: 8px; }
     .orb-empty p { font-size: 0.7rem; color: #585b70; line-height: 1.4; margin: 0; }
     .orb-empty strong { color: #89b4fa; }
 
-    /* List */
-    .orb-list {
+    /* Card grid — 1 column, matching heatmap aesthetic */
+    .orb-grid {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
     }
 
-    /* Row */
-    .orb-row {
+    .orb-card {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 8px;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
       border: 1px solid transparent;
       cursor: pointer;
       transition: all 0.18s ease;
+    }
+    .orb-card:hover { filter: brightness(1.1); }
+
+    /* Heatmap-matched gradient backgrounds */
+    .orb-card.card-bull {
+      background: linear-gradient(145deg, rgba(166,227,161,0.15), rgba(166,227,161,0.08));
+      border-color: rgba(166,227,161,0.25);
+    }
+    .orb-card.card-bear {
+      background: linear-gradient(145deg, rgba(243,139,168,0.15), rgba(243,139,168,0.08));
+      border-color: rgba(243,139,168,0.25);
+    }
+    .orb-card.card-neutral {
+      background: linear-gradient(145deg, rgba(249,226,175,0.1), rgba(249,226,175,0.05));
+      border-color: rgba(249,226,175,0.15);
+    }
+    .orb-card.card-wait {
       background: rgba(255,255,255,0.02);
+      border-color: rgba(69,71,90,0.3);
     }
-    .orb-row:hover {
-      background: rgba(137, 180, 250, 0.05);
-      border-color: rgba(137, 180, 250, 0.15);
-    }
-    .orb-bull {
-      border-left: 3px solid rgba(166, 227, 161, 0.6) !important;
-      background: rgba(166, 227, 161, 0.04) !important;
-    }
-    .orb-bear {
-      border-left: 3px solid rgba(243, 139, 168, 0.6) !important;
-      background: rgba(243, 139, 168, 0.04) !important;
-    }
-    .orb-none {
-      border-left: 3px solid rgba(69, 71, 90, 0.4) !important;
-    }
-    .orb-row.high-intent {
-      box-shadow: 0 0 10px rgba(250, 179, 135, 0.1);
+    .orb-card.high-intent {
+      box-shadow: 0 0 12px rgba(250,179,135,0.15);
     }
 
-    /* Direction Badge */
-    .orb-dir {
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 900;
-      flex-shrink: 0;
-    }
-    .dir-bull {
-      background: rgba(166, 227, 161, 0.15);
-      color: #a6e3a1;
-      border: 1px solid rgba(166, 227, 161, 0.3);
-    }
-    .dir-bear {
-      background: rgba(243, 139, 168, 0.15);
-      color: #f38ba8;
-      border: 1px solid rgba(243, 139, 168, 0.3);
-    }
-    .dir-none {
-      background: rgba(69, 71, 90, 0.2);
-      color: #45475a;
-      border: 1px solid rgba(69, 71, 90, 0.3);
-    }
-
-    /* Symbol Block */
-    .orb-sym-block {
-      flex: 1;
+    /* Left — symbol + price */
+    .orb-left {
       display: flex;
       flex-direction: column;
-      gap: 1px;
-      min-width: 42px;
+      gap: 2px;
     }
     .orb-sym {
-      font-size: 0.8rem;
+      font-size: 0.95rem;
       font-weight: 900;
       color: #cdd6f4;
+      letter-spacing: 0.5px;
     }
     .orb-price {
       font-size: 0.6rem;
@@ -236,77 +156,42 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       font-weight: 600;
     }
 
-    /* Range Block */
-    .orb-range-block {
+    /* Right — status text + rvol */
+    .orb-right {
       display: flex;
       flex-direction: column;
-      gap: 2px;
-    }
-    .orb-range-row {
-      display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 4px;
     }
-    .orb-range-lbl {
+    .orb-status-label {
+      font-size: 0.6rem;
+      font-weight: 950;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .status-bull {
+      color: #a6e3a1;
+      background: rgba(166,227,161,0.12);
+      border: 1px solid rgba(166,227,161,0.3);
+    }
+    .status-bear {
+      color: #f38ba8;
+      background: rgba(243,139,168,0.12);
+      border: 1px solid rgba(243,139,168,0.3);
+    }
+    .status-wait {
+      color: #f9e2af;
+      background: rgba(249,226,175,0.08);
+      border: 1px solid rgba(249,226,175,0.2);
+    }
+    .orb-rvol {
       font-size: 0.5rem;
-      font-weight: 900;
-      color: #45475a;
-      width: 8px;
-    }
-    .orb-range-val {
-      font-size: 0.65rem;
-      font-weight: 700;
-    }
-    .orb-range-val.res { color: #f38ba8; }
-    .orb-range-val.sup { color: #a6e3a1; }
-
-    /* Width Block */
-    .orb-width-block {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1px;
-      min-width: 36px;
-    }
-    .orb-width-val {
-      font-size: 0.7rem;
-      font-weight: 900;
-      color: #89b4fa;
-    }
-    .orb-width-lbl {
-      font-size: 0.45rem;
       font-weight: 700;
       color: #45475a;
       letter-spacing: 0.5px;
     }
-
-    /* RVOL Block */
-    .orb-rvol-block {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1px;
-      min-width: 32px;
-      position: relative;
-    }
-    .orb-rvol-val {
-      font-size: 0.7rem;
-      font-weight: 900;
-      color: #6c7086;
-    }
-    .orb-rvol-val.hot { color: #fab387; }
-    .orb-rvol-lbl {
-      font-size: 0.45rem;
-      font-weight: 700;
-      color: #45475a;
-      letter-spacing: 0.5px;
-    }
-    .orb-fire {
-      font-size: 0.65rem;
-      position: absolute;
-      top: -4px;
-      right: -6px;
-    }
+    .orb-rvol.rvol-hot { color: #fab387; }
 
     /* Footer */
     .orb-footer {
@@ -328,10 +213,8 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       line-height: 1;
     }
     .orb-stat span {
-      font-size: 0.5rem;
-      color: #45475a;
+      font-size: 0.45rem;
       font-weight: 700;
-      text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .bull-text { color: #a6e3a1; }
@@ -365,23 +248,26 @@ export class OrbDashboardComponent {
     return this.orbInstruments().filter(i => i.plan.is_high_intent).length;
   }
 
-  getDirClass(broken: string): string {
-    if (broken === 'bullish') return 'dir-bull';
-    if (broken === 'bearish') return 'dir-bear';
-    return 'dir-none';
+  /** Background card class — uses trade_signal.recommendation to match heatmap color */
+  getCardClass(item: { plan: any; analysis: InstrumentAnalysis }): string {
+    const trend = item.analysis.trade_signal.recommendation;
+    const intent = item.plan.is_high_intent ? ' high-intent' : '';
+    if (trend === 'bullish') return 'orb-card card-bull' + intent;
+    if (trend === 'bearish') return 'orb-card card-bear' + intent;
+    if (trend === 'neutral') return 'orb-card card-neutral' + intent;
+    return 'orb-card card-wait' + intent;
   }
 
-  getDirIcon(broken: string): string {
-    if (broken === 'bullish') return '▲';
-    if (broken === 'bearish') return '▼';
-    return '—';
+  /** Status text label based on ORB breakout state */
+  getStatusText(broken: string): string {
+    if (broken === 'bullish') return '▲ BULL BREAKOUT';
+    if (broken === 'bearish') return '▼ BEAR BREAKDOWN';
+    return '— INSIDE RANGE';
   }
 
-  getORBWidth(plan: any): string {
-    if (!plan.or_high || !plan.or_low || plan.or_low === 0) return 'N/A';
-    const mid = (plan.or_high + plan.or_low) / 2;
-    if (mid === 0) return 'N/A';
-    const pct = ((plan.or_high - plan.or_low) / mid) * 100;
-    return pct.toFixed(2) + '%';
+  getStatusClass(broken: string): string {
+    if (broken === 'bullish') return 'orb-status-label status-bull';
+    if (broken === 'bearish') return 'orb-status-label status-bear';
+    return 'orb-status-label status-wait';
   }
 }
