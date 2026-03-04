@@ -25,22 +25,25 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
                  [class]="getCardClass(item)"
                  (click)="select.emit(item.analysis)">
 
-              <!-- Left: Symbol + Price -->
-              <div class="orb-left">
-                <span class="orb-sym">{{ item.symbol }}</span>
-                <span class="orb-price">\${{ item.analysis.current_price | number:'1.2-2' }}</span>
+              <!-- Top row: Symbol + Status -->
+              <div class="orb-top-row">
+                <div class="orb-left">
+                  <span class="orb-sym">{{ item.symbol }}</span>
+                  <span class="orb-price">\${{ item.analysis.current_price | number:'1.2-2' }}</span>
+                </div>
+                <div class="orb-right">
+                  <span class="orb-status-label" [class]="getStatusClass(item.plan.or_broken)">
+                    {{ getStatusText(item.plan.or_broken) }}
+                    @if (item.plan.is_high_intent) { 🔥 }
+                  </span>
+                  <span class="orb-rvol" [class.rvol-hot]="item.plan.rvol >= 1.8">
+                    RVOL {{ item.plan.rvol }}x
+                  </span>
+                </div>
               </div>
 
-              <!-- Right: Status Text + RVOL -->
-              <div class="orb-right">
-                <span class="orb-status-label" [class]="getStatusClass(item.plan.or_broken)">
-                  {{ getStatusText(item.plan.or_broken) }}
-                  @if (item.plan.is_high_intent) { 🔥 }
-                </span>
-                <span class="orb-rvol" [class.rvol-hot]="item.plan.rvol >= 1.8">
-                  RVOL {{ item.plan.rvol }}x
-                </span>
-              </div>
+              <!-- Bottom row: Plain-English battle text -->
+              <p class="orb-battle-text">{{ getORBText(item) }}</p>
 
             </div>
           }
@@ -107,8 +110,8 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
     .orb-card {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-direction: column;
+      gap: 8px;
       padding: 10px 14px;
       border-radius: 10px;
       border: 1px solid transparent;
@@ -116,6 +119,8 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       transition: all 0.18s ease;
     }
     .orb-card:hover { filter: brightness(1.1); }
+    .orb-top-row { display: flex; align-items: center; justify-content: space-between; }
+    .orb-battle-text { font-size: 0.65rem; color: #a6adc8; line-height: 1.5; margin: 0; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.05); }
 
     /* Heatmap-matched gradient backgrounds */
     .orb-card.card-bull {
@@ -269,5 +274,33 @@ export class OrbDashboardComponent {
     if (broken === 'bullish') return 'orb-status-label status-bull';
     if (broken === 'bearish') return 'orb-status-label status-bear';
     return 'orb-status-label status-wait';
+  }
+
+  /** Generate plain-English ORB battle text for each instrument */
+  getORBText(item: { symbol: string; plan: any; analysis: InstrumentAnalysis }): string {
+    const { or_high, or_low, or_broken, rvol, is_high_intent } = item.plan;
+    const price = item.analysis.current_price;
+    const signal = item.analysis.trade_signal.recommendation;
+    const hi = or_high?.toFixed(2);
+    const lo = or_low?.toFixed(2);
+    const rvolStr = rvol >= 1.8 ? ` RVOL ${rvol}x — institutions active.` : '';
+
+    if (or_broken === 'bullish') {
+      const targetNote = signal === 'bullish'
+        ? ' Trend confirmed — target next resistance.'
+        : ' Caution: ORB breakout against bearish signal. Wait for confirmation.';
+      return `Price broke above OR High ($${hi}). Bullish bias active. OR Low ($${lo}) is now key support — stay long above it.${targetNote}${rvolStr}`;
+    }
+
+    if (or_broken === 'bearish') {
+      const targetNote = signal === 'bearish'
+        ? ' Trend confirmed — target next support level.'
+        : ' Caution: ORB breakdown against bullish signal. Avoid longs until OR Low reclaimed.';
+      return `Price broke below OR Low ($${lo}). Bearish bias active. OR High ($${hi}) is now resistance.${targetNote}${rvolStr}`;
+    }
+
+    const rangeWidth = or_high && or_low ? (((or_high - or_low) / or_low) * 100).toFixed(2) : null;
+    const rangeNote = rangeWidth ? ` Range width: ${rangeWidth}%.` : '';
+    return `Price inside opening range ($${lo} – $${hi}).${rangeNote} Wait for a clear breakout above OR High or breakdown below OR Low before taking a position.`;
   }
 }
