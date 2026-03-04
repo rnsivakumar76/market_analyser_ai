@@ -621,6 +621,114 @@
   }
 }
 
+/* --- Hide old individual icon buttons (replaced by context menu) --- */
+.header .menu-btn,
+.header .manual-btn,
+.header .strategy-btn,
+.header .settings-btn,
+.header .journal-btn,
+.header .alerts-btn,
+.header .geopolitical-btn { display: none !important; }
+
+/* --- Context Menu --- */
+.ctx-menu-wrapper {
+  position: relative;
+}
+
+.ctx-menu-btn {
+  background: rgba(69, 71, 90, 0.35);
+  border: 1px solid rgba(69, 71, 90, 0.6);
+  border-radius: 8px;
+  color: #cdd6f4;
+  font-size: 1.2rem;
+  font-weight: 700;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  line-height: 1;
+
+  &:hover { background: rgba(137, 180, 250, 0.15); color: #89b4fa; }
+}
+
+.ctx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+}
+
+.ctx-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 999;
+  background: #1e1e2e;
+  border: 1px solid rgba(137, 180, 250, 0.25);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 195px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ctx-item {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #a6adc8;
+  font-size: 0.82rem;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+
+  &:hover { background: rgba(137, 180, 250, 0.12); color: #cdd6f4; }
+}
+
+/* --- Freshness chip: positioned below the Refresh button --- */
+.header {
+  position: relative;
+  padding-bottom: 28px;
+}
+
+.header-freshness-chip {
+  position: absolute;
+  bottom: 4px;
+  right: 24px;
+}
+
+/* --- User profile: compact avatar at far right --- */
+.user-profile {
+  order: 200;
+  position: relative;
+  cursor: pointer;
+
+  .user-info { display: none; }
+
+  &:hover .user-info {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: #1e1e2e;
+    border: 1px solid rgba(137, 180, 250, 0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    min-width: 150px;
+    gap: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    white-space: nowrap;
+  }
+}
+
 /* --- Header Freshness Chip (inline in header row) --- */
 .header-freshness-chip {
   display: flex;
@@ -659,6 +767,7 @@
 /* --- Hide the standalone timer strip and AI copilot bars --- */
 .data-status-strip { display: none !important; }
 app-ai-copilot     { display: none; }
+.bottom-bar        { display: none !important; }
 
 /* --- Data Status Strip (top-right, below header) --- */
 .data-status-strip {

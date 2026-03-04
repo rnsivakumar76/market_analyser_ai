@@ -42,6 +42,8 @@ export class App implements OnInit, OnDestroy {
   showTradeJournal = signal(false);
   showSmartAlerts = signal(false);
   showGeopoliticalAnalysis = signal(false);
+  showContextMenu = signal(false);
+  lastUpdatedTime = signal<string>('');
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
   psychologicalGuardrail = signal<PsychologicalGuardrail | null>(null);
@@ -246,6 +248,7 @@ export class App implements OnInit, OnDestroy {
         this.correlationData.set(response.correlation_data);
         this.psychologicalGuardrail.set(response.psychological_guardrail);
         this.lastUpdated.set(new Date(response.analysis_timestamp).toLocaleString());
+        this.lastUpdatedTime.set(new Date(response.analysis_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
         this.loading.set(false);
 
         // Track data freshness from backend

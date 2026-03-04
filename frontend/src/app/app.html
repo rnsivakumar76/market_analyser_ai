@@ -38,6 +38,23 @@
       </div>
       }
 
+      <!-- Context Menu (replaces 7 individual icon buttons) -->
+      <div class="ctx-menu-wrapper">
+        <button class="ctx-menu-btn" (click)="showContextMenu.set(!showContextMenu())" title="Tools">&#8942;</button>
+        @if (showContextMenu()) {
+        <div class="ctx-overlay" (click)="showContextMenu.set(false)"></div>
+        <div class="ctx-dropdown">
+          <button class="ctx-item" (click)="showCorrelationModal.set(true); showContextMenu.set(false)">&#128202; Market Correlation</button>
+          <button class="ctx-item" (click)="showUserManual.set(true); showContextMenu.set(false)">&#128214; Intelligence Manual</button>
+          <button class="ctx-item" (click)="showStrategySettings.set(true); showContextMenu.set(false)">&#9889; Strategy Settings</button>
+          <button class="ctx-item" (click)="showSettings.set(true); showContextMenu.set(false)">&#9881; Manage Symbols</button>
+          <button class="ctx-item" (click)="showTradeJournal.set(true); showContextMenu.set(false)">&#128210; Trade Journal</button>
+          <button class="ctx-item" (click)="showSmartAlerts.set(true); showContextMenu.set(false)">&#128276; Smart Alerts</button>
+          <button class="ctx-item" (click)="showGeopoliticalAnalysis.set(true); showContextMenu.set(false)">&#127758; Geopolitical</button>
+        </div>
+        }
+      </div>
+
       <button class="menu-btn correlation-btn" (click)="showCorrelationModal.set(true)" title="Market Correlation">
         📊
       </button>
@@ -67,7 +84,7 @@
 
       @if (lastUpdated()) {
       <div class="header-freshness-chip" [class]="dataFreshnessClass()">
-        <span class="hfc-time">&#128336; {{ lastUpdated() }}</span>
+        <span class="hfc-time">&#128336; {{ lastUpdatedTime() }}</span>
         <span class="hfc-sep">&#183;</span>
         <span class="hfc-next" [class.syncing]="loading()">
           @if (loading()) { Refreshing&#8230; } @else { {{ nextRefreshCountdown() }} }
