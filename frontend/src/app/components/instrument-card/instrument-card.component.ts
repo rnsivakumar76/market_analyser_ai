@@ -52,16 +52,27 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           </div>
         </header>
 
-        <!-- 2.5 AI EXECUTIVE SUMMARY (NEW) -->
-        <div class="ai-executive-synthesis" [class]="getSignalClass()">
-           <div class="synthesis-header">🤖 AI EXECUTIVE SUMMARY</div>
-           <p class="synthesis-text">{{ getFilteredSummary() }}</p>
-           <div class="synthesis-tags">
-              @for (reason of analysis.trade_signal.reasons; track reason) {
-                <span class="syn-tag" [class]="getReasonImpactClass(reason)"># {{ reason }}</span>
-              }
-           </div>
+        <!-- 2.5 SIGNAL REASONS STRIP (compact) -->
+        <div class="signal-reasons-strip">
+          @for (reason of analysis.trade_signal.reasons; track reason) {
+            <span class="syn-tag" [class]="getReasonImpactClass(reason)"># {{ reason }}</span>
+          }
         </div>
+
+        <!-- EXPERT BATTLE PLAN (always visible, above tabs) -->
+        @if (analysis.expert_trade_plan) {
+        <div class="expert-above-tabs" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
+          <div class="eat-header-row">
+            <span class="eat-title">🎖️ EXPERT BATTLE PLAN</span>
+            <span class="eat-rvol" [class.rvol-hot]="analysis.expert_trade_plan.rvol >= 1.8">
+              RVOL {{ analysis.expert_trade_plan.rvol }}x
+              @if (analysis.expert_trade_plan.is_high_intent) { 🔥 }
+            </span>
+            <span class="plan-age" [class.plan-age--stale]="isPlanStale()">🕐 {{ getAnalysisAge() }}</span>
+          </div>
+          <p class="eat-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
+        </div>
+        }
 
         <!-- ANALYSIS TABS NAVIGATION -->
         <div class="analysis-tabs">
@@ -167,24 +178,6 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
               </div>
 
-              <!-- EXPERT BATTLE PLAN (Short-Term) -->
-              @if (analysis.expert_trade_plan) {
-              <div class="tech-section expert-battle-section">
-                <div class="expert-intel-block" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
-                  <div class="expert-header-row">
-                    <div class="tile-header">🎖️ EXPERT BATTLE PLAN</div>
-                    <span class="plan-age" [class.plan-age--stale]="isPlanStale()">🕐 {{ getAnalysisAge() }}</span>
-                  </div>
-                  <p class="expert-plan-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
-                  <div class="expert-metrics">
-                    <div class="em-pill"><span>RVOL</span><strong>{{ analysis.expert_trade_plan.rvol }}x</strong></div>
-                    @if (analysis.expert_trade_plan.is_high_intent) {
-                      <div class="em-pill intent">🔥 HIGH INTENT</div>
-                    }
-                  </div>
-                </div>
-              </div>
-              }
 
               <!-- MARKET MOMENTUM READ -->
               <div class="tech-section momentum-read-section">
@@ -638,19 +631,23 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .terminal-body.bullish { border-left: 3px solid #a6e3a1; }
     .terminal-body.bearish { border-left: 3px solid #f38ba8; }
 
-    /* AI EXECUTIVE SUMMARY */
-    .ai-executive-synthesis { padding: 24px; background: rgba(30, 30, 46, 0.3); border-bottom: 1px solid #1f1f3a; }
-    .ai-executive-synthesis.bullish { background: rgba(166, 227, 161, 0.05); }
-    .ai-executive-synthesis.bearish { background: rgba(243, 139, 168, 0.05); }
-    .synthesis-header { font-size: 0.65rem; font-weight: 950; color: #89b4fa; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
-    .synthesis-text { font-size: 1.1rem; color: #cdd6f4; line-height: 1.4; margin-bottom: 16px; font-weight: 500; }
-    .synthesis-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-    .syn-tag { font-size: 0.65rem; padding: 4px 10px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; color: #9399b2; font-weight: 600; }
-    .syn-tag.positive { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; border-color: rgba(166, 227, 161, 0.3); }
-    .syn-tag.negative { background: rgba(243, 139, 168, 0.1); color: #f38ba8; border-color: rgba(243, 139, 168, 0.3); }
-    .syn-tag.neutral { background: rgba(249, 226, 175, 0.1); color: #f9e2af; border-color: rgba(249, 226, 175, 0.3); }
-    .syn-tag.warning { background: rgba(250, 179, 135, 0.1); color: #fab387; border-color: rgba(250, 179, 135, 0.3); }
-    .syn-tag.info { background: rgba(137, 180, 250, 0.1); color: #89b4fa; border-color: rgba(137, 180, 250, 0.3); }
+    /* SIGNAL REASONS STRIP (replaces verbose AI Summary) */
+    .signal-reasons-strip { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid #1f1f3a; background: rgba(17,17,27,0.4); }
+    .syn-tag { font-size: 0.6rem; padding: 3px 9px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; color: #9399b2; font-weight: 700; }
+    .syn-tag.positive { background: rgba(166,227,161,0.1); color: #a6e3a1; border-color: rgba(166,227,161,0.3); }
+    .syn-tag.negative { background: rgba(243,139,168,0.1); color: #f38ba8; border-color: rgba(243,139,168,0.3); }
+    .syn-tag.neutral { background: rgba(249,226,175,0.1); color: #f9e2af; border-color: rgba(249,226,175,0.3); }
+    .syn-tag.warning { background: rgba(250,179,135,0.1); color: #fab387; border-color: rgba(250,179,135,0.3); }
+    .syn-tag.info { background: rgba(137,180,250,0.1); color: #89b4fa; border-color: rgba(137,180,250,0.3); }
+
+    /* EXPERT BATTLE PLAN — above tabs (always visible) */
+    .expert-above-tabs { padding: 14px 20px; background: rgba(137,180,250,0.04); border-bottom: 1px solid #1f1f3a; border-left: 3px solid #585b70; }
+    .expert-above-tabs.high-intent { background: rgba(250,179,135,0.05); border-left-color: #fab387; box-shadow: inset 0 0 30px rgba(250,179,135,0.04); }
+    .eat-header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .eat-title { font-size: 0.6rem; font-weight: 950; letter-spacing: 1.5px; color: #6c7086; text-transform: uppercase; flex: 1; }
+    .eat-rvol { font-size: 0.58rem; font-weight: 900; color: #45475a; letter-spacing: 0.5px; }
+    .eat-rvol.rvol-hot { color: #fab387; }
+    .eat-text { font-size: 0.85rem; color: #cdd6f4; line-height: 1.55; margin: 0; font-weight: 500; }
 
     /* HUD UPGRADE (ZERO WASTE) */
     .terminal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: #0b0b15; border-bottom: 1px solid #1f1f3a; }
