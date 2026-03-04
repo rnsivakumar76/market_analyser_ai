@@ -496,19 +496,26 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         logger.info(f"[BENCHMARKS] Cache miss or expired — fetching fresh via BATCH (bench={bench_interval}, exec={exec_interval})")
         from .twelvedata_fetcher import TwelveDataFetcher
         shared_fetcher = TwelveDataFetcher()
-        bench_batch = ["SPX", "BTC", "DXY", "TNX"]
-        
-        # BATCH FETCH Benchmarks using a single shared fetcher to respect rate limits
-        b_macro = shared_fetcher.fetch_batch_data(bench_batch, interval=bench_interval, days=1000)
-        b_exec = shared_fetcher.fetch_batch_data(bench_batch, interval=exec_interval, days=exec_days)
-        
+        # Fetch SPX/BTC in their own batch — isolate DXY/TNX so a DXY failure
+        # cannot contaminate the SPX/BTC chunk (DXY is invalid on some API plans)
+        core_bench = ["SPX", "BTC"]
+        b_macro = shared_fetcher.fetch_batch_data(core_bench, interval=bench_interval, days=1000)
+        b_exec  = shared_fetcher.fetch_batch_data(core_bench, interval=exec_interval, days=exec_days)
+
+        # DXY / TNX are best-effort — failure here must never block core analysis
+        try:
+            b_rates = shared_fetcher.fetch_batch_data(["DXY", "TNX"], interval=bench_interval, days=1000)
+        except Exception as _dxy_err:
+            logger.warning(f"[BENCHMARKS] DXY/TNX fetch skipped: {_dxy_err}")
+            b_rates = {}
+
         benchmarks_data = {
             "SPX_macro": b_macro.get("SPX"),
             "BTC_macro": b_macro.get("BTC"),
             "SPX_exec": b_exec.get("SPX"),
             "BTC_exec": b_exec.get("BTC"),
-            "DXY": b_macro.get("DXY"),
-            "US10Y": b_macro.get("TNX")
+            "DXY": b_rates.get("DXY"),
+            "US10Y": b_rates.get("TNX")
         }
         bench_summary = {k: ('OK' if v is not None and not v.empty else 'MISSING') for k, v in benchmarks_data.items()}
         logger.info(f"[BENCHMARKS] Fetch result: {bench_summary}")
