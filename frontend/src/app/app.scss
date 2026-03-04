@@ -621,6 +621,147 @@
   }
 }
 
+/* --- Header Freshness Chip (inline in header row) --- */
+.header-freshness-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(69, 71, 90, 0.6);
+  background: rgba(30, 30, 46, 0.7);
+  font-size: 0.7rem;
+  white-space: nowrap;
+  transition: border-color 0.4s ease;
+
+  &.fresh    { border-color: rgba(166, 227, 161, 0.4); .hfc-time { color: #a6e3a1; } }
+  &.recent   { border-color: rgba(249, 226, 175, 0.4); .hfc-time { color: #f9e2af; } }
+  &.stale    { border-color: rgba(250, 179, 135, 0.5); .hfc-time { color: #fab387; } }
+  &.outdated { border-color: rgba(243, 139, 168, 0.6); .hfc-time { color: #f38ba8; } }
+
+  .hfc-time {
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    transition: color 0.4s ease;
+  }
+
+  .hfc-sep { color: #45475a; }
+
+  .hfc-next {
+    color: #89b4fa;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+
+    &.syncing { color: #f9e2af; animation: text-pulse 1s infinite alternate; }
+  }
+}
+
+/* --- Hide the standalone timer strip and AI copilot bars --- */
+.data-status-strip { display: none !important; }
+app-ai-copilot     { display: none; }
+
+/* --- Data Status Strip (top-right, below header) --- */
+.data-status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 5px 24px 5px;
+  background: rgba(17, 17, 27, 0.6);
+  border-bottom: 1px solid rgba(69, 71, 90, 0.4);
+  font-size: 0.75rem;
+
+  .ds-timestamp {
+    font-weight: 600;
+    transition: color 0.4s ease;
+    letter-spacing: 0.2px;
+
+    &.fresh    { color: #a6e3a1; }
+    &.recent   { color: #f9e2af; }
+    &.stale    { color: #fab387; }
+    &.outdated { color: #f38ba8; }
+  }
+
+  .ds-sep { color: #45475a; }
+
+  .ds-next {
+    color: #89b4fa;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+
+    &.syncing {
+      color: #f9e2af;
+      animation: text-pulse 1s infinite alternate;
+    }
+  }
+}
+
+/* Hide the old timer from the bottom bar (now shown in top strip) */
+.bottom-bar .last-updated,
+.bottom-bar .next-update,
+.bottom-bar .cache-badge {
+  display: none;
+}
+
+/* --- Data Freshness Indicators --- */
+.last-updated.fresh    { color: #a6e3a1 !important; font-weight: 600; }
+.last-updated.recent   { color: #f9e2af !important; font-weight: 600; }
+.last-updated.stale    { color: #fab387 !important; font-weight: 700; }
+.last-updated.outdated { color: #f38ba8 !important; font-weight: 700; }
+
+.cache-badge {
+  display: inline-block;
+  background: rgba(137, 180, 250, 0.12);
+  color: #89b4fa;
+  border: 1px solid rgba(137, 180, 250, 0.3);
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.stale-data-banner {
+  background: rgba(250, 179, 135, 0.08);
+  border-bottom: 1px solid rgba(250, 179, 135, 0.45);
+  padding: 8px 24px;
+
+  .stale-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+
+    .stale-icon { font-size: 1rem; flex-shrink: 0; }
+
+    .stale-message {
+      flex: 1;
+      color: #cdd6f4;
+
+      strong { color: #fab387; }
+    }
+
+    .stale-refresh-btn {
+      flex-shrink: 0;
+      padding: 4px 14px;
+      background: rgba(250, 179, 135, 0.15);
+      border: 1px solid rgba(250, 179, 135, 0.5);
+      border-radius: 4px;
+      color: #fab387;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+
+      &:hover:not(:disabled) { background: rgba(250, 179, 135, 0.28); }
+      &:disabled { opacity: 0.45; cursor: not-allowed; }
+    }
+  }
+}
+
 @keyframes text-pulse {
   from {
     opacity: 0.4;

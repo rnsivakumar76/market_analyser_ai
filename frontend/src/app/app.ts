@@ -59,6 +59,15 @@ export class App implements OnInit, OnDestroy {
   private readonly REFRESH_INTERVAL_SEC = 300; // 5 minutes
   private secondsRemaining = 300;
 
+  // Data freshness tracking
+  isDataStale = signal<boolean>(false);
+  servedFromCache = signal<boolean>(false);
+  dataAgeMinutes = signal<number>(0);
+  dataAgeLabel = signal<string>('');
+  dataFreshnessClass = signal<'fresh' | 'recent' | 'stale' | 'outdated'>('fresh');
+  private analysisTimestamp: Date | null = null;
+  private ageTickerSub?: Subscription;
+
   // Background scheduler monitoring
   private consecutiveFailures = 0;
   private readonly MAX_CONSECUTIVE_FAILURES = 2;
@@ -107,6 +116,7 @@ export class App implements OnInit, OnDestroy {
     this.refreshSubscription?.unsubscribe();
     this.countdownSubscription?.unsubscribe();
     this.analysisSub?.unsubscribe();
+    this.ageTickerSub?.unsubscribe();
   }
 
   private startAutoRefresh() {
@@ -125,6 +135,40 @@ export class App implements OnInit, OnDestroy {
       const secs = this.secondsRemaining % 60;
       this.nextRefreshCountdown.set(`${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
     });
+  }
+
+  private startAgeTicker() {
+    this.ageTickerSub?.unsubscribe();
+    // Update the live "X min ago" label every 60 seconds
+    this.ageTickerSub = interval(60000).subscribe(() => this.updateDataAge());
+  }
+
+  private updateDataAge() {
+    if (!this.analysisTimestamp) return;
+    const now = new Date();
+    const diffMs = now.getTime() - this.analysisTimestamp.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    this.dataAgeMinutes.set(diffMin);
+
+    if (diffMin < 1) {
+      this.dataAgeLabel.set('just now');
+      this.dataFreshnessClass.set('fresh');
+    } else if (diffMin < 6) {
+      this.dataAgeLabel.set(`${diffMin} min ago`);
+      this.dataFreshnessClass.set('fresh');
+    } else if (diffMin < 15) {
+      this.dataAgeLabel.set(`${diffMin} min ago`);
+      this.dataFreshnessClass.set('recent');
+    } else if (diffMin < 60) {
+      this.dataAgeLabel.set(`${diffMin} min ago`);
+      this.dataFreshnessClass.set('stale');
+      this.isDataStale.set(true);
+    } else {
+      const hrs = Math.floor(diffMin / 60);
+      this.dataAgeLabel.set(`${hrs}h ago`);
+      this.dataFreshnessClass.set('outdated');
+      this.isDataStale.set(true);
+    }
   }
 
   loadPreferences() {
@@ -203,6 +247,13 @@ export class App implements OnInit, OnDestroy {
         this.psychologicalGuardrail.set(response.psychological_guardrail);
         this.lastUpdated.set(new Date(response.analysis_timestamp).toLocaleString());
         this.loading.set(false);
+
+        // Track data freshness from backend
+        this.analysisTimestamp = new Date(response.analysis_timestamp);
+        this.isDataStale.set(response.is_stale ?? false);
+        this.servedFromCache.set(response.served_from_cache ?? false);
+        this.updateDataAge();
+        this.startAgeTicker();
 
         // Track scheduler health
         this.handleSchedulerSuccess();

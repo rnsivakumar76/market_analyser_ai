@@ -65,6 +65,17 @@
         <span class="mode-icon">{{ strategyMode() === 'long_term' ? '📅' : '⏱️' }}</span>
       </button>
 
+      @if (lastUpdated()) {
+      <div class="header-freshness-chip" [class]="dataFreshnessClass()">
+        <span class="hfc-time">&#128336; {{ lastUpdated() }}</span>
+        <span class="hfc-sep">&#183;</span>
+        <span class="hfc-next" [class.syncing]="loading()">
+          @if (loading()) { Refreshing&#8230; } @else { {{ nextRefreshCountdown() }} }
+        </span>
+        @if (servedFromCache() && !loading()) { <span class="cache-badge">CACHED</span> }
+      </div>
+      }
+
       <button class="refresh-btn" (click)="runAnalysis()" [disabled]="loading()">
         @if (loading()) {
         <span class="spinner"></span> Analyzing...
@@ -75,12 +86,28 @@
     </div>
   </header>
 
+  <!-- Data Freshness Status Strip (top-right, below header) -->
+  @if (lastUpdated()) {
+  <div class="data-status-strip">
+    <span [class]="'ds-timestamp ' + dataFreshnessClass()">&#128336; {{ lastUpdated() }}</span>
+    <span class="ds-sep">&#183;</span>
+    <span class="ds-next" [class.syncing]="loading()">
+      @if (loading()) { Refreshing&#8230; } @else { Next: {{ nextRefreshCountdown() }} }
+    </span>
+    @if (servedFromCache() && !loading()) { <span class="cache-badge">CACHED</span> }
+  </div>
+  }
+
   <!-- Bottom Status Bar -->
   <div class="bottom-bar">
     <div class="bottom-bar-left">
       @if (lastUpdated()) {
-      <span class="last-updated">🕐 {{ lastUpdated() }}</span>
-      <span class="next-update" [class.syncing]="loading()">(Next: {{ nextRefreshCountdown() }})</span>
+      <span [class]="'last-updated ' + dataFreshnessClass()">🕐 {{ lastUpdated() }}</span>
+      <span class="next-update" [class.syncing]="loading()">
+        @if (loading()) { Refreshing... }
+        @else { Next: {{ nextRefreshCountdown() }} }
+        @if (servedFromCache() && !loading()) { <span class="cache-badge">CACHED</span> }
+      </span>
       }
       <div class="bar-divider"></div>
       <span class="stat">{{ instruments().length }} instruments</span>
@@ -128,6 +155,23 @@
     <button class="health-diagnose-btn" (click)="showDiagnostics.set(true)" title="View Error Diagnostics">
       🔍 Diagnose
     </button>
+  </div>
+  }
+
+  <!-- Stale Data Warning Banner -->
+  @if (isDataStale() && !loading() && schedulerHealthStatus() === 'healthy') {
+  <div class="stale-data-banner">
+    <div class="stale-content">
+      <span class="stale-icon">&#9888;</span>
+      <span class="stale-message">
+        @if (dataFreshnessClass() === 'outdated') {
+          Data is <strong>{{ dataAgeLabel() }} old</strong> &#8212; prices and signals may be significantly outdated.
+        } @else {
+          Rates last updated <strong>{{ dataAgeLabel() }}</strong>@if (servedFromCache()) { from cache} &#8212; consider refreshing for latest prices.
+        }
+      </span>
+      <button class="stale-refresh-btn" (click)="refreshAnalysis()" [disabled]="loading()">&#8635; Refresh Now</button>
+    </div>
   </div>
   }
 

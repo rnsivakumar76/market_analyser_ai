@@ -725,13 +725,30 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
     if mode is None:
         mode = StrategyMode.LONG_TERM
     
+    def _cache_age_minutes(cached: dict) -> int:
+        """Calculate how many minutes old a cached result is."""
+        try:
+            ts = cached.get("analysis_timestamp", "")
+            if ts:
+                from datetime import datetime, timezone
+                cached_dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                delta = datetime.now(timezone.utc) - cached_dt
+                return max(0, int(delta.total_seconds() / 60))
+        except Exception:
+            pass
+        return 0
+
     # 1. Optimistic Cache check (if not forced refresh)
     # If we have something in cache less than 5 minutes old, serve it fast.
     if not refresh and nexus_db.is_dynamo_enabled():
         cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=300)
         if cached:
-            logger.info(f"Fast-path: Serving cached {mode.value} for {user_id}")
-            return _scrub_nans(AnalysisResponse(**cached).dict())
+            age_min = _cache_age_minutes(cached)
+            logger.info(f"Fast-path: Serving cached {mode.value} for {user_id} (age={age_min}m)")
+            resp = AnalysisResponse(**cached)
+            resp.served_from_cache = True
+            resp.data_age_minutes = age_min
+            return _scrub_nans(resp.dict())
     
     # 2. Perform Fresh Analysis
     try:
@@ -742,15 +759,23 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
             # If fresh scan returned empty (e.g. TwelveData partial outage), try stale cache fallback
             stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=7200) # 2 hours
             if stale:
-                logger.warning(f"Fresh scan empty, falling back to STALE cache for {user_id}")
-                return _scrub_nans(AnalysisResponse(**stale).dict())
+                age_min = _cache_age_minutes(stale)
+                logger.warning(f"Fresh scan empty, falling back to STALE cache for {user_id} (age={age_min}m)")
+                resp = AnalysisResponse(**stale)
+                resp.is_stale = True
+                resp.served_from_cache = True
+                resp.data_age_minutes = age_min
+                return _scrub_nans(resp.dict())
 
         response = AnalysisResponse(
             analysis_timestamp=datetime.now(timezone.utc).isoformat(),
             instruments=results,
             weekly_performance=perf,
             correlation_data=corr,
-            psychological_guardrail=guardrail
+            psychological_guardrail=guardrail,
+            is_stale=False,
+            served_from_cache=False,
+            data_age_minutes=0
         )
 
         # Save to Cache
@@ -768,14 +793,24 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
         if nexus_db.is_dynamo_enabled():
             emergency_stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=14400)
             if emergency_stale:
-                logger.info(f"Returning EMERGENCY STALE data for {user_id} due to error: {e}")
-                return _scrub_nans(AnalysisResponse(**emergency_stale).dict())
+                age_min = _cache_age_minutes(emergency_stale)
+                logger.info(f"Returning EMERGENCY STALE data for {user_id} (age={age_min}m) due to error: {e}")
+                resp = AnalysisResponse(**emergency_stale)
+                resp.is_stale = True
+                resp.served_from_cache = True
+                resp.data_age_minutes = age_min
+                return _scrub_nans(resp.dict())
             
             # 4. Final Fallback: Serve the GLOBAL DEFAULT cache so the UI isn't blank for new users
             global_stale = nexus_db.get_latest_analysis_results("global_default", mode.value, max_age_seconds=14400)
             if global_stale:
-                logger.info(f"Returning GLOBAL DEFAULT cache for {user_id} (fallback)")
-                return _scrub_nans(AnalysisResponse(**global_stale).dict())
+                age_min = _cache_age_minutes(global_stale)
+                logger.info(f"Returning GLOBAL DEFAULT cache for {user_id} (age={age_min}m) (fallback)")
+                resp = AnalysisResponse(**global_stale)
+                resp.is_stale = True
+                resp.served_from_cache = True
+                resp.data_age_minutes = age_min
+                return _scrub_nans(resp.dict())
         
         # If absolutely nothing works, raise the error
         raise HTTPException(status_code=503, detail="Market analysis currently unavailable. System is performing a fresh scan, please retry in 30 seconds.")

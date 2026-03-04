@@ -162,7 +162,32 @@ class TwelveDataFetcher:
                                     df_sym.reset_index(inplace=True)
                                     results[orig_sym] = self._normalize_df(df_sym)
                 except Exception as chunk_e:
+                    err_msg = str(chunk_e)
                     logger.warning(f"Batch chunk failed: {chunk_e}")
+                    # If the chunk failed due to an unknown symbol, retry each symbol individually
+                    # so that one bad symbol doesn't block the rest of the chunk.
+                    if len(chunk) > 1 and 'symbol' in err_msg.lower() and 'not found' in err_msg.lower():
+                        logger.warning(f"[BATCH_FETCH] Retrying chunk individually to isolate bad symbol: {chunk}")
+                        for single_sym in chunk:
+                            orig_sym = map_back.get(single_sym)
+                            if not orig_sym or orig_sym in results:
+                                continue
+                            try:
+                                self._rate_limit_wait()
+                                ts_single = self.client.time_series(
+                                    symbol=single_sym,
+                                    interval=interval,
+                                    outputsize=outputsize,
+                                    timezone="UTC"
+                                )
+                                df_single = ts_single.as_pandas()
+                                if df_single is not None and not df_single.empty:
+                                    df_single = df_single.copy()
+                                    df_single.reset_index(inplace=True)
+                                    results[orig_sym] = self._normalize_df(df_single)
+                                    logger.info(f"[BATCH_FETCH] Individual retry OK: {orig_sym}")
+                            except Exception as single_e:
+                                logger.warning(f"[BATCH_FETCH] Individual fetch failed for {single_sym}: {single_e}")
                 else:
                     new_keys = [k for k in results if k not in prev_keys]
                     if new_keys:
@@ -258,7 +283,11 @@ class TwelveDataFetcher:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
             
-        return df.sort_index(ascending=True)
+        df = df.sort_index(ascending=True)
+        # Remove duplicate timestamps (can arise from DST changes or API quirks)
+        if df.index.duplicated().any():
+            df = df[~df.index.duplicated(keep='last')]
+        return df
 
     def get_current_price(self, symbol: str) -> float:
         """Get latest price with ETF fallback."""

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export interface GeopoliticalEvent {
@@ -435,6 +436,9 @@ export interface AnalysisResponse {
   weekly_performance: WeeklyPerformance;
   correlation_data: CorrelationData;
   psychological_guardrail: PsychologicalGuardrail;
+  is_stale: boolean;
+  served_from_cache: boolean;
+  data_age_minutes: number | null;
 }
 
 export interface NotificationPrefs {
@@ -465,7 +469,8 @@ export class MarketAnalyzerService {
 
   analyzeAll(mode: StrategyMode = 'long_term', refresh: boolean = false): Observable<AnalysisResponse> {
     const refreshParam = refresh ? '&refresh=true' : '';
-    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}${refreshParam}`);
+    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}${refreshParam}`)
+      .pipe(timeout(28000));
   }
 
   analyzeSingle(symbol: string, mode: StrategyMode = 'long_term'): Observable<InstrumentAnalysis> {

@@ -385,6 +385,9 @@ class AnalysisResponse(BaseModel):
     weekly_performance: Optional[PerformanceSummary] = None
     correlation_data: Optional[CorrelationData] = None
     psychological_guardrail: Optional[PsychologicalGuardrail] = None
+    is_stale: bool = False
+    served_from_cache: bool = False
+    data_age_minutes: Optional[int] = None
 
 
 class InstrumentConfig(BaseModel):
