@@ -694,7 +694,7 @@
 /* --- Freshness chip: positioned below the Refresh button --- */
 .header {
   position: relative;
-  padding-bottom: 28px;
+  padding-bottom: 0;
 }
 
 .header-freshness-chip {
@@ -705,7 +705,7 @@
 
 /* --- User profile: compact avatar at far right --- */
 .user-profile {
-  order: 200;
+  order: 50;
   position: relative;
   cursor: pointer;
 
@@ -727,6 +727,30 @@
     z-index: 999;
     white-space: nowrap;
   }
+}
+
+/* --- Header separator + chip-row layout fix --- */
+.header {
+  border-bottom: 1px solid rgba(137, 180, 250, 0.2);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4);
+}
+
+.header-actions {
+  flex-wrap: wrap;
+  align-content: center;
+  row-gap: 2px;
+}
+
+.header-freshness-chip {
+  position: static !important;
+  order: 0;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0 2px 6px;
+  opacity: 0.88;
 }
 
 /* --- Header Freshness Chip (inline in header row) --- */
