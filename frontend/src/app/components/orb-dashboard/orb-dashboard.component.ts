@@ -39,6 +39,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
                   <span class="orb-rvol" [class.rvol-hot]="item.plan.rvol >= 1.8">
                     RVOL {{ item.plan.rvol }}x
                   </span>
+                  <span class="orb-age" [class.orb-age--stale]="isORBStale(item.analysis)">🕐 {{ getORBAge(item.analysis) }}</span>
                 </div>
               </div>
 
@@ -197,6 +198,8 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       letter-spacing: 0.5px;
     }
     .orb-rvol.rvol-hot { color: #fab387; }
+    .orb-age { font-size: 0.45rem; font-weight: 700; color: #45475a; letter-spacing: 0.3px; }
+    .orb-age--stale { color: #f38ba8; }
 
     /* Footer */
     .orb-footer {
@@ -274,6 +277,22 @@ export class OrbDashboardComponent {
     if (broken === 'bullish') return 'orb-status-label status-bull';
     if (broken === 'bearish') return 'orb-status-label status-bear';
     return 'orb-status-label status-wait';
+  }
+
+  getORBAge(analysis: InstrumentAnalysis): string {
+    if (!analysis.last_updated) return 'N/A';
+    const diffMs = Date.now() - new Date(analysis.last_updated).getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ${diffMin % 60}m ago`;
+    return new Date(analysis.last_updated).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  isORBStale(analysis: InstrumentAnalysis): boolean {
+    if (!analysis.last_updated) return false;
+    return (Date.now() - new Date(analysis.last_updated).getTime()) > 30 * 60000;
   }
 
   /** Generate plain-English ORB battle text for each instrument */
