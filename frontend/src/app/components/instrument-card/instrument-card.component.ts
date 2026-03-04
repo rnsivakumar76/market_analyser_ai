@@ -162,11 +162,16 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     <div class="sz-header">⚖️ FIXED SCALING ENTRIES (50 / 30 / 20)</div>
                     <div class="sz-grid">
                         @for (step of getScalingStrategy(); track step.stage) {
-                          <div class="sz-item">
+                          <div class="sz-item" [class.sz-item--hit]="isTargetHit(step.target)" [class.sz-item--next]="isNextTarget(step.target)">
                              <div class="sz-top"><span>{{ step.percent }}% ALLOC</span><strong>{{ step.stage }}</strong></div>
                              <div class="sz-val">{{ step.target }}</div>
+                             <div class="sz-dist">{{ getTargetDistance(step.target) }}</div>
                           </div>
                         }
+                    </div>
+                    <!-- Scaling Interpretation -->
+                    <div class="sz-interpretation">
+                      <p class="sz-action-read">{{ getScalingActionRead() }}</p>
                     </div>
                 </div>
 
@@ -675,9 +680,18 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .scaling-zone { margin: 24px 0; background: #11111b; border: 1px dashed #313244; padding: 16px; border-radius: 8px; }
     .sz-header { font-size: 0.55rem; color: #45475a; font-weight: 950; margin-bottom: 16px; }
     .sz-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .sz-item { background: #0b0b15; padding: 10px; border-radius: 6px; border: 1px solid #1f1f3a; text-align: center; }
+    .sz-item { background: #0b0b15; padding: 10px; border-radius: 6px; border: 1px solid #1f1f3a; text-align: center; transition: all 0.2s; }
     .sz-top { font-size: 0.45rem; color: #585b70; display: block; margin-bottom: 4px; }
     .sz-val { font-size: 0.85rem; font-weight: 950; color: #a6e3a1; }
+    .sz-dist { font-size: 0.48rem; font-weight: 700; color: #45475a; margin-top: 4px; letter-spacing: 0.3px; }
+    .sz-item--next { border-color: #89b4fa !important; background: rgba(137,180,250,0.06) !important; }
+    .sz-item--next .sz-val { color: #89b4fa; }
+    .sz-item--next .sz-dist { color: #89b4fa; }
+    .sz-item--hit { border-color: rgba(166,227,161,0.4) !important; background: rgba(166,227,161,0.06) !important; opacity: 0.7; }
+    .sz-item--hit .sz-val { color: #6c7086; text-decoration: line-through; }
+    .sz-interpretation { margin-top: 14px; padding-top: 12px; border-top: 1px solid #1f1f3a; }
+    .sz-action-read { font-size: 0.68rem; color: #a6adc8; line-height: 1.6; margin: 0; padding: 10px 12px; background: rgba(17,17,27,0.6); border-left: 3px solid #585b70; border-radius: 0 6px 6px 0; }
+    .sz-action-read:first-letter { font-size: 0.9rem; }
     .mm-footer { display: flex; gap: 10px; margin-bottom: 24px; }
     .mmf-item { flex: 1; padding: 12px; background: #121220; border-radius: 6px; text-align: center; }
     .mmf-item span { font-size: 0.5rem; color: #45475a; display: block; margin-bottom: 4px; }
@@ -1402,6 +1416,62 @@ export class InstrumentCardComponent implements OnChanges {
 
   getPullbackReasons(): string[] {
     return this.analysis.pullback_warning?.reasons || [];
+  }
+
+  // ── Scaling Interpretation Methods ────────────────────────────────────────
+  /** Parse dollar target string (e.g. "$75.28") to number, or null */
+  private parseTargetPrice(target: string): number | null {
+    if (!target || !target.startsWith('$')) return null;
+    return parseFloat(target.replace('$', ''));
+  }
+
+  getTargetDistance(target: string): string {
+    const t = this.parseTargetPrice(target);
+    if (t === null) return '';
+    const price = this.analysis.current_price;
+    const dist = ((Math.abs(t - price) / price) * 100).toFixed(2);
+    const direction = this.isBullish ? t > price : t < price;
+    const arrow = direction ? '↑' : '↓ (crossed)';
+    return `${dist}% ${arrow}`;
+  }
+
+  isTargetHit(target: string): boolean {
+    const t = this.parseTargetPrice(target);
+    if (t === null) return false;
+    const price = this.analysis.current_price;
+    return this.isBullish ? price >= t : price <= t;
+  }
+
+  isNextTarget(target: string): boolean {
+    const steps = this.getScalingStrategy();
+    const nextUnhit = steps.find(s => !this.isTargetHit(s.target));
+    return nextUnhit ? nextUnhit.target === target : false;
+  }
+
+  getScalingActionRead(): string {
+    const vr = this.analysis.volatility_risk;
+    const price = this.analysis.current_price;
+    if (!vr) return '';
+
+    const tp1 = vr.take_profit_level1;
+    const tp2 = vr.take_profit_level2;
+    const tp3 = vr.take_profit;
+    const sl = vr.stop_loss;
+    const distPct = (t: number) => ((Math.abs(t - price) / price) * 100).toFixed(2);
+
+    if (this.isBullish) {
+      if (tp3 && price >= tp3) return `🎯 All three targets hit. Consider closing the 20% runner or raising stop to lock in full profit.`;
+      if (tp2 && price >= tp2) return `✅ T1 & T2 hit. 20% runner in play — raise stop to T1 ($${tp1?.toFixed(2) ?? '?'}) to protect gains. Let the runner breathe.`;
+      if (tp1 && price >= tp1) return `✅ T1 hit at $${tp1.toFixed(2)}. Exit 50% now. Move stop-loss to breakeven. Target T2 ($${tp2?.toFixed(2) ?? '?'}) with the remaining position.`;
+      if (tp1) return `⏳ ${distPct(tp1)}% from T1 ($${tp1.toFixed(2)}). Hold long — do not move stop until T1 is reached. On T1 hit: exit 50%, raise stop, target T2 ($${tp2?.toFixed(2) ?? '?'}).`;
+      return `⏳ Target $${tp3.toFixed(2)} (${distPct(tp3)}% away). Hold long with stop at $${sl.toFixed(2)}.`;
+    } else {
+      if (tp3 && price <= tp3) return `🎯 All three targets hit. Consider closing the 20% runner or lowering stop to lock in full profit.`;
+      if (tp2 && price <= tp2) return `✅ T1 & T2 hit. 20% runner in play — lower stop to T1 ($${tp1?.toFixed(2) ?? '?'}) to protect gains.`;
+      if (tp1 && price <= tp1) return `✅ T1 hit at $${tp1.toFixed(2)}. Exit 50% now. Move stop-loss to breakeven. Target T2 ($${tp2?.toFixed(2) ?? '?'}) short.`;
+      if (tp1) return `⏳ ${distPct(tp1)}% from T1 ($${tp1.toFixed(2)}). Hold short — do not move stop until T1 is reached. On T1 hit: cover 50%, lower stop, target T2 ($${tp2?.toFixed(2) ?? '?'}).`;
+      return `⏳ Target $${tp3.toFixed(2)} (${distPct(tp3)}% away). Hold short with stop at $${sl.toFixed(2)}.`;
+    }
   }
 
   getScalingStrategy(): { stage: string, percent: number, target: string }[] {
