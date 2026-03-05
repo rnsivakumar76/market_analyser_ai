@@ -136,9 +136,16 @@ def generate_expert_trade_plan(
         elif orb_direction == "bearish":
             plan.append(f"TARGETS: Aim for S1 ({p.s1:.2f}) then S2 ({p.s2:.2f}).")
         elif price > p.pivot:
-            plan.append(f"TARGETS: Aim for R1 ({p.r1:.2f}) then R2 ({p.r2:.2f}).")
+            if is_bearish_signal:
+                plan.append(f"CAUTION: Price above Pivot ({p.pivot:.2f}) against bearish signal. Wait for Pivot break before shorting. Target S1 ({p.s1:.2f}) on breakdown.")
+            else:
+                plan.append(f"TARGETS: Aim for R1 ({p.r1:.2f}) then R2 ({p.r2:.2f}).")
         else:
-            plan.append(f"TARGETS: Aim for S1 ({p.s1:.2f}) then S2 ({p.s2:.2f}).")
+            # Price is below pivot — no ORB break yet
+            if is_bullish_signal:
+                plan.append(f"PULLBACK ZONE: Price below Pivot ({p.pivot:.2f}). Watch for long entry near S1 ({p.s1:.2f}). Targets on bounce: R1 ({p.r1:.2f}) then R2 ({p.r2:.2f}).")
+            else:
+                plan.append(f"TARGETS: Aim for S1 ({p.s1:.2f}) then S2 ({p.s2:.2f}).")
 
         if technical.fibonacci and orb_direction == "bearish" and is_bullish_signal:
             plan.append(f"KEY ENTRY: Fib 38.2% at {technical.fibonacci.ret_382:.2f} is the ideal long trigger zone.")
