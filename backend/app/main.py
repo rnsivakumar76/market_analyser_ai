@@ -538,7 +538,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             shared_fetcher.fetch_batch_data, 
             sym_list, 
             interval=exec_fetch_interval, 
-            days=500 if mode == StrategyMode.LONG_TERM else 300
+            days=500 if mode == StrategyMode.LONG_TERM else 60  # SHORT_TERM: 60d×24h=1440 bars, enough for all indicators
         )
         
         # Optional: Expert 15-minute data

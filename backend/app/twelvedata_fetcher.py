@@ -41,12 +41,13 @@ class TwelveDataFetcher:
         self.client = TDClient(apikey=api_key)
         
     def _rate_limit_wait(self):
-        """Ensures safe interval between calls. For Lambda/Free-Tier, we use a 2.5s burst gap."""
+        """Ensures safe interval between calls. 1.0s gap is safe for a single Lambda since
+        sequential calls stay well under 55 credits/min; concurrent Lambda collisions are
+        handled by the DynamoDB cache layer, not by slowing down individual scans."""
         with self._lock:
             now = time.time()
             elapsed = now - TwelveDataFetcher._last_call_time
-            # 2.5s interval is safer for free keys while still beating 30s Lambda timeout
-            wait_time = 2.5 - elapsed
+            wait_time = 1.0 - elapsed
             if wait_time > 0:
                 time.sleep(wait_time)
             TwelveDataFetcher._last_call_time = time.time()
