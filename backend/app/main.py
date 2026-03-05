@@ -190,23 +190,30 @@ def analyze_instrument_lazy(
         pullback_label = "Day Trading"
         execution_label = "Execution (H1)"
 
-    # Speed Optimization: Use the most recent close from history to avoid a redundant 1.2s call.
-    # This prevents the "Failed to fetch analysis" error by keeping total scan under 30s.
-    try:
-        if not execution_data.empty:
-            current_price = float(execution_data['Close'].iloc[-1])
-            logger.info(f"Using latest candle price for {symbol}: {current_price}")
-        else:
-            raise ValueError("History empty")
-    except Exception as e:
-        logger.warning(f"Defaulting to API price for {symbol}: {e}")
+    # Price Strategy:
+    # - LONG_TERM mode uses daily candles → last close can be hours stale (post-session).
+    #   Always fetch live price from API; fall back to candle close only if API fails.
+    # - SHORT_TERM mode uses hourly candles → last close is at most 1h stale, API call skipped.
+    candle_price = float(execution_data['Close'].iloc[-1]) if not execution_data.empty else None
+
+    if mode == StrategyMode.LONG_TERM:
         try:
             from .twelvedata_fetcher import TwelveDataFetcher
             fetcher = TwelveDataFetcher()
             current_price = fetcher.get_current_price(symbol)
+            logger.info(f"Live API price for {symbol}: {current_price}")
         except Exception as api_err:
-            logger.error(f"Price fetch failed for {symbol}: {api_err}")
-            raise api_err
+            logger.warning(f"Live price fetch failed for {symbol}, using candle close: {api_err}")
+            if candle_price is None:
+                raise ValueError(f"No price available for {symbol}")
+            current_price = candle_price
+            logger.info(f"Candle fallback price for {symbol}: {current_price}")
+    else:
+        # SHORT_TERM: hourly candle close is fresh enough
+        if candle_price is None:
+            raise ValueError(f"Execution data empty for {symbol}")
+        current_price = candle_price
+        logger.info(f"Using latest candle price for {symbol}: {current_price}")
     
     trend = analyze_monthly_trend(macro_data, params.get('monthly', {}))
     # Update description to reflect timeframe
