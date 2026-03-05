@@ -106,6 +106,7 @@ def analyze_instrument_lazy(
     pre_pullback_df: Any = None,
     pre_execution_df: Any = None,
     pre_expert_df: Any = None,
+    pre_price: float = None,
     dxy_df: Any = None,
     us10y_df: Any = None,
     news_api_key: str = ''
@@ -191,29 +192,17 @@ def analyze_instrument_lazy(
         execution_label = "Execution (H1)"
 
     # Price Strategy:
-    # - LONG_TERM mode uses daily candles → last close can be hours stale (post-session).
-    #   Always fetch live price from API; fall back to candle close only if API fails.
-    # - SHORT_TERM mode uses hourly candles → last close is at most 1h stale, API call skipped.
+    # - pre_price: live price pre-fetched in batch by the scan endpoint (1 API call for all instruments).
+    # - Fallback: last candle close (hourly in SHORT_TERM = fresh enough; daily in LONG_TERM = may lag by hours).
     candle_price = float(execution_data['Close'].iloc[-1]) if not execution_data.empty else None
-
-    if mode == StrategyMode.LONG_TERM:
-        try:
-            from .twelvedata_fetcher import TwelveDataFetcher
-            fetcher = TwelveDataFetcher()
-            current_price = fetcher.get_current_price(symbol)
-            logger.info(f"Live API price for {symbol}: {current_price}")
-        except Exception as api_err:
-            logger.warning(f"Live price fetch failed for {symbol}, using candle close: {api_err}")
-            if candle_price is None:
-                raise ValueError(f"No price available for {symbol}")
-            current_price = candle_price
-            logger.info(f"Candle fallback price for {symbol}: {current_price}")
-    else:
-        # SHORT_TERM: hourly candle close is fresh enough
-        if candle_price is None:
-            raise ValueError(f"Execution data empty for {symbol}")
+    if pre_price and pre_price > 0:
+        current_price = pre_price
+        logger.info(f"Using pre-fetched live price for {symbol}: {current_price}")
+    elif candle_price is not None:
         current_price = candle_price
         logger.info(f"Using latest candle price for {symbol}: {current_price}")
+    else:
+        raise ValueError(f"No price available for {symbol}")
     
     trend = analyze_monthly_trend(macro_data, params.get('monthly', {}))
     # Update description to reflect timeframe
@@ -509,20 +498,16 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         b_macro = shared_fetcher.fetch_batch_data(core_bench, interval=bench_interval, days=1000)
         b_exec  = shared_fetcher.fetch_batch_data(core_bench, interval=exec_interval, days=exec_days)
 
-        # DXY / TNX are best-effort — failure here must never block core analysis
-        try:
-            b_rates = shared_fetcher.fetch_batch_data(["DXY", "TNX"], interval=bench_interval, days=1000)
-        except Exception as _dxy_err:
-            logger.warning(f"[BENCHMARKS] DXY/TNX fetch skipped: {_dxy_err}")
-            b_rates = {}
-
+        # DXY / TNX consistently fail on free-tier API keys (symbol not recognised in batch).
+        # Removing them eliminates ~4 wasted credit retries per scan.
+        # Intermarket analysis degrades gracefully to None when not available.
         benchmarks_data = {
             "SPX_macro": b_macro.get("SPX"),
             "BTC_macro": b_macro.get("BTC"),
             "SPX_exec": b_exec.get("SPX"),
             "BTC_exec": b_exec.get("BTC"),
-            "DXY": b_rates.get("DXY"),
-            "US10Y": b_rates.get("TNX")
+            "DXY": None,
+            "US10Y": None
         }
         bench_summary = {k: ('OK' if v is not None and not v.empty else 'MISSING') for k, v in benchmarks_data.items()}
         logger.info(f"[BENCHMARKS] Fetch result: {bench_summary}")
@@ -573,7 +558,13 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         logger.info(f"[INSTRUMENTS] Exec batch fetched: {list(exec_batch.keys())} (missing: {[s for s in sym_list if s not in exec_batch]})")
         if expert_batch:
             logger.info(f"[INSTRUMENTS] Expert 15min batch: {list(expert_batch.keys())}")
-        
+
+        # Fetch live prices for all instruments in ONE API call (LONG_TERM only — hourly candle is fresh in SHORT_TERM)
+        if mode == StrategyMode.LONG_TERM:
+            live_prices = shared_fetcher.fetch_batch_prices(sym_list)
+        else:
+            live_prices = {}
+
         # We'll allow the analyzer to use whatever history it has from previous runs or fall back
         macro_batch = {}
         pullback_batch = {}
@@ -598,6 +589,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 pre_pullback_df=pullback_batch.get(sym),
                 pre_execution_df=exec_batch.get(sym),
                 pre_expert_df=expert_batch.get(sym),
+                pre_price=live_prices.get(sym),
                 dxy_df=benchmarks_data.get("DXY"),
                 us10y_df=benchmarks_data.get("US10Y"),
                 news_api_key=newsapi_key

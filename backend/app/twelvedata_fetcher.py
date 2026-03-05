@@ -289,6 +289,36 @@ class TwelveDataFetcher:
             df = df[~df.index.duplicated(keep='last')]
         return df
 
+    def fetch_batch_prices(self, symbols: List[str]) -> Dict[str, float]:
+        """
+        Fetch live prices for multiple symbols in ONE API call (1 credit total).
+        Replaces N individual get_current_price() calls to stay within rate limits.
+        Returns dict of {internal_symbol: price}. Missing symbols are silently skipped.
+        """
+        if not symbols:
+            return {}
+        td_symbols = [self.get_symbol_mapping(s) for s in symbols]
+        td_to_orig = {self.get_symbol_mapping(s): s for s in symbols}
+        try:
+            self._rate_limit_wait()
+            data = self.client.price(symbol=",".join(td_symbols)).as_json()
+            result = {}
+            if isinstance(data, dict):
+                if 'price' in data:
+                    orig = td_to_orig.get(td_symbols[0])
+                    if orig:
+                        result[orig] = float(data['price'])
+                else:
+                    for td_sym, price_data in data.items():
+                        orig = td_to_orig.get(td_sym)
+                        if orig and isinstance(price_data, dict) and 'price' in price_data:
+                            result[orig] = float(price_data['price'])
+            logger.info(f"[BATCH_PRICES] Fetched {len(result)}/{len(symbols)}: {result}")
+            return result
+        except Exception as e:
+            logger.warning(f"[BATCH_PRICES] Failed: {e}. Prices will fall back to candle close.")
+            return {}
+
     def get_current_price(self, symbol: str) -> float:
         """Get latest price with ETF fallback."""
         try:
