@@ -13,8 +13,6 @@ instruments:
   name: Silver
 - symbol: WTI
   name: Crude Oil
-- symbol: SPX
-  name: S&P 500
 - symbol: BTC
   name: Bitcoin
 analysis:
