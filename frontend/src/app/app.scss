@@ -408,14 +408,13 @@
 }
 
 .logo-icon-wrap {
-  position: relative;
   display: inline-flex;
+  align-items: flex-start;
+  gap: 4px;
   flex-shrink: 0;
 
   .pro-badge {
-    position: absolute;
-    top: -5px;
-    right: -10px;
+    margin-top: 2px;
   }
 }
 
