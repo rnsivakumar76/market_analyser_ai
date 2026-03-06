@@ -407,6 +407,18 @@
   gap: 12px;
 }
 
+.logo-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+
+  .pro-badge {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+  }
+}
+
 .app-logo {
   width: 36px;
   height: 36px;
@@ -1860,6 +1872,11 @@ app-ai-copilot     { display: none; }
     max-height: 320px;
     border-right: none;
     border-bottom: 1px solid #313244;
+
+    &.mobile-active-panel {
+      max-height: calc(100vh - 146px - 56px);
+      overflow-y: auto;
+    }
   }
 
   .detail-panel {
@@ -1933,6 +1950,10 @@ app-ai-copilot     { display: none; }
 
   .sidebar-panel {
     max-height: 260px;
+
+    &.mobile-active-panel {
+      max-height: calc(100vh - 146px - 56px);
+    }
   }
 
   .detail-panel {
@@ -2055,6 +2076,10 @@ app-ai-copilot     { display: none; }
 
   .sidebar-panel {
     max-height: 220px;
+
+    &.mobile-active-panel {
+      max-height: calc(100vh - 146px - 56px);
+    }
   }
 
   .instruments-list {

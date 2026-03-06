@@ -3,10 +3,12 @@
   <header class="header">
     <div class="header-content">
       <div class="logo-area">
-        <img src="nexus-logo.png" alt="NEXUS" class="app-logo">
+        <div class="logo-icon-wrap">
+          <img src="nexus-logo.png" alt="NEXUS" class="app-logo">
+          <span class="badge pro-badge">PRO</span>
+        </div>
         <div class="brand-text">
           <h1>NEXUS</h1>
-          <span class="badge">PRO</span>
         </div>
       </div>
       <p class="subtitle">Market Intelligence Platform</p>
@@ -21,20 +23,6 @@
           <span class="user-name">{{ user.name }}</span>
           <button class="logout-link" (click)="authService.logout()">Sign out</button>
         </div>
-      </div>
-      }
-
-      <div class="action-divider"></div>
-
-      <!-- Theme Toggle -->
-      <app-theme-toggle></app-theme-toggle>
-
-      <div class="action-divider"></div>
-
-      @if (psychologicalGuardrail(); as guard) {
-      <div class="shield-indicator" [class.restricted]="guard.status === 'restricted'" [title]="guard.message">
-        <span class="shield-icon">{{ guard.status === 'active' ? '🛡️' : '🚨' }}</span>
-        <span class="shield-label">{{ guard.status === 'active' ? 'Shield Active' : 'Restricted' }}</span>
       </div>
       }
 
@@ -386,7 +374,7 @@
 
 
   <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
-    <div class="sidebar-panel" [class.mobile-hidden]="mobileTab() !== 'watchlist'">
+    <div class="sidebar-panel" [class.mobile-hidden]="mobileTab() !== 'watchlist'" [class.mobile-active-panel]="mobileTab() === 'watchlist'">
       <!-- Sidebar Tab Bar -->
       <div class="sidebar-tabs">
         <button class="stab" [class.active]="sidebarTab() === 'heatmap'" (click)="sidebarTab.set('heatmap')">

@@ -177,8 +177,6 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
                 <div class="mm-footer">
                    <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
-                   <div class="mmf-item"><span>RISK $</span><strong>{{ getRiskAmount() }}</strong></div>
-                   <div class="mmf-item"><span>VWAP DIST</span><strong [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct != null ? (analysis.daily_strength.vwap_dist_pct.toFixed(2) + '%') : 'N/A' }}</strong></div>
                 </div>
 
               </div>
@@ -202,6 +200,11 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     <span class="mmr-lbl">IMPACT</span>
                     <strong class="mmr-val" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</strong>
                     <span class="mmr-interp">{{ getTechnicalRecommendation() }}</span>
+                  </div>
+                  <div class="mmr-item">
+                    <span class="mmr-lbl">VWAP DIST</span>
+                    <strong class="mmr-val" [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct != null ? (analysis.daily_strength.vwap_dist_pct.toFixed(2) + '%') : 'N/A' }}</strong>
+                    <span class="mmr-interp" [class]="getVWAPClass()">{{ getVWAPDistLabel() }}</span>
                   </div>
                 </div>
                 <div class="mmr-combined-read">{{ getMarketMomentumRead() }}</div>
@@ -274,9 +277,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               }
 
               <!-- P7: SESSION VWAP -->
-              @if (analysis.session_vwap && analysis.session_vwap.vwap > 0) {
+              @if (analysis.session_vwap && analysis.session_vwap.vwap > 0 && analysis.strategy_mode === 'short_term') {
               <div class="intel-block">
-                <div class="tile-header">📐 SESSION VWAP</div>
+                <div class="tile-header">〰️ SESSION VWAP</div>
                 <div class="vwap-grid">
                   <div class="vwap-cell"><span>VWAP</span><strong>\${{ analysis.session_vwap.vwap.toFixed(2) }}</strong></div>
                   <div class="vwap-cell"><span>UPPER</span><strong class="bullish">\${{ analysis.session_vwap.upper_band.toFixed(2) }}</strong></div>
@@ -324,7 +327,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                      <div class="ch-left-data"><span class="ch-i">Key Levels</span><span class="ch-v">{{ getLevelStatus() }}</span></div>
                      <div class="ch-correlation">{{ getLevelCorrelation() }}</div>
                   </div>
-                  <div class="ch-item" [class]="getCorrelationRiskCheck()">
+                  <div class="ch-item" [class]="getVolatilityRegimeCheck()">
                      <div class="ch-left-data"><span class="ch-i">Volatility Regime</span><span class="ch-v">{{ analysis.volatility_risk.volatility_regime_label }}</span></div>
                      <div class="ch-correlation">ATR {{ analysis.volatility_risk.atr_percentile_rank?.toFixed(0) }}th %ile · HV {{ analysis.volatility_risk.historical_volatility_14?.toFixed(1) }}%</div>
                   </div>
@@ -386,48 +389,48 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     </div>
                 </div>
 
-              <!-- MACRO REGIME -->
-              <div class="macro-context-block">
-                <div class="tile-header">🌐 MACRO REGIME</div>
-                <div class="macro-mini">
-                  <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
-                  <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
-                </div>
-                <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
-              </div>
-
-              <!-- LIQUIDITY MAP -->
-              @if (analysis.liquidity_map) {
-              <div class="liquidity-map-section">
-                <div class="tile-header">🗺️ LIQUIDITY MAP</div>
-                <div class="lm-dual">
-                  <div class="lm-col">
-                    <div class="lm-col-header bearish">RESISTANCE</div>
-                    @for (lvl of analysis.liquidity_map.resistance_levels; track lvl.price) {
-                      <div class="lm-level" [class]="'lm-' + lvl.strength">
-                        <span class="lm-price bearish">\${{ lvl.price.toFixed(2) }}</span>
-                        <span class="lm-dist">+{{ lvl.distance_pct.toFixed(1) }}%</span>
-                        <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
-                      </div>
-                    }
-                  </div>
-                  <div class="lm-col">
-                    <div class="lm-col-header bullish">SUPPORT</div>
-                    @for (lvl of analysis.liquidity_map.support_levels; track lvl.price) {
-                      <div class="lm-level" [class]="'lm-' + lvl.strength">
-                        <span class="lm-price bullish">\${{ lvl.price.toFixed(2) }}</span>
-                        <span class="lm-dist">-{{ lvl.distance_pct.toFixed(1) }}%</span>
-                        <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-                <p class="lm-interpretation">{{ analysis.liquidity_map.interpretation }}</p>
-              </div>
-              }
-
               </div>
             </div>
+
+            <!-- MACRO REGIME -->
+            <div class="macro-context-block">
+              <div class="tile-header">🌐 MACRO REGIME</div>
+              <div class="macro-mini">
+                <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
+                <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
+              </div>
+              <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
+            </div>
+
+            <!-- LIQUIDITY MAP -->
+            @if (analysis.liquidity_map) {
+            <div class="liquidity-map-section">
+              <div class="tile-header">🗺️ LIQUIDITY MAP</div>
+              <div class="lm-dual">
+                <div class="lm-col">
+                  <div class="lm-col-header bearish">RESISTANCE</div>
+                  @for (lvl of analysis.liquidity_map.resistance_levels; track lvl.price) {
+                    <div class="lm-level" [class]="'lm-' + lvl.strength">
+                      <span class="lm-price bearish">\${{ lvl.price.toFixed(2) }}</span>
+                      <span class="lm-dist">+{{ lvl.distance_pct.toFixed(1) }}%</span>
+                      <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
+                    </div>
+                  }
+                </div>
+                <div class="lm-col">
+                  <div class="lm-col-header bullish">SUPPORT</div>
+                  @for (lvl of analysis.liquidity_map.support_levels; track lvl.price) {
+                    <div class="lm-level" [class]="'lm-' + lvl.strength">
+                      <span class="lm-price bullish">\${{ lvl.price.toFixed(2) }}</span>
+                      <span class="lm-dist">-{{ lvl.distance_pct.toFixed(1) }}%</span>
+                      <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+              <p class="lm-interpretation">{{ analysis.liquidity_map.interpretation }}</p>
+            </div>
+            }
 
             @if (analysis.fundamentals?.risk_reduction_active || analysis.fundamentals?.pre_event_caution) {
             <div class="pre-event-alert" [class]="analysis.fundamentals.risk_reduction_active ? 'pea-active' : 'pea-caution'">
@@ -1059,7 +1062,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     /* MARKET MOMENTUM READ */
     .momentum-read-section { background: rgba(137,180,250,0.02); }
-    .mmr-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
+    .mmr-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
     .mmr-item { display: flex; flex-direction: column; gap: 4px; background: #0b0b15; border-radius: 6px; padding: 10px; border: 1px solid #1f1f3a; }
     .mmr-lbl { font-size: 0.44rem; font-weight: 950; color: #45475a; letter-spacing: 1px; text-transform: uppercase; }
     .mmr-val { font-size: 1.1rem; font-weight: 950; color: #cdd6f4; line-height: 1; }
@@ -1863,8 +1866,19 @@ export class InstrumentCardComponent implements OnChanges {
     return 'ANALYZING'; // Placeholder
   }
 
-  getCorrelationRiskCheck(): string {
-    return 'warn'; // Placeholder
+  getVolatilityRegimeCheck(): string {
+    const label = (this.analysis.volatility_risk.volatility_regime_label || '').toLowerCase();
+    if (label.includes('extreme') || label.includes('very high')) return 'fail';
+    if (label.includes('high') || label.includes('elevated') || label.includes('moderate')) return 'warn';
+    return 'pass';
+  }
+
+  getVWAPDistLabel(): string {
+    const dist = this.analysis.daily_strength.vwap_dist_pct;
+    if (dist === undefined || dist === null) return 'N/A';
+    if (dist > 1.5) return 'Extended Above';
+    if (dist < -1.5) return 'Extended Below';
+    return 'Near VWAP';
   }
 
   getCorrelationRisk(): string {
