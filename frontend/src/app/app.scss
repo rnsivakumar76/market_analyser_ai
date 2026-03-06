@@ -632,15 +632,6 @@
   }
 }
 
-/* --- Hide old individual icon buttons (replaced by context menu) --- */
-.header .menu-btn,
-.header .manual-btn,
-.header .strategy-btn,
-.header .settings-btn,
-.header .journal-btn,
-.header .alerts-btn,
-.header .geopolitical-btn { display: none !important; }
-
 /* --- Context Menu --- */
 .ctx-menu-wrapper {
   position: relative;
@@ -800,7 +791,6 @@
 }
 
 /* --- Hide the standalone timer strip and AI copilot bars --- */
-.data-status-strip { display: none !important; }
 app-ai-copilot     { display: none; }
 .bottom-bar        { display: none !important; }
 

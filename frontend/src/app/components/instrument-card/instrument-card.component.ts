@@ -177,6 +177,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
                 <div class="mm-footer">
                    <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
+                   <div class="mmf-item"><span>ENTRY</span><strong>\${{ (analysis.position_sizing?.entry_price ?? analysis.current_price)?.toFixed(2) }}</strong></div>
                 </div>
 
               </div>
@@ -884,6 +885,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
       .analysis-tabs { overflow-x: auto; }
       .atab { min-width: 60px; font-size: 0.55rem; padding: 10px 4px; }
       .geo-deep-grid { grid-template-columns: 1fr; }
+      .mmr-grid { grid-template-columns: repeat(2, 1fr); }
       .rrd-stats { grid-template-columns: repeat(2, 1fr); }
       .perf-summary-row { grid-template-columns: repeat(3, 1fr); }
       .perf-metrics-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1157,7 +1159,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .sample-size-warning { margin: 10px 0; padding: 8px 12px; background: rgba(249,226,175,0.07); border: 1px solid rgba(249,226,175,0.3); border-radius: 6px; font-size: 0.62rem; color: #f9e2af; line-height: 1.4; }
 
     /* MACRO CONTEXT BLOCK (in Risk tab) */
-    .macro-context-block { padding: 16px 20px; border-bottom: 1px solid #1f1f3a; background: rgba(17,17,27,0.4); }
+    .macro-context-block { padding: 16px 20px; border-top: 1px solid #1f1f3a; margin-top: 8px; background: rgba(17,17,27,0.4); border-radius: 0 0 8px 8px; }
     .macro-context-block .tile-header { margin-bottom: 10px; }
 
     /* LEVELS INACTIVE (wait state) */

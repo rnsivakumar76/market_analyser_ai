@@ -43,27 +43,6 @@
         }
       </div>
 
-      <button class="menu-btn correlation-btn" (click)="showCorrelationModal.set(true)" title="Market Correlation">
-        📊
-      </button>
-      <button class="manual-btn" (click)="showUserManual.set(true)" title="Intelligence Manual">
-        📖
-      </button>
-      <button class="strategy-btn" (click)="showStrategySettings.set(true)" title="Strategy Optimization">
-        ⚡
-      </button>
-      <button class="settings-btn" (click)="showSettings.set(true)" title="Manage Symbols">
-        ⚙️
-      </button>
-      <button class="menu-btn journal-btn" (click)="showTradeJournal.set(true)" title="Trade Journal">
-        📒
-      </button>
-      <button class="menu-btn alerts-btn" (click)="showSmartAlerts.set(true)" title="Smart Alerts">
-        🔔
-      </button>
-      <button class="menu-btn geopolitical-btn" (click)="showGeopoliticalAnalysis.set(true)" title="Geopolitical Analysis">
-        🌍
-      </button>
       <button class="mode-toggle-btn" (click)="toggleStrategyMode()"
         [class.short-term]="strategyMode() === 'short_term'">
         <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : 'Short Term' }}</span>
@@ -90,18 +69,6 @@
       </button>
     </div>
   </header>
-
-  <!-- Data Freshness Status Strip (top-right, below header) -->
-  @if (lastUpdated()) {
-  <div class="data-status-strip">
-    <span [class]="'ds-timestamp ' + dataFreshnessClass()">&#128336; {{ lastUpdated() }}</span>
-    <span class="ds-sep">&#183;</span>
-    <span class="ds-next" [class.syncing]="loading()">
-      @if (loading()) { Refreshing&#8230; } @else { Next: {{ nextRefreshCountdown() }} }
-    </span>
-    @if (servedFromCache() && !loading()) { <span class="cache-badge">CACHED</span> }
-  </div>
-  }
 
   <!-- Bottom Status Bar -->
   <div class="bottom-bar">
