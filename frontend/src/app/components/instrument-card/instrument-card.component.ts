@@ -650,13 +650,14 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .syn-tag.info { background: rgba(137,180,250,0.1); color: #89b4fa; border-color: rgba(137,180,250,0.3); }
 
     /* EXPERT BATTLE PLAN — above tabs (always visible) */
-    .expert-above-tabs { padding: 14px 20px; background: rgba(137,180,250,0.04); border-bottom: 1px solid #1f1f3a; border-left: 3px solid #585b70; }
-    .expert-above-tabs.high-intent { background: rgba(250,179,135,0.05); border-left-color: #fab387; box-shadow: inset 0 0 30px rgba(250,179,135,0.04); }
+    .expert-above-tabs { padding: 14px 20px 16px; background: rgba(245,158,11,0.08); border-top: 1px solid rgba(245,158,11,0.35); border-bottom: 1px solid rgba(245,158,11,0.2); border-left: 4px solid #f59e0b; box-shadow: inset 4px 0 14px rgba(245,158,11,0.06); }
+    .expert-above-tabs.high-intent { background: rgba(250,179,135,0.12); border-left-color: #fab387; border-top-color: rgba(250,179,135,0.45); box-shadow: inset 4px 0 18px rgba(250,179,135,0.1); animation: ebp-pulse 3s ease-in-out infinite; }
+    @keyframes ebp-pulse { 0%, 100% { box-shadow: inset 4px 0 18px rgba(250,179,135,0.1); } 50% { box-shadow: inset 4px 0 28px rgba(250,179,135,0.2), 0 0 16px rgba(250,179,135,0.08); } }
     .eat-header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .eat-title { font-size: 0.6rem; font-weight: 950; letter-spacing: 1.5px; color: #6c7086; text-transform: uppercase; flex: 1; }
-    .eat-rvol { font-size: 0.58rem; font-weight: 900; color: #45475a; letter-spacing: 0.5px; }
+    .eat-title { font-size: 0.6rem; font-weight: 950; letter-spacing: 1.5px; color: #f59e0b; text-transform: uppercase; flex: 1; }
+    .eat-rvol { font-size: 0.58rem; font-weight: 900; color: #6c7086; letter-spacing: 0.5px; }
     .eat-rvol.rvol-hot { color: #fab387; }
-    .eat-text { font-size: 0.85rem; color: #cdd6f4; line-height: 1.55; margin: 0; font-weight: 500; }
+    .eat-text { font-size: 0.88rem; color: #e2e8f0; line-height: 1.6; margin: 0; font-weight: 600; }
 
     /* HUD UPGRADE (ZERO WASTE) */
     .terminal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: #0b0b15; border-bottom: 1px solid #1f1f3a; }
