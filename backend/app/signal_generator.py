@@ -4,6 +4,10 @@ from .models import (
     TradeSignal, Signal, CandleAnalysis, StrategySettings,
     FundamentalsAnalysis, RelativeStrengthAnalysis, SignalConflict
 )
+from domain.signals.scoring_engine import compute_composite_score, classify_recommendation
+from domain.signals.filter_engine import apply_all_hard_filters
+from domain.signals.conflict_detector import detect_signal_conflict as _domain_detect_conflict
+from domain.constants import SIGNAL_CONVICTION_THRESHOLD, FILTER_ADX_THRESHOLD
 
 
 def generate_trade_signal(
@@ -30,129 +34,63 @@ def generate_trade_signal(
     
     Score: -100 (strong sell) to +100 (strong buy)
     """
-    score = 0
-    reasons = []
-    
-    # Monthly trend contribution (weight: 40 points)
-    if trend.direction == Signal.BULLISH:
-        score += 40
-        reasons.append("Monthly uptrend confirmed")
-    elif trend.direction == Signal.BEARISH:
-        score -= 40
-        reasons.append("Monthly downtrend - caution")
-    else:
-        reasons.append("Monthly trend unclear")
-    
-    # Weekly pullback contribution (weight: 30 points)
-    if trend.direction == Signal.BULLISH:
-        # In uptrend, pullback to support is bullish
-        if pullback.detected and pullback.near_support:
-            score += 30
-            reasons.append("Pullback to support in uptrend - ideal entry")
-        elif pullback.detected:
-            score += 15
-            reasons.append("Pullback detected, waiting for support")
-        else:
-            score += 5
-            reasons.append("No pullback - extended from support")
-    elif trend.direction == Signal.BEARISH:
-        # In downtrend, bounce to resistance is bearish
-        if pullback.detected and pullback.near_support:
-            score -= 10
-            reasons.append("Bounce in downtrend - potential short entry")
-        else:
-            score -= 20
-            reasons.append("Downtrend continuation")
-    
-    # Daily strength contribution (weight: 30 points)
-    if strength.signal == Signal.BULLISH:
-        if trend.direction == Signal.BULLISH:
-            score += 30
-            reasons.append("Daily strength confirms uptrend")
-        else:
-            score += 10
-            reasons.append("Daily bullish but against trend")
-    elif strength.signal == Signal.BEARISH:
-        if trend.direction == Signal.BEARISH:
-            score -= 30
-            reasons.append("Daily weakness confirms downtrend")
-        else:
-            score -= 10
-            reasons.append("Daily bearish but against trend")
-    else:
-        reasons.append("Daily momentum neutral")
+    # ── Domain layer: composite score ────────────────────────────────────────
+    threshold = settings.conviction_threshold if settings else SIGNAL_CONVICTION_THRESHOLD
+    adx_threshold = settings.adx_threshold if settings else FILTER_ADX_THRESHOLD
 
-    # Determine recommendation based on score
-    threshold = settings.conviction_threshold if settings else 70
-    
-    if score >= threshold:
-        recommendation = Signal.BULLISH
-        trade_worthy = True
-    elif score <= -threshold:
-        recommendation = Signal.BEARISH
-        trade_worthy = True
-    elif score >= 20:
-        recommendation = Signal.BULLISH
-        trade_worthy = False
-        reasons.append("Setup developing but not ideal yet")
-    elif score <= -20:
-        recommendation = Signal.BEARISH
-        trade_worthy = False
-        reasons.append("Bearish setup developing")
-    else:
-        recommendation = Signal.NEUTRAL
-        trade_worthy = False
-        reasons.append("No clear setup - wait for better opportunity")
-    
-    # Hard Filter 1: ADX must be > threshold for a trade-worthy signal
+    components = compute_composite_score(
+        trend_direction=trend.direction.value,
+        pullback_detected=pullback.detected,
+        near_support=pullback.near_support,
+        strength_direction=strength.signal.value,
+    )
+    score = components.composite
+    reasons = list(components.reasons)
+
+    recommendation_str, trade_worthy = classify_recommendation(score, threshold)
+    recommendation = Signal(recommendation_str)
+
+    if not trade_worthy:
+        if score >= 20:
+            reasons.append("Setup developing but not ideal yet")
+        elif score <= -20:
+            reasons.append("Bearish setup developing")
+        else:
+            reasons.append("No clear setup - wait for better opportunity")
+
+    # ADX pass-through reason (when ADX is above threshold, add as a reason)
     adx_value = strength.adx
-    adx_threshold = settings.adx_threshold if settings else 25
-    
-    if trade_worthy and (adx_value is None or adx_value <= adx_threshold):
-        trade_worthy = False
-        adx_str = f"{adx_value:.1f}" if adx_value is not None else "N/A"
-        reasons.append(f"Filter: Trend strength (ADX={adx_str}) too low. Threshold: {adx_threshold}")
-    elif adx_value is not None and adx_value > adx_threshold:
+    if adx_value is not None and adx_value > adx_threshold:
         reasons.append(f"Trend strength high (ADX={adx_value:.1f})")
 
-    # Hard Filter 2: Market Beta (Benchmark Correlation)
-    # If SPX/BTC is bearish, we don't buy anything.
-    if trade_worthy and recommendation == Signal.BULLISH and benchmark_direction == Signal.BEARISH:
-        trade_worthy = False
-        reasons.append("Beta Filter: Avoid buying individual assets while major market benchmark is in a downtrend.")
-    elif trade_worthy and recommendation == Signal.BEARISH and benchmark_direction == Signal.BULLISH:
-        trade_worthy = False
-        reasons.append("Beta Filter: Avoid shorting while major market benchmark is rally.")
+    # ── Domain layer: all hard filters ───────────────────────────────────────
+    is_outperforming = relative_strength.is_outperforming if relative_strength else None
+    has_high_impact = fundamentals.has_high_impact_events if fundamentals else False
 
-    # Hard Filter 3: Price Action Trigger (Candlestick Pattern)
-    # We want to see a confirmation candle (Hammer/Engulfing) at support.
-    if trade_worthy:
-        has_bullish_candle = candle.is_bullish is True
-        has_bearish_candle = candle.is_bullish is False
-        
-        if recommendation == Signal.BULLISH and not has_bullish_candle:
-            trade_worthy = False
-            reasons.append(f"Trigger Filter: Waiting for a bullish reversal candle (Engulfing/Hammer) to confirm entry. Currently: {candle.pattern}")
-        elif recommendation == Signal.BEARISH and not has_bearish_candle:
-            trade_worthy = False
-            reasons.append(f"Trigger Filter: Waiting for a bearish reversal candle (Shooting Star/Engulfing) to confirm entry. Currently: {candle.pattern}")
-        elif candle.is_bullish is not None:
-             reasons.append(f"Price Action Trigger confirmed: {candle.description}")
+    trade_worthy, score, blocked_reasons = apply_all_hard_filters(
+        recommendation=recommendation.value,
+        trade_worthy=trade_worthy,
+        composite_score=score,
+        adx=adx_value if adx_value is not None else 0.0,
+        benchmark_direction=benchmark_direction.value,
+        candle_is_bullish=candle.is_bullish,
+        candle_pattern=candle.pattern,
+        has_high_impact_events=has_high_impact,
+        is_outperforming=is_outperforming,
+        adx_threshold=adx_threshold,
+    )
+    reasons.extend(blocked_reasons)
 
-    # Hard Filter 4: Fundamental Event Guard (Macro Shield)
-    if trade_worthy and fundamentals and fundamentals.has_high_impact_events:
-        trade_worthy = False
-        score = max(score - 20, -100) if score > 0 else min(score + 20, 100)
-        reasons.append("Macro Shield Active: Trade blocked due to high-impact economic events or earnings within 48h.")
+    # ADX hard-filter blocked case: when adx_value is low and it DID block, add a fallback reason
+    if not trade_worthy and adx_value is not None and adx_value <= adx_threshold:
+        if not any("ADX" in r for r in reasons):
+            reasons.append(f"Filter: Trend strength (ADX={adx_value:.1f}) too low. Threshold: {adx_threshold}")
 
-    # Hard Filter 5: Relative Strength (Alpha Shield)
-    if trade_worthy and relative_strength:
-        if recommendation == Signal.BULLISH and not relative_strength.is_outperforming:
-            trade_worthy = False
-            reasons.append("Alpha Filter: Trade blocked. This instrument is a market laggard (underperforming its benchmark). Institutional money flows into leaders.")
-        elif recommendation == Signal.BEARISH and relative_strength.is_outperforming:
-            trade_worthy = False
-            reasons.append("Alpha Filter: Trade blocked. This instrument is showing resilient strength vs the market. Dangerous to short market leaders.")
+    # Candle confirmation reason (when candle was fine, add it)
+    if candle.is_bullish is not None and not any("Trigger Filter" in r for r in reasons):
+        if (recommendation == Signal.BULLISH and candle.is_bullish is True) or \
+           (recommendation == Signal.BEARISH and candle.is_bullish is False):
+            reasons.append(f"Price Action Trigger confirmed: {candle.description}")
 
     action_plan = "Stand Aside"
     action_plan_details = "Market conditions do not support a high-probability trade."
@@ -296,10 +234,8 @@ def _detect_signal_conflict(
     settings,
     tech_indicators
 ) -> Optional[SignalConflict]:
-    """Detect and explain contradictions between ADX momentum and directional signals."""
-    adx = strength.adx if strength else 0
-    adx_threshold = settings.adx_threshold if settings else 25
-    strong_adx = adx >= 35
+    """Detect and explain contradictions between ADX momentum and directional signals. Delegates to domain layer."""
+    adx = strength.adx if strength else 0.0
 
     trigger_up = None
     trigger_down = None
@@ -307,56 +243,23 @@ def _detect_signal_conflict(
         trigger_up = tech_indicators.pivot_points.r1
         trigger_down = tech_indicators.pivot_points.s1
 
-    # Case 1: Strong ADX but direction is NEUTRAL (most common institutional conflict)
-    if strong_adx and recommendation == Signal.NEUTRAL:
-        up_str = f"${trigger_up:.2f}" if trigger_up else "resistance"
-        down_str = f"${trigger_down:.2f}" if trigger_down else "support"
-        return SignalConflict(
-            conflict_type="adx_direction_mismatch",
-            severity="high",
-            headline=f"ADX={adx:.0f} confirms LOCKED TREND — but directional bias is NEUTRAL",
-            guidance=(
-                f"Strong trend momentum exists but direction is unconfirmed. "
-                f"Watch: break above {up_str} to confirm BULLISH, "
-                f"or break below {down_str} to confirm BEARISH. "
-                f"Do not enter until breakout is confirmed."
-            ),
-            trigger_price_up=trigger_up,
-            trigger_price_down=trigger_down
-        )
+    result = _domain_detect_conflict(
+        adx=float(adx),
+        recommendation=recommendation.value,
+        trend_direction=trend.direction.value,
+        strength_direction=strength.signal.value if strength else "neutral",
+        trigger_up=trigger_up,
+        trigger_down=trigger_down,
+    )
 
-    # Case 2: MTF disagreement — daily signal fights monthly trend
-    if trend.direction == Signal.BULLISH and strength.signal == Signal.BEARISH:
-        return SignalConflict(
-            conflict_type="mtf_disagreement",
-            severity="medium",
-            headline="MTF Conflict: Monthly BULLISH vs Daily BEARISH momentum",
-            guidance=(
-                "Daily momentum is pulling back against the long-term uptrend. "
-                "This is a potential dip-buy setup — wait for daily to stabilise "
-                "before adding exposure. Avoid chasing the dip."
-            ),
-            trigger_price_up=trigger_up,
-            trigger_price_down=trigger_down
-        )
-
-    if trend.direction == Signal.BEARISH and strength.signal == Signal.BULLISH:
-        return SignalConflict(
-            conflict_type="mtf_disagreement",
-            severity="medium",
-            headline="MTF Conflict: Monthly BEARISH vs Daily BULLISH momentum",
-            guidance=(
-                "Daily bounce is occurring inside a broader downtrend. "
-                "This is a dangerous 'dead cat bounce' scenario. "
-                "Avoid buying into this move unless monthly trend reverses."
-            ),
-            trigger_price_up=trigger_up,
-            trigger_price_down=trigger_down
-        )
+    if result.conflict_type == "none":
+        return SignalConflict(conflict_type="none", severity="none", headline="", guidance="")
 
     return SignalConflict(
-        conflict_type="none",
-        severity="none",
-        headline="",
-        guidance=""
+        conflict_type=result.conflict_type,
+        severity=result.severity,
+        headline=result.headline,
+        guidance=result.guidance,
+        trigger_price_up=result.trigger_price_up,
+        trigger_price_down=result.trigger_price_down,
     )

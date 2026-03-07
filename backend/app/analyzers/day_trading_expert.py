@@ -4,71 +4,55 @@ import logging
 from typing import Optional, Dict, Any
 from datetime import datetime, time as pytime
 from ..models import Signal
+from domain.trading.rvol import calculate_rvol as _domain_rvol
+from domain.trading.opening_range import detect_opening_range as _domain_orb
+from domain.constants import RVOL_LOOKBACK_DAYS
 
 logger = logging.getLogger(__name__)
+
 
 def detect_opening_range(df_15m: pd.DataFrame) -> Dict[str, Any]:
     """
     Detects the 15-minute Opening Range (first candle of NY Session).
-    NY Open is 9:30 AM EST (13:30 or 14:30 UTC depending on DST).
-    For simplicity, we look for the highest volume/volatility spike in the morning.
+    Delegates to domain layer.
     """
     if df_15m.empty:
         return {"or_high": 0.0, "or_low": 0.0, "broken": "none"}
-    
-    # Simple logic: Take the first candle of the most recent day in the data
+
     last_date = df_15m.index[-1].date()
     daily_data = df_15m[df_15m.index.date == last_date]
-    
-    if len(daily_data) < 1:
-        return {"high": 0.0, "low": 0.0, "broken": "none"}
-    
-    # The 'Opening Range' is the high/low of the first 15m candle
-    or_high = float(daily_data.iloc[0]['High'])
-    or_low = float(daily_data.iloc[0]['Low'])
-    
-    current_price = float(df_15m.iloc[-1]['Close'])
-    
-    broken = "none"
-    if current_price > or_high:
-        broken = "bullish"
-    elif current_price < or_low:
-        broken = "bearish"
-        
-    return {
-        "or_high": or_high,
-        "or_low": or_low,
-        "broken": broken
-    }
 
-def calculate_rvol(df: pd.DataFrame, lookback_days: int = 5) -> float:
+    if len(daily_data) < 1:
+        return {"or_high": 0.0, "or_low": 0.0, "broken": "none"}
+
+    current_price = float(df_15m.iloc[-1]['Close'])
+    orb = _domain_orb(
+        session_highs=daily_data['High'].tolist(),
+        session_lows=daily_data['Low'].tolist(),
+        current_price=current_price,
+        opening_bar_index=0,
+    )
+    return {"or_high": orb.or_high, "or_low": orb.or_low, "broken": orb.broken}
+
+
+def calculate_rvol(df: pd.DataFrame, lookback_days: int = RVOL_LOOKBACK_DAYS) -> float:
     """
-    Calculates Relative Volume (RVOL).
-    Compares the volume of the current bar to the average volume of the SAME bar in previous days.
-    This is much more accurate for day trading than a standard Volume MA.
+    Calculates Relative Volume (RVOL). Delegates to domain layer.
     """
     if len(df) < 50:
         return 1.0
-        
+
     current_time = df.index[-1].time()
-    current_vol = df.iloc[-1]['Volume']
-    
-    # Find volume at this same time over the last few days
-    historical_vols = []
-    for i in range(1, lookback_days + 1):
-        # Look back i days
-        same_time_bars = df[df.index.time == current_time]
-        if len(same_time_bars) > i:
-            historical_vols.append(same_time_bars.iloc[-(i+1)]['Volume'])
-            
-    if not historical_vols:
-        return 1.0
-        
-    avg_hist_vol = sum(historical_vols) / len(historical_vols)
-    if avg_hist_vol == 0:
-        return 1.0
-        
-    return round(float(current_vol / avg_hist_vol), 2)
+    current_vol = float(df.iloc[-1]['Volume'])
+
+    same_time_bars = df[df.index.time == current_time]
+    historical_vols = [
+        float(same_time_bars.iloc[-(i + 1)]['Volume'])
+        for i in range(1, lookback_days + 1)
+        if len(same_time_bars) > i
+    ]
+
+    return _domain_rvol(current_vol, historical_vols)
 
 def analyze_commodity_specifics(symbol: str, dxy_change: float, yield_change: float) -> str:
     """
