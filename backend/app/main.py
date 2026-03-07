@@ -564,6 +564,21 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         spy_bench = analyze_monthly_trend(benchmarks_data["SPX_macro"], params.get('monthly', {})).direction
     if benchmarks_data.get("BTC_macro") is not None and not benchmarks_data["BTC_macro"].empty:
         btc_bench = analyze_monthly_trend(benchmarks_data["BTC_macro"], params.get('monthly', {})).direction
+
+    # Commodity benchmark: use inverted DXY (weak dollar = bullish for WTI/XAU/XAG)
+    # DXY direction is derived from a 20-bar MA comparison on the 60-day daily data.
+    commodity_bench = Signal.NEUTRAL
+    _dxy_data = benchmarks_data.get("DXY")
+    if _dxy_data is not None and not _dxy_data.empty and len(_dxy_data) >= 20:
+        _dxy_close = _dxy_data['Close']
+        _dxy_ma = _dxy_close.rolling(20).mean().iloc[-1]
+        _dxy_cur = _dxy_close.iloc[-1]
+        if _dxy_cur > _dxy_ma * 1.005:    # Dollar strong → headwind for commodities
+            commodity_bench = Signal.BEARISH
+        elif _dxy_cur < _dxy_ma * 0.995:  # Dollar weak  → tailwind for commodities
+            commodity_bench = Signal.BULLISH
+        # else stays NEUTRAL (no beta filter applied)
+    logger.info(f"[BENCHMARKS] spy={spy_bench.value}, btc={btc_bench.value}, commodity(DXY-inv)={commodity_bench.value}")
             
     # 5. TIERED BATCH FETCH (The "Speed & Limit" Solution)
     # We only fetch LIVE data (Execution/Expert) on refresh. 
@@ -621,10 +636,19 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         sym = inst['symbol'].upper()
         t_inst = time.time()
         try:
-            # Improved Crypto Detection (Whitelisted for BTC)
+            # Benchmark assignment: crypto→BTC, commodity→inverted-DXY, equity→SPX
+            _COMMODITY_SYMS = {"WTI", "XAU", "XAG", "GOLD", "SILVER", "OIL"}
             is_crypto = any(sub in sym for sub in ["BTC", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
-            bench = btc_bench if is_crypto else spy_bench
-            bench_exec_df = benchmarks_data.get("BTC_exec") if is_crypto else benchmarks_data.get("SPX_exec")
+            is_commodity = any(sub in sym for sub in _COMMODITY_SYMS)
+            if is_crypto:
+                bench = btc_bench
+                bench_exec_df = benchmarks_data.get("BTC_exec")
+            elif is_commodity:
+                bench = commodity_bench  # inverted DXY — correct driver for WTI/XAU/XAG
+                bench_exec_df = None     # no exec-level benchmark needed for commodities
+            else:
+                bench = spy_bench
+                bench_exec_df = benchmarks_data.get("SPX_exec")
             
             # Pass pre-fetched data
             analysis, hist_data = analyze_instrument_lazy(
