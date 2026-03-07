@@ -2179,6 +2179,11 @@ app-ai-copilot     { display: none; }
   .sidebar-panel.mobile-hidden { display: none !important; }
   .detail-panel.mobile-hidden { display: none !important; }
 
+  .detail-panel {
+    width: 100%;
+    flex: 1;
+  }
+
   .performance-panel {
     display: none;
   }
