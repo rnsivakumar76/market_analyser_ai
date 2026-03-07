@@ -69,7 +69,8 @@ def get_backtest_results(symbol: str, daily_data: pd.DataFrame, params: Dict[str
         )
 
     trades = []
-    
+    mae_trades = []  # Max Adverse Excursion per winning trade
+
     # Step through data (starting after we have enough for MAs)
     # To keep it fast, we'll only check the last 400 trading days
     start_idx = max(100, len(daily_data) - 400)
@@ -120,9 +121,12 @@ def get_backtest_results(symbol: str, daily_data: pd.DataFrame, params: Dict[str
                     # Monitor trade for up to 20 bars
                     won = None
                     pnl = 0.0
+                    worst_adverse = 0.0  # MAE tracking
                     for t in range(idx + 1, min(idx + 21, len(daily_data))):
                         bar = daily_data.iloc[t]
                         if direction == 1:
+                            adverse = (entry_price - bar['Low']) / entry_price
+                            worst_adverse = max(worst_adverse, adverse)
                             if bar['Low'] <= stop_loss:
                                 won = False
                                 pnl = (stop_loss - entry_price) / entry_price
@@ -132,6 +136,8 @@ def get_backtest_results(symbol: str, daily_data: pd.DataFrame, params: Dict[str
                                 pnl = (take_profit - entry_price) / entry_price
                                 break
                         else:
+                            adverse = (bar['High'] - entry_price) / entry_price
+                            worst_adverse = max(worst_adverse, adverse)
                             if bar['High'] >= stop_loss:
                                 won = False
                                 pnl = (entry_price - stop_loss) / entry_price
@@ -140,10 +146,12 @@ def get_backtest_results(symbol: str, daily_data: pd.DataFrame, params: Dict[str
                                 won = True
                                 pnl = (entry_price - take_profit) / entry_price
                                 break
-                    
+
                     if won is not None:
                         trades.append(pnl)
-                        idx += 5 # Move forward
+                        if won:
+                            mae_trades.append(worst_adverse)
+                        idx += 5  # Move forward
                     else:
                         # Time exit (small gain or loss)
                         idx += 1
@@ -158,22 +166,52 @@ def get_backtest_results(symbol: str, daily_data: pd.DataFrame, params: Dict[str
     total = len(trades)
     if total == 0:
         results = BacktestAnalysis(
-            win_rate=0.0, total_trades=0, profit_factor=0.0, 
-            avg_win=0.0, avg_loss=0.0, 
+            win_rate=0.0, total_trades=0, profit_factor=0.0,
+            avg_win=0.0, avg_loss=0.0, sample_size=0,
             description="Historical Edge: No high-probability setups identified in the 1-year window."
         )
     else:
         wins = [t for t in trades if t > 0]
         losses = [t for t in trades if t <= 0]
         win_rate = (len(wins) / total) * 100
-        
+
         sum_wins = sum(wins)
         sum_losses = abs(sum(losses))
         profit_factor = sum_wins / sum_losses if sum_losses > 0 else 99.9
-        
+
         avg_win = (sum_wins / len(wins) * 100) if wins else 0
         avg_loss = (sum_losses / len(losses) * 100) if losses else 0
-        
+
+        # Expectancy per trade (as % of position)
+        win_rate_dec = win_rate / 100
+        loss_rate_dec = 1 - win_rate_dec
+        expectancy = round((win_rate_dec * avg_win) - (loss_rate_dec * avg_loss), 3)
+
+        # Sharpe Ratio (annualised, assumes ~252 trades/year scaling)
+        trade_arr = np.array(trades)
+        sharpe = 0.0
+        if trade_arr.std() > 0:
+            sharpe = round(float((trade_arr.mean() / trade_arr.std()) * np.sqrt(252)), 2)
+
+        # Max Drawdown via equity curve
+        equity = np.cumprod(1 + trade_arr)
+        peak = np.maximum.accumulate(equity)
+        drawdowns = (equity - peak) / peak
+        max_dd = round(float(drawdowns.min()) * 100, 2)
+
+        # Max consecutive losses
+        max_streak = 0
+        cur_streak = 0
+        for t in trades:
+            if t <= 0:
+                cur_streak += 1
+                max_streak = max(max_streak, cur_streak)
+            else:
+                cur_streak = 0
+
+        # MAE: tracked per trade during backtest (mae_trades list from loop above)
+        avg_mae = round(float(np.mean(mae_trades)) * 100, 2) if mae_trades else 0.0
+
         desc = f"Historical Performance (1yr): {win_rate:.1f}% win rate over {total} trades. "
         if win_rate < 45:
             desc += "⚠️ Caution: Low historical success for this strategy/asset combo."
@@ -186,7 +224,13 @@ def get_backtest_results(symbol: str, daily_data: pd.DataFrame, params: Dict[str
             profit_factor=round(profit_factor, 2),
             avg_win=round(avg_win, 2),
             avg_loss=round(avg_loss, 2),
-            description=desc
+            description=desc,
+            sharpe_ratio=sharpe,
+            max_drawdown_pct=max_dd,
+            max_consecutive_losses=max_streak,
+            max_adverse_excursion_pct=avg_mae,
+            sample_size=total,
+            expectancy=expectancy
         )
 
     # Save to cache

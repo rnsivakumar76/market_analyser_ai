@@ -44,41 +44,74 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             <div class="th-status-pill" [class]="getSignalClass()">
                <span class="th-s-val">{{ analysis.trade_signal.score }}</span>
                <span class="th-s-rec">{{ analysis.trade_signal.recommendation }}</span>
+               @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
+                 <span class="th-conflict-badge" [class]="'sev-' + analysis.trade_signal.signal_conflict!.severity">⚡ CONFLICT</span>
+               }
             </div>
             <button class="btn-refresh-circle" (click)="onRefresh()">🔄</button>
           </div>
         </header>
 
-        <!-- 2.5 AI EXECUTIVE SUMMARY (NEW) -->
-        <div class="ai-executive-synthesis" [class]="getSignalClass()">
-           <div class="synthesis-header">🤖 AI EXECUTIVE SUMMARY</div>
-           <p class="synthesis-text">{{ analysis.trade_signal.executive_summary }}</p>
-           <div class="synthesis-tags">
-              @for (reason of analysis.trade_signal.reasons; track reason) {
-                <span class="syn-tag" [class]="getReasonImpactClass(reason)"># {{ reason }}</span>
-              }
-           </div>
+        <!-- 2.5 SIGNAL REASONS STRIP (compact) -->
+        <div class="signal-reasons-strip">
+          @for (reason of analysis.trade_signal.reasons; track reason) {
+            <span class="syn-tag" [class]="getReasonImpactClass(reason)"># {{ reason }}</span>
+          }
         </div>
+
+        <!-- EXPERT BATTLE PLAN (always visible, above tabs) -->
+        @if (analysis.expert_trade_plan) {
+        <div class="expert-above-tabs" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
+          <div class="eat-header-row">
+            <span class="eat-title">🎖️ EXPERT BATTLE PLAN</span>
+            <span class="eat-rvol" [class.rvol-hot]="analysis.expert_trade_plan.rvol >= 1.8">
+              RVOL {{ analysis.expert_trade_plan.rvol }}x
+              @if (analysis.expert_trade_plan.is_high_intent) { 🔥 }
+            </span>
+            <span class="plan-age" [class.plan-age--stale]="isPlanStale()">🕐 {{ getAnalysisAge() }}</span>
+          </div>
+          <p class="eat-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
+        </div>
+        }
 
         <!-- ANALYSIS TABS NAVIGATION -->
         <div class="analysis-tabs">
-          <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">TECHNICAL</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">SIGNAL</button>
           <button class="atab" [class.active]="activeAnalysisTab === 'risk'" (click)="activeAnalysisTab = 'risk'">RISK</button>
+          <button class="atab" [class.active]="activeAnalysisTab === 'performance'" (click)="activeAnalysisTab = 'performance'">PERFORMANCE</button>
         </div>
 
           @if (activeAnalysisTab === 'technical') {
           <section class="t-tile intel-tile tab-content-tile">
             <div class="intel-column-stack">
 
+              <!-- CONFLICT DETAIL (inline, compact) -->
+              @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
+              <div class="conflict-inline" [class]="'ci-' + analysis.trade_signal.signal_conflict!.severity">
+                <span class="ci-text">{{ analysis.trade_signal.signal_conflict!.guidance }}</span>
+                @if (analysis.trade_signal.signal_conflict!.trigger_price_up) {
+                  <span class="ci-trigger bullish">▲ \${{ analysis.trade_signal.signal_conflict!.trigger_price_up?.toFixed(2) }}</span>
+                }
+                @if (analysis.trade_signal.signal_conflict!.trigger_price_down) {
+                  <span class="ci-trigger bearish">▼ \${{ analysis.trade_signal.signal_conflict!.trigger_price_down?.toFixed(2) }}</span>
+                }
+              </div>
+              }
+
               <!-- SECTION 1: STRATEGIC ACTION & SCALING -->
               <div class="tech-section action-section">
-                <div class="tile-header">🎯 STRATEGIC ACTION & SCALING</div>
+                <div class="tile-header">
+                  🎯 STRATEGIC ACTION & SCALING
+                  <span class="action-rec-badge" [class]="isWaitAction() ? 'badge-wait' : getSignalClass()">{{ analysis.trade_signal.action_plan }}</span>
+                </div>
                 <div class="action-hero">
-                   <div class="aph-text">{{ analysis.trade_signal.action_plan }}</div>
                    <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
                 </div>
 
-                <div class="levels-stack">
+                <div class="levels-stack" [class.levels-inactive]="isWaitAction()">
+                  @if (isWaitAction()) {
+                    <div class="levels-pending">⏸ Levels pending signal confirmation — wait for alignment before entering</div>
+                  }
                   <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
                   <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
                   <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
@@ -111,9 +144,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                   <div class="rrd-stats">
                     <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
-                    <div class="rrd-stat"><span>PROBABILITY</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
                     <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
                     <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
+                    <div class="rrd-stat"><span>SIGNAL SCORE</span><strong [class]="getSignalClass()">{{ analysis.trade_signal.score }}</strong></div>
                   </div>
                 </div>
 
@@ -129,41 +162,54 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     <div class="sz-header">⚖️ FIXED SCALING ENTRIES (50 / 30 / 20)</div>
                     <div class="sz-grid">
                         @for (step of getScalingStrategy(); track step.stage) {
-                          <div class="sz-item">
+                          <div class="sz-item" [class.sz-item--hit]="isTargetHit(step.target)" [class.sz-item--next]="isNextTarget(step.target)">
                              <div class="sz-top"><span>{{ step.percent }}% ALLOC</span><strong>{{ step.stage }}</strong></div>
                              <div class="sz-val">{{ step.target }}</div>
+                             <div class="sz-dist">{{ getTargetDistance(step.target) }}</div>
                           </div>
                         }
+                    </div>
+                    <!-- Scaling Interpretation -->
+                    <div class="sz-interpretation">
+                      <p class="sz-action-read">{{ getScalingActionRead() }}</p>
                     </div>
                 </div>
 
                 <div class="mm-footer">
                    <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
-                   <div class="mmf-item"><span>RISK $</span><strong>{{ getRiskAmount() }}</strong></div>
-                   <div class="mmf-item"><span>VWAP DIST</span><strong [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct?.toFixed(2) }}%</strong></div>
+                   <div class="mmf-item"><span>ENTRY</span><strong>\${{ (analysis.position_sizing?.entry_price ?? analysis.current_price)?.toFixed(2) }}</strong></div>
                 </div>
 
-                <div class="tile-actions">
-                  <button class="btn-primary" (click)="openJournalModal()">📒 Log Trade</button>
-                  <button class="btn-secondary" (click)="toggleChart()">📊 Open Chart</button>
-                </div>
               </div>
 
-              <!-- EXPERT BATTLE PLAN (Short-Term) -->
-              @if (analysis.expert_trade_plan) {
-              <div class="tech-section expert-battle-section">
-                <div class="expert-intel-block" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
-                  <div class="tile-header">🎖️ EXPERT BATTLE PLAN</div>
-                  <p class="expert-plan-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
-                  <div class="expert-metrics">
-                    <div class="em-pill"><span>RVOL</span><strong>{{ analysis.expert_trade_plan.rvol }}x</strong></div>
-                    @if (analysis.expert_trade_plan.is_high_intent) {
-                      <div class="em-pill intent">🔥 HIGH INTENT</div>
-                    }
+
+              <!-- MARKET MOMENTUM READ -->
+              <div class="tech-section momentum-read-section">
+                <div class="tile-header">📊 MARKET MOMENTUM READ</div>
+                <div class="mmr-grid">
+                  <div class="mmr-item">
+                    <span class="mmr-lbl">ADX</span>
+                    <strong class="mmr-val">{{ analysis.daily_strength.adx.toFixed(0) }}</strong>
+                    <span class="mmr-interp" [class]="getADXClass()">{{ getADXInterpretation() }}</span>
+                  </div>
+                  <div class="mmr-item">
+                    <span class="mmr-lbl">RSI</span>
+                    <strong class="mmr-val">{{ analysis.daily_strength.rsi.toFixed(0) }}</strong>
+                    <span class="mmr-interp" [class]="getRSIClass()">{{ getRSIInterpretation() }}</span>
+                  </div>
+                  <div class="mmr-item">
+                    <span class="mmr-lbl">IMPACT</span>
+                    <strong class="mmr-val" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</strong>
+                    <span class="mmr-interp">{{ getTechnicalRecommendation() }}</span>
+                  </div>
+                  <div class="mmr-item">
+                    <span class="mmr-lbl">VWAP DIST</span>
+                    <strong class="mmr-val" [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct != null ? (analysis.daily_strength.vwap_dist_pct.toFixed(2) + '%') : 'N/A' }}</strong>
+                    <span class="mmr-interp" [class]="getVWAPClass()">{{ getVWAPDistLabel() }}</span>
                   </div>
                 </div>
+                <div class="mmr-combined-read">{{ getMarketMomentumRead() }}</div>
               </div>
-              }
 
               <!-- SECTION 2: PIVOT MATRIX & EXTENSIONS -->
               <div class="tech-section pivot-section">
@@ -181,89 +227,72 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                    <div class="feb-item"><span>1.272 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1272 }}</strong></div>
                    <div class="feb-item"><span>1.618 Ext</span><strong>\${{ analysis.technical_indicators?.fibonacci?.ext_1618 }}</strong></div>
                 </div>
-              </div>
-
-              <!-- SECTION 3: AI TRADE REASONING -->
-              <div class="tech-section ai-reasoning-section">
-                <div class="tile-header">🧠 AI TRADE REASONING — WHY {{ getTradeDirection() }}</div>
-                @if (getBullishFactors().length > 0) {
-                  <div class="air-group">
-                    <div class="air-group-label bullish-label">BULLISH FACTORS</div>
-                    @for (factor of getBullishFactors(); track factor.indicator) {
-                      <div class="air-factor bullish-factor">
-                        <div class="air-indicator">● {{ factor.indicator }}: <strong>{{ factor.value }}</strong></div>
-                        <div class="air-explanation">{{ factor.explanation }}</div>
-                      </div>
-                    }
+                <!-- Pivot Interpretation -->
+                @if (analysis.technical_indicators?.pivot_points) {
+                <div class="pivot-interpretation">
+                  <div class="pi-bias-row">
+                    <span class="pi-badge" [class]="getPivotBias()">{{ getPricePosition() }}</span>
+                    <span class="pi-align-tag" [class]="getPivotSignalAlignClass()">{{ getPivotSignalAlign() }}</span>
                   </div>
-                }
-                @if (getCautionFactors().length > 0) {
-                  <div class="air-group">
-                    <div class="air-group-label caution-label">CAUTION / BEARISH FACTORS</div>
-                    @for (factor of getCautionFactors(); track factor.indicator) {
-                      <div class="air-factor caution-factor">
-                        <div class="air-indicator">⚠ {{ factor.indicator }}: <strong>{{ factor.value }}</strong></div>
-                        <div class="air-explanation">{{ factor.explanation }}</div>
-                      </div>
-                    }
+                  <p class="pi-read-text">{{ getPivotTradeRead() }}</p>
+                  <div class="pi-key-levels">
+                    <div class="pi-kl res">
+                      <span>NEXT RESISTANCE</span>
+                      <strong>\${{ getNearestResistance() }}</strong>
+                    </div>
+                    <div class="pi-kl sup">
+                      <span>NEAREST SUPPORT</span>
+                      <strong>\${{ getNearestSupport() }}</strong>
+                    </div>
                   </div>
-                }
-                <div class="air-range">
-                  <div class="air-range-header">NEXT RANGE ESTIMATE</div>
-                  <div class="air-range-row up">
-                    <span class="air-dir">▲ UP:</span>
-                    <span class="air-range-text">{{ getRangeUp() }}</span>
-                  </div>
-                  <div class="air-range-row down">
-                    <span class="air-dir">▼ DOWN:</span>
-                    <span class="air-range-text">{{ getRangeDown() }}</span>
-                  </div>
+                  @if (getFibZoneRead()) {
+                    <div class="pi-fib-note">{{ getFibZoneRead() }}</div>
+                  }
                 </div>
-                <div class="air-data-line">DATA: {{ getReasoningDataLine() }}</div>
+                }
               </div>
 
-              <!-- SECTION 4: TECHNICAL ANALYSIS -->
-              <div class="intel-block">
-                  <div class="tile-header">🌐 MACRO REGIME</div>
-                  <div class="macro-mini">
-                     <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
-                     <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
-                  </div>
-                  <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
-              </div>
 
+
+              <!-- P6: VOLUME PROFILE -->
+              @if (analysis.volume_profile) {
               <div class="intel-block">
-                  <div class="tile-header">📊 TECHNICAL HEAT</div>
-                  <div class="heat-context">
-                      <p class="heat-intro">Current trade technical strength indicators:</p>
-                  </div>
-                  <div class="heat-bars">
-                      <div class="hb-item">
-                          <span>ADX Strength</span>
-                          <div class="hb-track">
-                              <div class="hb-fill adx" [style.width.%]="analysis.daily_strength.adx * 2"></div>
-                          </div>
-                          <span class="hb-interpretation">{{ getADXInterpretation() }}</span>
+                <div class="tile-header">📦 VOLUME PROFILE</div>
+                <div class="vp-key-levels">
+                  <div class="vp-lvl poc"><span>POC</span><strong>\${{ analysis.volume_profile.poc.toFixed(2) }}</strong></div>
+                  <div class="vp-lvl vah"><span>VAH</span><strong class="bullish">\${{ analysis.volume_profile.vah.toFixed(2) }}</strong></div>
+                  <div class="vp-lvl val"><span>VAL</span><strong class="bearish">\${{ analysis.volume_profile.val.toFixed(2) }}</strong></div>
+                </div>
+                <div class="vp-sparkline">
+                  @for (bucket of getTopVPBuckets(); track bucket.price_low) {
+                    <div class="vp-bar-row">
+                      <div class="vp-price">\${{ bucket.price_low.toFixed(0) }}</div>
+                      <div class="vp-bar-track">
+                        <div class="vp-bar-fill" [class.poc-bar]="bucket.is_poc" [style.width.%]="bucket.pct_of_max"></div>
                       </div>
-                      <div class="hb-item">
-                          <span>RSI Power</span>
-                          <div class="hb-track">
-                              <div class="hb-fill rsi" [style.left.%]="analysis.daily_strength.rsi"></div>
-                          </div>
-                          <span class="hb-interpretation">{{ getRSIInterpretation() }}</span>
-                      </div>
-                  </div>
-                  <div class="heat-implications">
-                      <div class="heat-impact">
-                          <span class="heat-label">Trade Impact:</span>
-                          <span class="heat-value" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</span>
-                      </div>
-                      <div class="heat-recommendation">
-                          <span class="heat-label">Recommendation:</span>
-                          <span class="heat-value">{{ getTechnicalRecommendation() }}</span>
-                      </div>
-                  </div>
+                    </div>
+                  }
+                </div>
+                <p class="vp-interpretation">{{ analysis.volume_profile.interpretation }}</p>
               </div>
+              }
+
+              <!-- P7: SESSION VWAP -->
+              @if (analysis.session_vwap && analysis.session_vwap.vwap > 0 && analysis.strategy_mode === 'short_term') {
+              <div class="intel-block">
+                <div class="tile-header">〰️ SESSION VWAP</div>
+                <div class="vwap-grid">
+                  <div class="vwap-cell"><span>VWAP</span><strong>\${{ analysis.session_vwap.vwap.toFixed(2) }}</strong></div>
+                  <div class="vwap-cell"><span>UPPER</span><strong class="bullish">\${{ analysis.session_vwap.upper_band.toFixed(2) }}</strong></div>
+                  <div class="vwap-cell"><span>LOWER</span><strong class="bearish">\${{ analysis.session_vwap.lower_band.toFixed(2) }}</strong></div>
+                  <div class="vwap-cell"><span>DIST</span><strong [class]="analysis.session_vwap.distance_pct >= 0 ? 'bullish' : 'bearish'">{{ analysis.session_vwap.distance_pct >= 0 ? '+' : '' }}{{ analysis.session_vwap.distance_pct.toFixed(2) }}%</strong></div>
+                </div>
+                <div class="vwap-position-badge" [class]="getVWAPPositionClass()">
+                  {{ analysis.session_vwap.position }}
+                </div>
+                <p class="vwap-interpretation">{{ analysis.session_vwap.interpretation }}</p>
+              </div>
+              }
 
             </div>
           </section>
@@ -289,67 +318,280 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                   <div class="ch-item" [class]="getVolumeCheck()">
                      <div class="ch-left-data"><span class="ch-i">Volume Analysis</span><span class="ch-v">{{ getVolumeStatus() }}</span></div>
-                     <div class="ch-correlation">{{ getVolumeCorrelation() }}</div>
+                     @if (getVolumeStatus() !== 'ANALYZING') {
+                       <div class="ch-correlation">{{ getVolumeCorrelation() }}</div>
+                     } @else {
+                       <div class="ch-correlation muted">Insufficient volume data — computing</div>
+                     }
                   </div>
                   <div class="ch-item" [class]="getSupportResistanceCheck()">
                      <div class="ch-left-data"><span class="ch-i">Key Levels</span><span class="ch-v">{{ getLevelStatus() }}</span></div>
                      <div class="ch-correlation">{{ getLevelCorrelation() }}</div>
                   </div>
-                  <div class="ch-item" [class]="getCorrelationRiskCheck()">
-                     <div class="ch-left-data"><span class="ch-i">Market Correlation</span><span class="ch-v">{{ getCorrelationStatus() }}</span></div>
-                     <div class="ch-correlation">{{ getCorrelationRisk() }}</div>
+                  <div class="ch-item" [class]="getVolatilityRegimeCheck()">
+                     <div class="ch-left-data"><span class="ch-i">Volatility Regime</span><span class="ch-v">{{ analysis.volatility_risk.volatility_regime_label }}</span></div>
+                     <div class="ch-correlation">ATR {{ analysis.volatility_risk.atr_percentile_rank?.toFixed(0) }}th %ile · HV {{ analysis.volatility_risk.historical_volatility_14?.toFixed(1) }}%</div>
                   </div>
                 </div>
+
+                @if (analysis.instrument_correlations &&
+                     !(analysis.instrument_correlations.interpretation?.toLowerCase()?.includes('insufficient')) &&
+                     (analysis.instrument_correlations.vs_dxy != null || analysis.instrument_correlations.vs_spx != null || analysis.instrument_correlations.vs_btc != null)) {
+                <div class="corr-matrix-row">
+                  <div class="cm-label">30-DAY CORRELATIONS</div>
+                  <div class="cm-cells">
+                    @if (analysis.instrument_correlations.vs_dxy !== null && analysis.instrument_correlations.vs_dxy !== undefined) {
+                      <div class="cm-cell" [class]="getCorrCellClass(analysis.instrument_correlations.vs_dxy)">
+                        <span>vs DXY</span><strong>{{ analysis.instrument_correlations.vs_dxy > 0 ? '+' : '' }}{{ analysis.instrument_correlations.vs_dxy?.toFixed(2) }}</strong>
+                      </div>
+                    }
+                    @if (analysis.instrument_correlations.vs_spx !== null && analysis.instrument_correlations.vs_spx !== undefined) {
+                      <div class="cm-cell" [class]="getCorrCellClass(analysis.instrument_correlations.vs_spx)">
+                        <span>vs SPX</span><strong>{{ analysis.instrument_correlations.vs_spx > 0 ? '+' : '' }}{{ analysis.instrument_correlations.vs_spx?.toFixed(2) }}</strong>
+                      </div>
+                    }
+                    @if (analysis.instrument_correlations.vs_btc !== null && analysis.instrument_correlations.vs_btc !== undefined) {
+                      <div class="cm-cell" [class]="getCorrCellClass(analysis.instrument_correlations.vs_btc)">
+                        <span>vs BTC</span><strong>{{ analysis.instrument_correlations.vs_btc > 0 ? '+' : '' }}{{ analysis.instrument_correlations.vs_btc?.toFixed(2) }}</strong>
+                      </div>
+                    }
+                  </div>
+                  <div class="cm-interpretation">{{ analysis.instrument_correlations.interpretation }}</div>
+                </div>
+                }
               </div>
 
               <div class="risk-panel-card">
                 <div class="tile-header">⚠️ PULLBACK & TRAP ANALYSIS</div>
-                <p class="pic-desc">{{ analysis.pullback_warning?.description }}</p>
+                <p class="pic-desc">{{ analysis.pullback_warning?.description || 'No immediate pullback or trap risk detected. Current price action appears normal.' }}</p>
                 <div class="pic-reasons">
-                    @for (reason of analysis.pullback_warning?.reasons; track reason) {
-                        <div class="pic-reason-tag" [class]="getPullbackReasonClass(reason)">◈ {{ reason }}</div>
+                    @if (hasPullbackReasons()) {
+                        @for (reason of analysis.pullback_warning!.reasons; track reason) {
+                            <div class="pic-reason-tag" [class]="getPullbackReasonClass(reason)">◈ {{ reason }}</div>
+                        }
+                    } @else {
+                        <div class="pic-reason-tag neutral">◈ Market conditions stable</div>
+                        <div class="pic-reason-tag neutral">◈ No trap patterns identified</div>
+                        <div class="pic-reason-tag neutral">◈ Normal price progression</div>
                     }
                 </div>
-                @if (analysis.pullback_warning) {
-                    <div class="pic-metrics">
-                        <div class="pic-metric">
-                            <span class="pic-metric-label">Risk Level</span>
-                            <span class="pic-metric-value" [class]="getPullbackRiskClass()">{{ getPullbackRiskLevel() }}</span>
-                        </div>
-                        <div class="pic-metric">
-                            <span class="pic-metric-label">Current Position</span>
-                            <span class="pic-metric-value">{{ getPullbackPosition() }}</span>
-                        </div>
-                        <div class="pic-metric">
-                            <span class="pic-metric-label">Recommended Action</span>
-                            <span class="pic-metric-value">{{ getPullbackAction() }}</span>
-                        </div>
+                <div class="pic-metrics">
+                    <div class="pic-metric">
+                        <span class="pic-metric-label">Risk Level</span>
+                        <span class="pic-metric-value" [class]="getPullbackRiskClass()">{{ getPullbackRiskLevel() }}</span>
                     </div>
+                    <div class="pic-metric">
+                        <span class="pic-metric-label">Current Position</span>
+                        <span class="pic-metric-value">{{ getPullbackPosition() }}</span>
+                    </div>
+                    <div class="pic-metric">
+                        <span class="pic-metric-label">Recommended Action</span>
+                        <span class="pic-metric-value">{{ getPullbackAction() }}</span>
+                    </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- MACRO REGIME -->
+            <div class="macro-context-block">
+              <div class="tile-header">🌐 MACRO REGIME</div>
+              <div class="macro-mini">
+                <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
+                <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
+              </div>
+              <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
+            </div>
+
+            <!-- LIQUIDITY MAP -->
+            @if (analysis.liquidity_map) {
+            <div class="liquidity-map-section">
+              <div class="tile-header">🗺️ LIQUIDITY MAP</div>
+              <div class="lm-dual">
+                <div class="lm-col">
+                  <div class="lm-col-header bearish">RESISTANCE</div>
+                  @for (lvl of analysis.liquidity_map.resistance_levels; track lvl.price) {
+                    <div class="lm-level" [class]="'lm-' + lvl.strength">
+                      <span class="lm-price bearish">\${{ lvl.price.toFixed(2) }}</span>
+                      <span class="lm-dist">+{{ lvl.distance_pct.toFixed(1) }}%</span>
+                      <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
+                    </div>
+                  }
+                </div>
+                <div class="lm-col">
+                  <div class="lm-col-header bullish">SUPPORT</div>
+                  @for (lvl of analysis.liquidity_map.support_levels; track lvl.price) {
+                    <div class="lm-level" [class]="'lm-' + lvl.strength">
+                      <span class="lm-price bullish">\${{ lvl.price.toFixed(2) }}</span>
+                      <span class="lm-dist">-{{ lvl.distance_pct.toFixed(1) }}%</span>
+                      <span class="lm-badge" [class]="'strength-' + lvl.strength">{{ lvl.strength }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+              <p class="lm-interpretation">{{ analysis.liquidity_map.interpretation }}</p>
+            </div>
+            }
+
+            @if (analysis.fundamentals?.risk_reduction_active || analysis.fundamentals?.pre_event_caution) {
+            <div class="pre-event-alert" [class]="analysis.fundamentals.risk_reduction_active ? 'pea-active' : 'pea-caution'">
+              <div class="pea-header">
+                <span>{{ analysis.fundamentals.risk_reduction_active ? '🔴' : '🟡' }}</span>
+                <span class="pea-title">{{ analysis.fundamentals.risk_reduction_active ? 'RISK REDUCTION ACTIVE' : 'PRE-EVENT CAUTION' }}</span>
+                @if (analysis.fundamentals.minutes_to_next_event) {
+                  <span class="pea-countdown">{{ getEventCountdown(analysis.fundamentals.minutes_to_next_event) }}</span>
                 }
               </div>
-            </div>
-
-            <div class="probability-box-v2">
-              <div class="pb2-header">PROBABILITY DEPTH (BACKTEST)</div>
-              <div class="pb2-grid">
-                <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
-                <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results.profit_factor }}</strong></div>
+              <div class="pea-body">
+                {{ analysis.fundamentals.risk_reduction_active
+                   ? 'High-impact event within 60 min. Position size auto-capped at 50%.'
+                   : 'High-impact event within 24h. Consider reducing size to 75%.' }}
               </div>
-              <div class="bt-spark-v2">
-                <svg viewBox="0 0 200 40" preserveAspectRatio="none"><polyline [attr.points]="getEquityCurvePoints()" class="spark-line" /></svg>
+              @if (analysis.fundamentals.event_timestamps?.length) {
+                <div class="pea-event">{{ analysis.fundamentals.event_timestamps[0].event }}</div>
+              }
+              <div class="pea-multiplier">
+                Size Multiplier: <strong>×{{ analysis.fundamentals.recommended_position_multiplier?.toFixed(2) }}</strong>
               </div>
             </div>
+            }
 
-            <div class="verdict-banner-final" [class]="getOverallCheckClass()">
-                {{ getTradeVerdict() }}
+            <!-- P9: BLOCK FLOW DETECTOR (always in Risk tab) -->
+            @if (analysis.block_flow) {
+            <div class="block-flow-section" [class]="analysis.block_flow.detected ? 'bf-active' : 'bf-quiet'">
+              <div class="tile-header">🐋 BLOCK FLOW DETECTOR</div>
+              @if (!analysis.block_flow.detected) {
+                <p class="bf-quiet-msg">{{ analysis.block_flow.interpretation }}</p>
+              }
+              @if (analysis.block_flow.detected) {
+                <div class="bf-summary">
+                  <div class="bf-direction" [class]="'bf-dir-' + analysis.block_flow.net_direction">
+                    {{ analysis.block_flow.net_direction | uppercase }} FLOW
+                  </div>
+                  <div class="bf-counts">
+                    <span class="bullish">{{ analysis.block_flow.bull_blocks }}🟢 Bull</span>
+                    <span class="bearish">{{ analysis.block_flow.bear_blocks }}🔴 Bear</span>
+                  </div>
+                </div>
+                <div class="bf-events">
+                  @for (ev of analysis.block_flow.events.slice().reverse().slice(0, 3); track ev.timestamp) {
+                    <div class="bf-event" [class]="'bf-' + ev.direction">
+                      <span class="bf-ts">{{ ev.timestamp }}</span>
+                      <span class="bf-p" [class]="ev.direction">\${{ ev.price.toFixed(2) }}</span>
+                      <span class="bf-vol">{{ ev.volume_ratio }}x vol</span>
+                    </div>
+                  }
+                </div>
+                <p class="bf-interpretation">{{ analysis.block_flow.interpretation }}</p>
+              }
+            </div>
+            }
+
+            <!-- P10: GEOPOLITICAL RISK INTELLIGENCE -->
+            @if (analysis.geopolitical_risk?.detected) {
+            <div class="geo-risk-section" [class]="'geo-' + analysis.geopolitical_risk!.risk_level.toLowerCase()">
+              <div class="geo-risk-header">
+                <div class="geo-risk-title">
+                  <span class="geo-risk-icon">🌍</span>
+                  <span>GEOPOLITICAL RISK INTELLIGENCE</span>
+                </div>
+                <div class="geo-risk-score-badge" [class]="'geo-score-' + analysis.geopolitical_risk!.risk_level.toLowerCase()">
+                  <span class="geo-score-val">{{ analysis.geopolitical_risk!.risk_score }}</span>
+                  <span class="geo-score-label">/100</span>
+                  <span class="geo-risk-level">{{ analysis.geopolitical_risk!.risk_level }}</span>
+                </div>
+              </div>
+
+              <div class="geo-keywords">
+                @for (kw of analysis.geopolitical_risk!.keywords_found; track kw) {
+                  <span class="geo-kw-tag">{{ kw }}</span>
+                }
+              </div>
+
+              <div class="geo-impact-row">
+                <div class="geo-impact-cell">
+                  <span class="geo-cell-label">EXPECTED IMPACT</span>
+                  <span class="geo-cell-val" [class]="getGeoImpactClass(analysis.geopolitical_risk!.expected_impact)">
+                    {{ analysis.geopolitical_risk!.expected_impact | uppercase }}
+                  </span>
+                </div>
+                <div class="geo-impact-cell">
+                  <span class="geo-cell-label">CONFIDENCE</span>
+                  <span class="geo-cell-val">{{ analysis.geopolitical_risk!.impact_confidence }}</span>
+                </div>
+                <div class="geo-impact-cell">
+                  <span class="geo-cell-label">PRICE ACTION</span>
+                  <span class="geo-cell-val" [class]="getGeoConfirmationClass(analysis.geopolitical_risk!.indicator_confirmation)">
+                    {{ analysis.geopolitical_risk!.indicator_confirmation }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="geo-indicators">
+                @for (ind of analysis.geopolitical_risk!.indicators; track ind.name) {
+                  <div class="geo-ind-row" [class]="'geo-ind-' + ind.status">
+                    <span class="geo-ind-icon">{{ ind.status === 'confirming' ? '✅' : ind.status === 'diverging' ? '❌' : '⚠️' }}</span>
+                    <div class="geo-ind-content">
+                      <span class="geo-ind-name">{{ ind.name }}</span>
+                      <span class="geo-ind-desc">{{ ind.description }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <div class="geo-narrative">{{ analysis.geopolitical_risk!.ai_narrative }}</div>
+
+              <div class="geo-action-bias" [class]="getGeoActionClass(analysis.geopolitical_risk!.action_bias)">
+                <span class="geo-action-label">ACTION BIAS</span>
+                <span class="geo-action-val">{{ analysis.geopolitical_risk!.action_bias }}</span>
+              </div>
+            </div>
+            }
+
+          </section>
+          }
+
+          @if (activeAnalysisTab === 'performance') {
+          <section class="t-tile perf-tab-tile tab-content-tile">
+            <div class="perf-content">
+              <div class="probability-box-v2">
+                <div class="pb2-header">📈 PROBABILITY & BACKTEST QUALITY</div>
+                <div class="pb2-grid">
+                  <div class="pb2-stat"><span>WIN RATE</span><strong>{{ analysis.backtest_results.win_rate.toFixed(1) }}%</strong></div>
+                  <div class="pb2-stat"><span>PROFIT FACTOR</span><strong>{{ analysis.backtest_results.profit_factor }}</strong></div>
+                  <div class="pb2-stat"><span>SHARPE</span><strong [class]="analysis.backtest_results.sharpe_ratio >= 1 ? 'bullish' : 'bearish'">{{ analysis.backtest_results.sharpe_ratio?.toFixed(2) }}</strong></div>
+                  <div class="pb2-stat"><span>EXPECTANCY</span><strong [class]="analysis.backtest_results.expectancy >= 0 ? 'bullish' : 'bearish'">{{ analysis.backtest_results.expectancy >= 0 ? '+' : '' }}{{ analysis.backtest_results.expectancy?.toFixed(2) }}%</strong></div>
+                </div>
+                <div class="pb2-grid pb2-grid-secondary">
+                  <div class="pb2-stat"><span>MAX DD</span><strong class="bearish">{{ analysis.backtest_results.max_drawdown_pct?.toFixed(1) }}%</strong></div>
+                  <div class="pb2-stat"><span>MAX STREAK</span><strong>{{ analysis.backtest_results.max_consecutive_losses }}L</strong></div>
+                  <div class="pb2-stat"><span>SAMPLE</span><strong>n={{ analysis.backtest_results.sample_size }}</strong></div>
+                  <div class="pb2-stat"><span>MAE</span><strong>{{ analysis.backtest_results.max_adverse_excursion_pct?.toFixed(1) }}% vs</strong></div>
+                </div>
+                @if (analysis.backtest_results.sample_size < 30) {
+                  <div class="sample-size-warning">⚠ Low sample size (n={{ analysis.backtest_results.sample_size }}). Results are indicative only — not statistically significant until n≥30.</div>
+                }
+                <div class="bt-spark-v2">
+                  <svg viewBox="0 0 200 60" preserveAspectRatio="none">
+                    <polyline [attr.points]="getEquityCurvePoints()" class="spark-line" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Chart Area in Performance tab -->
+              <div class="perf-chart-area">
+                <div class="tile-header">📉 PRICE CHART</div>
+                <div class="terminal-chart-area">
+                  <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol" [overlayLevels]="getChartOverlays()" *ngIf="chartData.length > 0"></app-instrument-chart>
+                  @if (!chartData.length) {
+                    <div class="chart-placeholder">Chart data loading — click Refresh 🔄</div>
+                  }
+                </div>
+              </div>
             </div>
           </section>
           }
 
-        <!-- Inline Chart Area -->
-        <div class="terminal-chart-area" *ngIf="showChart">
-           <app-instrument-chart [data]="chartData" [symbol]="analysis.symbol" [overlayLevels]="getChartOverlays()" *ngIf="chartData.length > 0"></app-instrument-chart>
-        </div>
       </div>
 
        <!-- Journal Modal -->
@@ -398,19 +640,24 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .terminal-body.bullish { border-left: 3px solid #a6e3a1; }
     .terminal-body.bearish { border-left: 3px solid #f38ba8; }
 
-    /* AI EXECUTIVE SUMMARY */
-    .ai-executive-synthesis { padding: 24px; background: rgba(30, 30, 46, 0.3); border-bottom: 1px solid #1f1f3a; }
-    .ai-executive-synthesis.bullish { background: rgba(166, 227, 161, 0.05); }
-    .ai-executive-synthesis.bearish { background: rgba(243, 139, 168, 0.05); }
-    .synthesis-header { font-size: 0.65rem; font-weight: 950; color: #89b4fa; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
-    .synthesis-text { font-size: 1.1rem; color: #cdd6f4; line-height: 1.4; margin-bottom: 16px; font-weight: 500; }
-    .synthesis-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-    .syn-tag { font-size: 0.65rem; padding: 4px 10px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; color: #9399b2; font-weight: 600; }
-    .syn-tag.positive { background: rgba(166, 227, 161, 0.1); color: #a6e3a1; border-color: rgba(166, 227, 161, 0.3); }
-    .syn-tag.negative { background: rgba(243, 139, 168, 0.1); color: #f38ba8; border-color: rgba(243, 139, 168, 0.3); }
-    .syn-tag.neutral { background: rgba(249, 226, 175, 0.1); color: #f9e2af; border-color: rgba(249, 226, 175, 0.3); }
-    .syn-tag.warning { background: rgba(250, 179, 135, 0.1); color: #fab387; border-color: rgba(250, 179, 135, 0.3); }
-    .syn-tag.info { background: rgba(137, 180, 250, 0.1); color: #89b4fa; border-color: rgba(137, 180, 250, 0.3); }
+    /* SIGNAL REASONS STRIP (replaces verbose AI Summary) */
+    .signal-reasons-strip { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid #1f1f3a; background: rgba(17,17,27,0.4); }
+    .syn-tag { font-size: 0.6rem; padding: 3px 9px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; color: #9399b2; font-weight: 700; }
+    .syn-tag.positive { background: rgba(166,227,161,0.1); color: #a6e3a1; border-color: rgba(166,227,161,0.3); }
+    .syn-tag.negative { background: rgba(243,139,168,0.1); color: #f38ba8; border-color: rgba(243,139,168,0.3); }
+    .syn-tag.neutral { background: rgba(249,226,175,0.1); color: #f9e2af; border-color: rgba(249,226,175,0.3); }
+    .syn-tag.warning { background: rgba(250,179,135,0.1); color: #fab387; border-color: rgba(250,179,135,0.3); }
+    .syn-tag.info { background: rgba(137,180,250,0.1); color: #89b4fa; border-color: rgba(137,180,250,0.3); }
+
+    /* EXPERT BATTLE PLAN — above tabs (always visible) */
+    .expert-above-tabs { padding: 14px 20px 16px; background: rgba(245,158,11,0.08); border-top: 1px solid rgba(245,158,11,0.35); border-bottom: 1px solid rgba(245,158,11,0.2); border-left: 4px solid #f59e0b; box-shadow: inset 4px 0 14px rgba(245,158,11,0.06); }
+    .expert-above-tabs.high-intent { background: rgba(250,179,135,0.12); border-left-color: #fab387; border-top-color: rgba(250,179,135,0.45); box-shadow: inset 4px 0 18px rgba(250,179,135,0.1); animation: ebp-pulse 3s ease-in-out infinite; }
+    @keyframes ebp-pulse { 0%, 100% { box-shadow: inset 4px 0 18px rgba(250,179,135,0.1); } 50% { box-shadow: inset 4px 0 28px rgba(250,179,135,0.2), 0 0 16px rgba(250,179,135,0.08); } }
+    .eat-header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .eat-title { font-size: 0.6rem; font-weight: 950; letter-spacing: 1.5px; color: #f59e0b; text-transform: uppercase; flex: 1; }
+    .eat-rvol { font-size: 0.58rem; font-weight: 900; color: #6c7086; letter-spacing: 0.5px; }
+    .eat-rvol.rvol-hot { color: #fab387; }
+    .eat-text { font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; margin: 0; font-weight: 500; white-space: pre-line; }
 
     /* HUD UPGRADE (ZERO WASTE) */
     .terminal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: #0b0b15; border-bottom: 1px solid #1f1f3a; }
@@ -438,9 +685,18 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .scaling-zone { margin: 24px 0; background: #11111b; border: 1px dashed #313244; padding: 16px; border-radius: 8px; }
     .sz-header { font-size: 0.55rem; color: #45475a; font-weight: 950; margin-bottom: 16px; }
     .sz-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .sz-item { background: #0b0b15; padding: 10px; border-radius: 6px; border: 1px solid #1f1f3a; text-align: center; }
+    .sz-item { background: #0b0b15; padding: 10px; border-radius: 6px; border: 1px solid #1f1f3a; text-align: center; transition: all 0.2s; }
     .sz-top { font-size: 0.45rem; color: #585b70; display: block; margin-bottom: 4px; }
     .sz-val { font-size: 0.85rem; font-weight: 950; color: #a6e3a1; }
+    .sz-dist { font-size: 0.48rem; font-weight: 700; color: #45475a; margin-top: 4px; letter-spacing: 0.3px; }
+    .sz-item--next { border-color: #89b4fa !important; background: rgba(137,180,250,0.06) !important; }
+    .sz-item--next .sz-val { color: #89b4fa; }
+    .sz-item--next .sz-dist { color: #89b4fa; }
+    .sz-item--hit { border-color: rgba(166,227,161,0.4) !important; background: rgba(166,227,161,0.06) !important; opacity: 0.7; }
+    .sz-item--hit .sz-val { color: #6c7086; text-decoration: line-through; }
+    .sz-interpretation { margin-top: 14px; padding-top: 12px; border-top: 1px solid #1f1f3a; }
+    .sz-action-read { font-size: 0.82rem; color: #cdd6f4; line-height: 1.65; margin: 0; padding: 12px 14px; background: rgba(137,180,250,0.05); border-left: 3px solid #89b4fa; border-radius: 0 6px 6px 0; font-weight: 500; }
+    .sz-action-read:first-letter { font-size: 1rem; }
     .mm-footer { display: flex; gap: 10px; margin-bottom: 24px; }
     .mmf-item { flex: 1; padding: 12px; background: #121220; border-radius: 6px; text-align: center; }
     .mmf-item span { font-size: 0.5rem; color: #45475a; display: block; margin-bottom: 4px; }
@@ -522,7 +778,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .expert-tile { background: linear-gradient(135deg, rgba(137, 180, 250, 0.03), transparent); }
     .expert-tile.high-intent { border-top: 3px solid #fab387; background: rgba(250, 179, 135, 0.05); }
     .expert-main { display: flex; flex-direction: column; gap: 16px; }
-    .expert-plan-text { font-size: 1.1rem; color: #cdd6f4; line-height: 1.4; font-weight: 500; }
+    .expert-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .plan-age { font-size: 0.6rem; font-weight: 700; color: #585b70; letter-spacing: 0.3px; }
+    .plan-age--stale { color: #f38ba8; }
+    .expert-plan-text { font-size: 1.1rem; color: #cdd6f4; line-height: 1.4; font-weight: 500; margin-top: 0; }
     .expert-badges { display: flex; gap: 8px; }
     .expert-badge { padding: 4px 10px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; display: flex; gap: 8px; align-items: center; }
     .eb-v { font-size: 0.85rem; font-weight: 950; color: #89b4fa; }
@@ -627,6 +886,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
       .analysis-tabs { overflow-x: auto; }
       .atab { min-width: 60px; font-size: 0.55rem; padding: 10px 4px; }
       .geo-deep-grid { grid-template-columns: 1fr; }
+      .mmr-grid { grid-template-columns: repeat(2, 1fr); }
       .rrd-stats { grid-template-columns: repeat(2, 1fr); }
       .perf-summary-row { grid-template-columns: repeat(3, 1fr); }
       .perf-metrics-grid { grid-template-columns: repeat(2, 1fr); }
@@ -779,6 +1039,51 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .feb-item span { font-size: 0.5rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
     .feb-item strong { font-size: 0.75rem; color: #cba6f7; font-weight: 950; }
 
+    /* PIVOT INTERPRETATION */
+    .pivot-interpretation { margin-top: 16px; padding-top: 14px; border-top: 1px solid #1f1f3a; }
+    .pi-bias-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .pi-badge { font-size: 0.55rem; font-weight: 950; letter-spacing: 1px; padding: 3px 10px; border-radius: 4px; }
+    .pi-badge.bullish { background: rgba(166,227,161,0.12); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .pi-badge.bearish { background: rgba(243,139,168,0.12); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .pi-badge.neutral { background: rgba(137,180,250,0.1); color: #89b4fa; border: 1px solid rgba(137,180,250,0.25); }
+    .pi-align-tag { font-size: 0.52rem; font-weight: 900; letter-spacing: 0.5px; }
+    .pi-align-tag.aligned { color: #a6e3a1; }
+    .pi-align-tag.conflicting { color: #f38ba8; }
+    .pi-align-tag.neutral { color: #f9e2af; }
+    .pi-read-text { font-size: 0.68rem; color: #a6adc8; line-height: 1.6; margin: 0 0 12px; padding: 10px 12px; background: rgba(17,17,27,0.5); border-left: 3px solid #585b70; border-radius: 0 6px 6px 0; }
+    .pi-key-levels { display: flex; gap: 10px; margin-bottom: 10px; }
+    .pi-kl { flex: 1; padding: 8px 10px; border-radius: 6px; display: flex; flex-direction: column; gap: 3px; }
+    .pi-kl span { font-size: 0.44rem; font-weight: 950; letter-spacing: 1px; text-transform: uppercase; }
+    .pi-kl strong { font-size: 0.8rem; font-weight: 950; }
+    .pi-kl.res { background: rgba(243,139,168,0.06); border: 1px solid rgba(243,139,168,0.2); }
+    .pi-kl.res span { color: #585b70; }
+    .pi-kl.res strong { color: #f38ba8; }
+    .pi-kl.sup { background: rgba(166,227,161,0.06); border: 1px solid rgba(166,227,161,0.2); }
+    .pi-kl.sup span { color: #585b70; }
+    .pi-kl.sup strong { color: #a6e3a1; }
+    .pi-fib-note { font-size: 0.62rem; color: #cba6f7; background: rgba(203,166,247,0.06); border: 1px solid rgba(203,166,247,0.15); border-radius: 6px; padding: 8px 12px; line-height: 1.5; }
+
+    /* MARKET MOMENTUM READ */
+    .momentum-read-section { background: rgba(137,180,250,0.02); }
+    .mmr-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
+    .mmr-item { display: flex; flex-direction: column; gap: 4px; background: #0b0b15; border-radius: 6px; padding: 10px; border: 1px solid #1f1f3a; }
+    .mmr-lbl { font-size: 0.44rem; font-weight: 950; color: #45475a; letter-spacing: 1px; text-transform: uppercase; }
+    .mmr-val { font-size: 1.1rem; font-weight: 950; color: #cdd6f4; line-height: 1; }
+    .mmr-val.strong { color: #fab387; }
+    .mmr-val.trending { color: #89b4fa; }
+    .mmr-val.weak { color: #6c7086; }
+    .mmr-val.high { color: #f38ba8; }
+    .mmr-val.medium { color: #f9e2af; }
+    .mmr-val.low { color: #6c7086; }
+    .mmr-interp { font-size: 0.52rem; font-weight: 900; letter-spacing: 0.3px; }
+    .mmr-interp.strong { color: #fab387; }
+    .mmr-interp.trending { color: #89b4fa; }
+    .mmr-interp.weak { color: #6c7086; }
+    .mmr-interp.bullish { color: #a6e3a1; }
+    .mmr-interp.bearish { color: #f38ba8; }
+    .mmr-interp.neutral { color: #f9e2af; }
+    .mmr-combined-read { font-size: 0.65rem; color: #a6adc8; line-height: 1.6; padding: 10px 12px; background: rgba(137,180,250,0.04); border-left: 3px solid #89b4fa; border-radius: 0 6px 6px 0; }
+
     /* TECH SECTION WRAPPERS */
     .tech-section { padding: 20px 24px; border-bottom: 1px solid #1f1f3a; }
     .tech-section:last-child { border-bottom: none; }
@@ -817,6 +1122,210 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .risk-panel-card:first-child { border-right: 1px solid #1f1f3a; }
     .risk-panel-card .tile-header { margin-bottom: 12px; }
     .risk-panel-card .pic-desc { font-size: 0.62rem; color: #9399b2; margin: 0 0 10px; line-height: 1.4; }
+
+    /* SIGNAL CONFLICT BANNER */
+    .signal-conflict-banner { margin-bottom: 20px; border-radius: 8px; padding: 14px 18px; border: 1px solid; }
+    .conflict-high { background: rgba(243,139,168,0.06); border-color: rgba(243,139,168,0.4); }
+    .conflict-medium { background: rgba(249,226,175,0.06); border-color: rgba(249,226,175,0.3); }
+    .scb-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .scb-icon { font-size: 1rem; }
+    .scb-title { font-size: 0.55rem; font-weight: 950; letter-spacing: 1.5px; color: #cdd6f4; flex: 1; }
+    .scb-badge { font-size: 0.5rem; font-weight: 900; padding: 2px 6px; border-radius: 3px; }
+    .conflict-high .scb-badge { background: rgba(243,139,168,0.2); color: #f38ba8; }
+    .conflict-medium .scb-badge { background: rgba(249,226,175,0.2); color: #f9e2af; }
+    .scb-headline { font-size: 0.7rem; font-weight: 800; color: #cdd6f4; margin-bottom: 6px; line-height: 1.3; }
+    .conflict-high .scb-headline { color: #f38ba8; }
+    .conflict-medium .scb-headline { color: #f9e2af; }
+    .scb-guidance { font-size: 0.62rem; color: #9399b2; line-height: 1.5; margin-bottom: 10px; }
+    .scb-triggers { display: flex; gap: 10px; margin-top: 6px; }
+    .scb-trigger { font-size: 0.6rem; font-weight: 900; padding: 4px 10px; border-radius: 4px; }
+    .scb-trigger.bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .scb-trigger.bearish { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+
+    /* CORRELATION MATRIX ROW */
+    .corr-matrix-row { margin-top: 14px; padding-top: 14px; border-top: 1px solid #1f1f3a; }
+    .cm-label { font-size: 0.5rem; color: #45475a; font-weight: 900; letter-spacing: 1.2px; margin-bottom: 8px; }
+    .cm-cells { display: flex; gap: 8px; margin-bottom: 8px; }
+    .cm-cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 6px; border-radius: 6px; border: 1px solid #1f1f3a; background: #0b0b15; }
+    .cm-cell span { font-size: 0.5rem; color: #45475a; font-weight: 700; text-transform: uppercase; }
+    .cm-cell strong { font-size: 0.8rem; font-weight: 950; }
+    .cm-cell.corr-strong-pos strong { color: #a6e3a1; }
+    .cm-cell.corr-pos strong { color: #89dceb; }
+    .cm-cell.corr-neutral strong { color: #9399b2; }
+    .cm-cell.corr-neg strong { color: #fab387; }
+    .cm-cell.corr-strong-neg strong { color: #f38ba8; }
+    .cm-interpretation { font-size: 0.58rem; color: #6c7086; line-height: 1.4; }
+
+    /* SAMPLE SIZE WARNING */
+    .sample-size-warning { margin: 10px 0; padding: 8px 12px; background: rgba(249,226,175,0.07); border: 1px solid rgba(249,226,175,0.3); border-radius: 6px; font-size: 0.62rem; color: #f9e2af; line-height: 1.4; }
+
+    /* MACRO CONTEXT BLOCK (in Risk tab) */
+    .macro-context-block { padding: 16px 20px; border-top: 1px solid #1f1f3a; margin-top: 8px; background: rgba(17,17,27,0.4); border-radius: 0 0 8px 8px; }
+    .macro-context-block .tile-header { margin-bottom: 10px; }
+
+    /* LEVELS INACTIVE (wait state) */
+    .levels-inactive { opacity: 0.45; pointer-events: none; position: relative; }
+    .levels-pending { font-size: 0.65rem; color: #f9e2af; background: rgba(249,226,175,0.08); border: 1px solid rgba(249,226,175,0.25); border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; }
+
+    /* ACTION REC BADGE */
+    .action-rec-badge { font-size: 0.5rem; font-weight: 900; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; }
+    .action-rec-badge.bullish { background: rgba(166,227,161,0.15); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .action-rec-badge.bearish { background: rgba(243,139,168,0.15); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .action-rec-badge.badge-wait { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+    .action-rec-badge.neutral { background: rgba(108,112,134,0.15); color: #9399b2; border: 1px solid rgba(108,112,134,0.3); }
+
+    /* CONFLICT BADGE ON STATUS PILL */
+    .th-conflict-badge { font-size: 0.45rem; font-weight: 900; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px; }
+    .th-conflict-badge.sev-high { background: rgba(243,139,168,0.2); color: #f38ba8; border: 1px solid rgba(243,139,168,0.4); }
+    .th-conflict-badge.sev-medium { background: rgba(249,226,175,0.2); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+
+    /* PERFORMANCE TAB */
+    .perf-content { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+    .perf-chart-area { background: #000; border-radius: 8px; overflow: hidden; }
+    .perf-chart-area .tile-header { padding: 12px 16px; background: #0b0b15; margin-bottom: 0; border-bottom: 1px solid #1f1f3a; }
+    .perf-chart-area .terminal-chart-area { height: 360px; }
+    .chart-placeholder { display: flex; align-items: center; justify-content: center; height: 200px; color: #45475a; font-size: 0.75rem; }
+
+    /* MUTED CORRELATION TEXT */
+    .ch-correlation.muted { color: #45475a; font-style: italic; }
+
+    /* SECONDARY BACKTEST GRID */
+    .pb2-grid-secondary { margin-top: 6px; padding-top: 8px; border-top: 1px solid #1f1f3a; }
+
+    /* PRE-EVENT ALERT BANNER */
+    .pre-event-alert { margin: 16px 0; padding: 12px 16px; border-radius: 8px; border: 1px solid; }
+    .pea-active { background: rgba(243,139,168,0.07); border-color: rgba(243,139,168,0.5); }
+    .pea-caution { background: rgba(249,226,175,0.07); border-color: rgba(249,226,175,0.4); }
+    .pea-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .pea-title { font-size: 0.55rem; font-weight: 950; letter-spacing: 1.5px; flex: 1; }
+    .pea-active .pea-title { color: #f38ba8; }
+    .pea-caution .pea-title { color: #f9e2af; }
+    .pea-countdown { font-size: 0.6rem; font-weight: 900; padding: 2px 8px; border-radius: 4px; }
+    .pea-active .pea-countdown { background: rgba(243,139,168,0.15); color: #f38ba8; }
+    .pea-caution .pea-countdown { background: rgba(249,226,175,0.15); color: #f9e2af; }
+    .pea-body { font-size: 0.62rem; color: #9399b2; line-height: 1.5; margin-bottom: 6px; }
+    .pea-event { font-size: 0.6rem; color: #cdd6f4; font-weight: 700; margin-bottom: 6px; }
+    .pea-multiplier { font-size: 0.58rem; color: #6c7086; }
+    .pea-multiplier strong { color: #cba6f7; }
+
+    /* VOLUME PROFILE */
+    .vp-key-levels { display: flex; gap: 8px; margin-bottom: 14px; }
+    .vp-lvl { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px; background: #0b0b15; border-radius: 6px; border: 1px solid #1f1f3a; }
+    .vp-lvl span { font-size: 0.5rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
+    .vp-lvl strong { font-size: 0.75rem; font-weight: 950; margin-top: 3px; color: #cdd6f4; }
+    .vp-lvl.poc { border-color: #cba6f7; }
+    .vp-lvl.poc strong { color: #cba6f7; }
+    .vp-sparkline { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; max-height: 140px; overflow-y: auto; }
+    .vp-bar-row { display: flex; align-items: center; gap: 6px; }
+    .vp-price { font-size: 0.45rem; color: #45475a; width: 40px; text-align: right; font-family: monospace; }
+    .vp-bar-track { flex: 1; height: 6px; background: #0b0b15; border-radius: 3px; overflow: hidden; }
+    .vp-bar-fill { height: 100%; background: rgba(137,180,250,0.35); border-radius: 3px; transition: width 0.3s; }
+    .vp-bar-fill.poc-bar { background: #cba6f7; }
+    .vp-interpretation { font-size: 0.6rem; color: #6c7086; line-height: 1.4; margin: 0; }
+
+    /* SESSION VWAP */
+    .vwap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+    .vwap-cell { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; background: #0b0b15; border-radius: 6px; border: 1px solid #1f1f3a; }
+    .vwap-cell span { font-size: 0.45rem; color: #45475a; font-weight: 900; text-transform: uppercase; }
+    .vwap-cell strong { font-size: 0.7rem; font-weight: 950; margin-top: 3px; }
+    .vwap-position-badge { display: inline-block; font-size: 0.55rem; font-weight: 900; padding: 3px 10px; border-radius: 4px; margin-bottom: 8px; letter-spacing: 1px; }
+    .vwap-position-badge.above { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .vwap-position-badge.below { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .vwap-position-badge.extended { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+    .vwap-interpretation { font-size: 0.6rem; color: #6c7086; line-height: 1.4; margin: 0; }
+
+    /* LIQUIDITY MAP */
+    .liquidity-map-section { padding: 20px; border-top: 1px solid #1f1f3a; }
+    .lm-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+    .lm-col-header { font-size: 0.5rem; font-weight: 950; letter-spacing: 1.5px; padding: 4px 8px; border-radius: 3px; margin-bottom: 8px; }
+    .lm-col-header.bearish { background: rgba(243,139,168,0.1); color: #f38ba8; }
+    .lm-col-header.bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; }
+    .lm-level { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 5px; margin-bottom: 4px; background: #0b0b15; border: 1px solid #1f1f3a; }
+    .lm-price { font-size: 0.68rem; font-weight: 900; flex: 1; }
+    .lm-dist { font-size: 0.55rem; color: #6c7086; }
+    .lm-badge { font-size: 0.45rem; font-weight: 900; padding: 2px 5px; border-radius: 3px; text-transform: uppercase; }
+    .strength-strong .lm-badge { background: rgba(249,226,175,0.2); color: #f9e2af; }
+    .strength-moderate .lm-badge { background: rgba(137,180,250,0.1); color: #89b4fa; }
+    .strength-weak .lm-badge { background: rgba(69,71,90,0.3); color: #6c7086; }
+    .lm-interpretation { font-size: 0.6rem; color: #6c7086; line-height: 1.4; margin: 0; }
+
+    /* BLOCK FLOW */
+    .block-flow-section { padding: 20px; border-top: 1px solid #1f1f3a; }
+    .bf-quiet { opacity: 0.7; }
+    .bf-quiet-msg { font-size: 0.62rem; color: #6c7086; line-height: 1.4; margin: 8px 0 0; }
+    .bf-summary { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+    .bf-direction { font-size: 0.6rem; font-weight: 950; padding: 4px 12px; border-radius: 5px; letter-spacing: 1px; }
+    .bf-dir-bullish { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .bf-dir-bearish { background: rgba(243,139,168,0.1); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .bf-dir-neutral { background: rgba(69,71,90,0.3); color: #9399b2; border: 1px solid #313244; }
+    .bf-counts { display: flex; gap: 10px; font-size: 0.6rem; font-weight: 700; }
+    .bf-events { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .bf-event { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 5px; background: #0b0b15; border: 1px solid #1f1f3a; }
+    .bf-bullish { border-left: 2px solid rgba(166,227,161,0.5); }
+    .bf-bearish { border-left: 2px solid rgba(243,139,168,0.5); }
+    .bf-ts { font-size: 0.5rem; color: #45475a; font-family: monospace; }
+    .bf-p { font-size: 0.65rem; font-weight: 800; flex: 1; }
+    .bf-vol { font-size: 0.55rem; color: #cba6f7; font-weight: 700; }
+    .bf-interpretation { font-size: 0.58rem; color: #6c7086; line-height: 1.4; margin: 0; }
+
+    /* GEOPOLITICAL RISK INTELLIGENCE */
+    .geo-risk-section { padding: 20px; border-top: 1px solid #1f1f3a; border-left: 4px solid #6c7086; }
+    .geo-risk-section.geo-low      { border-left-color: #a6e3a1; background: rgba(166,227,161,0.03); }
+    .geo-risk-section.geo-moderate { border-left-color: #f9e2af; background: rgba(249,226,175,0.04); }
+    .geo-risk-section.geo-high     { border-left-color: #fab387; background: rgba(250,179,135,0.05); }
+    .geo-risk-section.geo-critical { border-left-color: #f38ba8; background: rgba(243,139,168,0.06); }
+
+    .geo-risk-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .geo-risk-title  { display: flex; align-items: center; gap: 6px; font-size: 0.55rem; font-weight: 950; letter-spacing: 1.5px; color: #89b4fa; }
+    .geo-risk-icon   { font-size: 0.9rem; }
+
+    .geo-risk-score-badge { display: flex; align-items: baseline; gap: 3px; padding: 4px 10px; border-radius: 20px; background: rgba(137,180,250,0.1); border: 1px solid rgba(137,180,250,0.2); }
+    .geo-score-val   { font-size: 1.1rem; font-weight: 900; color: #cdd6f4; }
+    .geo-score-label { font-size: 0.55rem; color: #6c7086; }
+    .geo-risk-level  { font-size: 0.5rem; font-weight: 950; letter-spacing: 1.5px; padding: 2px 6px; border-radius: 3px; margin-left: 4px; }
+    .geo-low    .geo-risk-level { background: rgba(166,227,161,0.15); color: #a6e3a1; }
+    .geo-moderate .geo-risk-level { background: rgba(249,226,175,0.15); color: #f9e2af; }
+    .geo-high   .geo-risk-level { background: rgba(250,179,135,0.15); color: #fab387; }
+    .geo-critical .geo-risk-level { background: rgba(243,139,168,0.15); color: #f38ba8; }
+
+    .geo-keywords { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .geo-kw-tag { font-size: 0.48rem; font-weight: 700; letter-spacing: 0.8px; padding: 3px 8px; border-radius: 3px; background: rgba(203,166,247,0.1); border: 1px solid rgba(203,166,247,0.25); color: #cba6f7; text-transform: uppercase; }
+
+    .geo-impact-row  { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+    .geo-impact-cell { background: rgba(30,30,46,0.6); border: 1px solid #313244; border-radius: 6px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .geo-cell-label  { font-size: 0.45rem; font-weight: 950; letter-spacing: 1.5px; color: #6c7086; }
+    .geo-cell-val    { font-size: 0.65rem; font-weight: 800; color: #cdd6f4; }
+    .geo-cell-val.bullish { color: #a6e3a1; }
+    .geo-cell-val.bearish { color: #f38ba8; }
+    .geo-cell-val.neutral { color: #f9e2af; }
+    .geo-cell-val.geo-confirmed { color: #a6e3a1; }
+    .geo-cell-val.geo-diverging  { color: #f38ba8; }
+    .geo-cell-val.geo-early      { color: #f9e2af; }
+    .geo-cell-val.geo-none       { color: #6c7086; }
+
+    .geo-indicators { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .geo-ind-row     { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 6px; border: 1px solid transparent; }
+    .geo-ind-confirming { background: rgba(166,227,161,0.05); border-color: rgba(166,227,161,0.2); }
+    .geo-ind-diverging  { background: rgba(243,139,168,0.05); border-color: rgba(243,139,168,0.2); }
+    .geo-ind-neutral    { background: rgba(249,226,175,0.04); border-color: rgba(249,226,175,0.15); }
+    .geo-ind-icon    { font-size: 0.75rem; flex-shrink: 0; margin-top: 1px; }
+    .geo-ind-content { display: flex; flex-direction: column; gap: 2px; }
+    .geo-ind-name    { font-size: 0.5rem; font-weight: 950; letter-spacing: 1px; color: #89b4fa; }
+    .geo-ind-desc    { font-size: 0.58rem; color: #a6adc8; line-height: 1.35; }
+
+    .geo-narrative { font-size: 0.62rem; color: #cdd6f4; line-height: 1.6; padding: 10px 12px; background: rgba(17,17,27,0.5); border-radius: 6px; border-left: 3px solid #89b4fa; margin-bottom: 12px; }
+
+    .geo-action-bias { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 6px; }
+    .geo-action-trade   { background: rgba(166,227,161,0.1); border: 1px solid rgba(166,227,161,0.3); }
+    .geo-action-reduce  { background: rgba(243,139,168,0.1); border: 1px solid rgba(243,139,168,0.3); }
+    .geo-action-wait    { background: rgba(249,226,175,0.08); border: 1px solid rgba(249,226,175,0.25); }
+    .geo-action-monitor { background: rgba(137,180,250,0.07); border: 1px solid rgba(137,180,250,0.2); }
+    .geo-action-label { font-size: 0.45rem; font-weight: 950; letter-spacing: 1.5px; color: #6c7086; }
+    .geo-action-val   { font-size: 0.6rem; font-weight: 900; letter-spacing: 0.5px; }
+    .geo-action-trade   .geo-action-val { color: #a6e3a1; }
+    .geo-action-reduce  .geo-action-val { color: #f38ba8; }
+    .geo-action-wait    .geo-action-val { color: #f9e2af; }
+    .geo-action-monitor .geo-action-val { color: #89b4fa; }
 
     /* RESPONSIVE */
     @media (max-width: 1100px) {
@@ -866,6 +1375,44 @@ export class InstrumentCardComponent implements OnChanges {
     return 'TRANSITION';
   }
 
+  getTopVPBuckets() {
+    const vp = this.analysis.volume_profile;
+    if (!vp?.buckets?.length) return [];
+    const buckets = [...vp.buckets];
+    const sorted = buckets.sort((a, b) => {
+      const midA = (a.price_low + a.price_high) / 2;
+      const midB = (b.price_low + b.price_high) / 2;
+      return midA - midB;
+    });
+    const step = Math.max(1, Math.floor(sorted.length / 12));
+    const sampled = sorted.filter((_, i) => i % step === 0 || sorted[i].is_poc);
+    return sampled.slice(-12);
+  }
+
+  getVWAPPositionClass(): string {
+    const pos = this.analysis.session_vwap?.position || '';
+    if (pos.includes('EXTENDED')) return 'extended';
+    if (pos.includes('ABOVE')) return 'above';
+    return 'below';
+  }
+
+  getEventCountdown(minutes: number | undefined | null): string {
+    if (!minutes) return '';
+    if (minutes < 60) return `${minutes}m`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  getCorrCellClass(val: number | undefined | null): string {
+    if (val === null || val === undefined) return 'corr-neutral';
+    if (val >= 0.6) return 'corr-strong-pos';
+    if (val >= 0.3) return 'corr-pos';
+    if (val > -0.3) return 'corr-neutral';
+    if (val > -0.6) return 'corr-neg';
+    return 'corr-strong-neg';
+  }
+
   getNextEvent(): string {
     if (this.analysis.fundamentals?.has_high_impact_events) {
       return this.analysis.fundamentals.events[0] || 'High Impact Event';
@@ -875,6 +1422,62 @@ export class InstrumentCardComponent implements OnChanges {
 
   getPullbackReasons(): string[] {
     return this.analysis.pullback_warning?.reasons || [];
+  }
+
+  // ── Scaling Interpretation Methods ────────────────────────────────────────
+  /** Parse dollar target string (e.g. "$75.28") to number, or null */
+  private parseTargetPrice(target: string): number | null {
+    if (!target || !target.startsWith('$')) return null;
+    return parseFloat(target.replace('$', ''));
+  }
+
+  getTargetDistance(target: string): string {
+    const t = this.parseTargetPrice(target);
+    if (t === null) return '';
+    const price = this.analysis.current_price;
+    const dist = ((Math.abs(t - price) / price) * 100).toFixed(2);
+    const direction = this.isBullish ? t > price : t < price;
+    const arrow = direction ? '↑' : '↓ (crossed)';
+    return `${dist}% ${arrow}`;
+  }
+
+  isTargetHit(target: string): boolean {
+    const t = this.parseTargetPrice(target);
+    if (t === null) return false;
+    const price = this.analysis.current_price;
+    return this.isBullish ? price >= t : price <= t;
+  }
+
+  isNextTarget(target: string): boolean {
+    const steps = this.getScalingStrategy();
+    const nextUnhit = steps.find(s => !this.isTargetHit(s.target));
+    return nextUnhit ? nextUnhit.target === target : false;
+  }
+
+  getScalingActionRead(): string {
+    const vr = this.analysis.volatility_risk;
+    const price = this.analysis.current_price;
+    if (!vr) return '';
+
+    const tp1 = vr.take_profit_level1;
+    const tp2 = vr.take_profit_level2;
+    const tp3 = vr.take_profit;
+    const sl = vr.stop_loss;
+    const distPct = (t: number) => ((Math.abs(t - price) / price) * 100).toFixed(2);
+
+    if (this.isBullish) {
+      if (tp3 && price >= tp3) return `🎯 All three targets hit. Consider closing the 20% runner or raising stop to lock in full profit.`;
+      if (tp2 && price >= tp2) return `✅ T1 & T2 hit. 20% runner in play — raise stop to T1 ($${tp1?.toFixed(2) ?? '?'}) to protect gains. Let the runner breathe.`;
+      if (tp1 && price >= tp1) return `✅ T1 hit at $${tp1.toFixed(2)}. Exit 50% now. Move stop-loss to breakeven. Target T2 ($${tp2?.toFixed(2) ?? '?'}) with the remaining position.`;
+      if (tp1) return `⏳ ${distPct(tp1)}% from T1 ($${tp1.toFixed(2)}). Hold long — do not move stop until T1 is reached. On T1 hit: exit 50%, raise stop, target T2 ($${tp2?.toFixed(2) ?? '?'}).`;
+      return `⏳ Target $${tp3.toFixed(2)} (${distPct(tp3)}% away). Hold long with stop at $${sl.toFixed(2)}.`;
+    } else {
+      if (tp3 && price <= tp3) return `🎯 All three targets hit. Consider closing the 20% runner or lowering stop to lock in full profit.`;
+      if (tp2 && price <= tp2) return `✅ T1 & T2 hit. 20% runner in play — lower stop to T1 ($${tp1?.toFixed(2) ?? '?'}) to protect gains.`;
+      if (tp1 && price <= tp1) return `✅ T1 hit at $${tp1.toFixed(2)}. Exit 50% now. Move stop-loss to breakeven. Target T2 ($${tp2?.toFixed(2) ?? '?'}) short.`;
+      if (tp1) return `⏳ ${distPct(tp1)}% from T1 ($${tp1.toFixed(2)}). Hold short — do not move stop until T1 is reached. On T1 hit: cover 50%, lower stop, target T2 ($${tp2?.toFixed(2) ?? '?'}).`;
+      return `⏳ Target $${tp3.toFixed(2)} (${distPct(tp3)}% away). Hold short with stop at $${sl.toFixed(2)}.`;
+    }
   }
 
   getScalingStrategy(): { stage: string, percent: number, target: string }[] {
@@ -906,7 +1509,7 @@ export class InstrumentCardComponent implements OnChanges {
   private marketAnalyzerService = inject(MarketAnalyzerService);
 
   selectedTab: 'plan' | 'insight' = 'plan';
-  activeAnalysisTab: 'technical' | 'risk' = 'technical';
+  activeAnalysisTab: 'technical' | 'risk' | 'performance' = 'technical';
   showChart = false;
   isLoadingChart = false;
   chartData: ChartData[] = [];
@@ -966,6 +1569,54 @@ export class InstrumentCardComponent implements OnChanges {
 
   onRefresh() {
     this.refresh.emit(this.analysis.symbol);
+  }
+
+  getFilteredSummary(): string {
+    const text = this.analysis?.trade_signal?.executive_summary ?? '';
+    return text
+      .split(/(?<=[.!?])\s+/)
+      .filter(sentence => {
+        const lower = sentence.toLowerCase();
+        return !(
+          lower.includes('warning:') ||
+          (lower.includes('economic') && (lower.includes('event') || lower.includes('news'))) ||
+          lower.includes('high-impact event') ||
+          lower.includes('volatility is expected') ||
+          lower.includes('pre-event') ||
+          lower.includes('reduce position') && lower.includes('event')
+        );
+      })
+      .join(' ')
+      .trim();
+  }
+
+  isWaitAction(): boolean {
+    const action = this.analysis?.trade_signal?.action_plan?.toLowerCase() ?? '';
+    return action.includes('wait') || action.includes('observe') || action.includes('sideline') || action.includes('neutral');
+  }
+
+  getGeoImpactClass(impact: string): string {
+    const i = impact.toLowerCase();
+    if (i.includes('bullish')) return 'bullish';
+    if (i.includes('bearish')) return 'bearish';
+    return 'neutral';
+  }
+
+  getGeoConfirmationClass(confirmation: string): string {
+    switch (confirmation) {
+      case 'CONFIRMED': return 'geo-confirmed';
+      case 'DIVERGING':  return 'geo-diverging';
+      case 'EARLY':      return 'geo-early';
+      default:           return 'geo-none';
+    }
+  }
+
+  getGeoActionClass(bias: string): string {
+    const b = bias.toUpperCase();
+    if (b.includes('TRADE WITH')) return 'geo-action-trade';
+    if (b.includes('REDUCE'))     return 'geo-action-reduce';
+    if (b.includes('WAIT'))       return 'geo-action-wait';
+    return 'geo-action-monitor';
   }
 
   // CSS Class Helpers
@@ -1078,6 +1729,10 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   // ── Enhanced Pullback Analysis Methods ───────────────────────────────────────
+  hasPullbackReasons(): boolean {
+    return !!(this.analysis.pullback_warning?.reasons && this.analysis.pullback_warning.reasons.length > 0);
+  }
+
   getPullbackReasonClass(reason: string): string {
     const lowerReason = reason.toLowerCase();
     if (lowerReason.includes('extended') || lowerReason.includes('overbought')) return 'high-risk';
@@ -1214,8 +1869,19 @@ export class InstrumentCardComponent implements OnChanges {
     return 'ANALYZING'; // Placeholder
   }
 
-  getCorrelationRiskCheck(): string {
-    return 'warn'; // Placeholder
+  getVolatilityRegimeCheck(): string {
+    const label = (this.analysis.volatility_risk.volatility_regime_label || '').toLowerCase();
+    if (label.includes('extreme') || label.includes('very high')) return 'fail';
+    if (label.includes('high') || label.includes('elevated') || label.includes('moderate')) return 'warn';
+    return 'pass';
+  }
+
+  getVWAPDistLabel(): string {
+    const dist = this.analysis.daily_strength.vwap_dist_pct;
+    if (dist === undefined || dist === null) return 'N/A';
+    if (dist > 1.5) return 'Extended Above';
+    if (dist < -1.5) return 'Extended Below';
+    return 'Near VWAP';
   }
 
   getCorrelationRisk(): string {
@@ -1237,6 +1903,159 @@ export class InstrumentCardComponent implements OnChanges {
     return Math.max(0, Math.min(100, percent));
   }
 
+
+  // ── Pivot Interpretation Methods ──────────────────────────────────────────
+  getPivotBias(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 'neutral';
+    const price = this.analysis.current_price;
+    if (price > pp.r1) return 'bullish';
+    if (price > pp.pivot) return 'bullish';
+    return 'bearish';
+  }
+
+  getPricePosition(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 'N/A';
+    const price = this.analysis.current_price;
+    if (price > pp.r3) return 'ABOVE R3';
+    if (price > pp.r2) return 'ABOVE R2';
+    if (price > pp.r1) return 'ABOVE R1';
+    if (price > pp.pivot) return 'ABOVE PIVOT';
+    if (price > pp.s1) return 'BELOW PIVOT';
+    if (price > pp.s2) return 'AT S1 ZONE';
+    if (price > pp.s3) return 'AT S2 ZONE';
+    return 'BELOW S3';
+  }
+
+  getPivotSignalAlign(): string {
+    const bias = this.getPivotBias();
+    const signal = this.analysis.trade_signal.recommendation;
+    if (bias === signal) return '✓ ALIGNED';
+    if (signal === 'neutral') return '— NEUTRAL SIGNAL';
+    return '⚠ CONFLICTING';
+  }
+
+  getPivotSignalAlignClass(): string {
+    const align = this.getPivotSignalAlign();
+    if (align.startsWith('✓')) return 'aligned';
+    if (align.startsWith('⚠')) return 'conflicting';
+    return 'neutral';
+  }
+
+  getNearestResistance(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 'N/A';
+    const price = this.analysis.current_price;
+    if (price < pp.pivot) return pp.pivot.toFixed(2);
+    if (price < pp.r1) return pp.r1.toFixed(2);
+    if (price < pp.r2) return pp.r2.toFixed(2);
+    return pp.r3.toFixed(2);
+  }
+
+  getNearestSupport(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return 'N/A';
+    const price = this.analysis.current_price;
+    if (price > pp.pivot) return pp.pivot.toFixed(2);
+    if (price > pp.s1) return pp.s1.toFixed(2);
+    if (price > pp.s2) return pp.s2.toFixed(2);
+    return pp.s3.toFixed(2);
+  }
+
+  getPivotTradeRead(): string {
+    const pp = this.analysis.technical_indicators?.pivot_points;
+    if (!pp) return '';
+    const price = this.analysis.current_price;
+    const signal = this.analysis.trade_signal.recommendation;
+    const { pivot, s1, s2, r1, r2, r3 } = pp;
+
+    if (price > r2) {
+      return `Price is extended above R2 ($${r2.toFixed(2)}). Consider taking partial profits. A pullback to R1 ($${r1.toFixed(2)}) is healthy — re-enter if trend holds.`;
+    }
+    if (price > r1) {
+      return `Strong bullish momentum above R1 ($${r1.toFixed(2)}). Hold longs and target R2 ($${r2.toFixed(2)}). Trail stop-loss to just below R1 to protect gains.`;
+    }
+    if (price > pivot) {
+      if (signal === 'bearish') {
+        return `Price is above Pivot ($${pivot.toFixed(2)}) but signal is bearish — caution. Wait for price to break below Pivot before considering shorts. Target S1 ($${s1.toFixed(2)}).`;
+      }
+      return `Price above Pivot ($${pivot.toFixed(2)}) confirms bullish bias. Target R1 ($${r1.toFixed(2)}) on continuation. Stop-loss below S1 ($${s1.toFixed(2)}) on long entries.`;
+    }
+    if (price > s1) {
+      if (signal === 'bullish') {
+        return `Price below Pivot ($${pivot.toFixed(2)}) — wait for reclaim before going long. A Pivot break above would target R1 ($${r1.toFixed(2)}). S1 ($${s1.toFixed(2)}) is your downside risk.`;
+      }
+      return `Bearish bias below Pivot ($${pivot.toFixed(2)}). S1 ($${s1.toFixed(2)}) is current support. A break below S1 opens S2 ($${s2.toFixed(2)}) as next target.`;
+    }
+    if (price > s2) {
+      return `Price at S1 support zone ($${s1.toFixed(2)}) — critical make-or-break level. A bounce here targets Pivot ($${pivot.toFixed(2)}). A close below S1 signals further decline to S2 ($${s2.toFixed(2)}).`;
+    }
+    return `Price below S2 ($${s2.toFixed(2)}) — extended bearish move. High risk for new longs. Wait for S2 reclaim and stabilization before considering long positions.`;
+  }
+
+  getFibZoneRead(): string {
+    const fib = this.analysis.technical_indicators?.fibonacci;
+    if (!fib) return '';
+    const price = this.analysis.current_price;
+    const r382 = fib.ret_382, r618 = fib.ret_618, e1618 = fib.ext_1618;
+    if (!r382 || !r618) return '';
+    const pct = (v: number) => Math.abs((price - v) / price) * 100;
+    if (pct(r382) < 0.5) return `🎯 At Fib 38.2% ($${r382.toFixed(2)}) — ideal pullback entry zone in an uptrend.`;
+    if (pct(r618) < 0.5) return `⚡ At Fib 61.8% ($${r618.toFixed(2)}) — the golden ratio. Last major support before reversal risk increases significantly.`;
+    if (e1618 && price > e1618) return `📈 Beyond 1.618 extension ($${e1618.toFixed(2)}) — highly extended. Manage risk and consider partial profit-taking.`;
+    if (price < r382 && price > r618) return `In consolidation zone between 38.2% ($${r382.toFixed(2)}) and 61.8% ($${r618.toFixed(2)}) retracement. Wait for directional breakout.`;
+    return '';
+  }
+
+  // ── Market Momentum Read Methods ──────────────────────────────────────────
+  getADXClass(): string {
+    const adx = this.analysis.daily_strength.adx;
+    if (adx > 50) return 'strong';
+    if (adx > 25) return 'trending';
+    return 'weak';
+  }
+
+  getRSIClass(): string {
+    const rsi = this.analysis.daily_strength.rsi;
+    if (rsi > 70) return 'bearish';
+    if (rsi > 60) return 'bullish';
+    if (rsi < 30) return 'bullish';
+    if (rsi < 40) return 'bearish';
+    return 'neutral';
+  }
+
+  getMarketMomentumRead(): string {
+    const adx = this.analysis.daily_strength.adx;
+    const rsi = this.analysis.daily_strength.rsi;
+    const signal = this.analysis.trade_signal.recommendation;
+
+    if (adx > 50 && rsi > 65) return `Strong trending market with elevated momentum. Trend-following entries are favored — avoid counter-trend trades.`;
+    if (adx > 50 && rsi < 35) return `Strong trend but RSI is exhausted. A short-term bounce is likely. Wait for RSI to reset above 40 before entering in trend direction.`;
+    if (adx > 50 && rsi > 70) return `Powerful trend but overbought conditions (RSI ${rsi.toFixed(0)}). Wait for a pullback to enter — chasing at this level risks a sharp reversal.`;
+    if (adx > 25 && signal === 'bullish') return `Trending market (ADX ${adx.toFixed(0)}) supporting the bullish signal. RSI at ${rsi.toFixed(0)} — momentum is ${rsi > 50 ? 'positive' : 'building'}. Entry on pullback preferred.`;
+    if (adx > 25 && signal === 'bearish') return `Trending market (ADX ${adx.toFixed(0)}) supporting the bearish signal. RSI at ${rsi.toFixed(0)} — ${rsi < 50 ? 'downside momentum in play' : 'watch for RSI confirmation below 50'}.`;
+    if (adx < 20) return `Low trend strength (ADX ${adx.toFixed(0)}) — market is ranging. Reduce position size and avoid breakout strategies until ADX rises above 25.`;
+    return `Developing trend (ADX ${adx.toFixed(0)}), RSI ${rsi.toFixed(0)}. Monitor for confirmation before committing full position size.`;
+  }
+
+  getAnalysisAge(): string {
+    if (!this.analysis.last_updated) return 'N/A';
+    const updated = new Date(this.analysis.last_updated);
+    const diffMs = Date.now() - updated.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ${diffMin % 60}m ago`;
+    return updated.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  isPlanStale(): boolean {
+    if (!this.analysis.last_updated) return false;
+    const diffMin = Math.floor((Date.now() - new Date(this.analysis.last_updated).getTime()) / 60000);
+    return diffMin > 30;
+  }
 
   getVWAPClass(): string {
     const dist = this.analysis.daily_strength.vwap_dist_pct;
@@ -1543,18 +2362,28 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   // ── Visual R/R Diagram Helpers ──────────────────────────────────────────────
+  private isShortTrade(): boolean {
+    return this.analysis.trade_signal?.recommendation?.toLowerCase() === 'bearish';
+  }
+
   getRRReward(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
     const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
-    return Math.max(0, vr.take_profit - entry).toFixed(2);
+    const reward = this.isShortTrade()
+      ? entry - vr.take_profit
+      : vr.take_profit - entry;
+    return Math.max(0, reward).toFixed(2);
   }
 
   getRRRisk(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
     const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
-    return Math.max(0, entry - vr.stop_loss).toFixed(2);
+    const risk = this.isShortTrade()
+      ? vr.stop_loss - entry
+      : entry - vr.stop_loss;
+    return Math.max(0, risk).toFixed(2);
   }
 
   getRRRatio(): string {

@@ -22,6 +22,12 @@ def analyze_relative_strength(
         symbol_closes = symbol_data['Close'].sort_index()
         bench_closes = benchmark_data['Close'].sort_index()
 
+        # Guard: remove duplicate timestamps before alignment (causes reindex error otherwise)
+        if symbol_closes.index.duplicated().any():
+            symbol_closes = symbol_closes[~symbol_closes.index.duplicated(keep='last')]
+        if bench_closes.index.duplicated().any():
+            bench_closes = bench_closes[~bench_closes.index.duplicated(keep='last')]
+
         # Reindex to match dates if there's a slight mismatch (e.g. crypto vs stocks)
         combined = pd.DataFrame({
             'symbol': symbol_closes,

@@ -64,7 +64,8 @@ def _load_local_config(user_id: str = DEFAULT_USER_ID, config_path: str = None) 
         return {"instruments": [], "strategy": {}, "alerts": {}}
 
 
-ALLOWED_SYMBOLS = {'XAU', 'XAG', 'WTI', 'SPX', 'BTC'}
+ALLOWED_SYMBOLS = {'XAU', 'XAG', 'WTI', 'BTC'}
+BENCHMARK_ONLY_SYMBOLS = {'SPX', 'DXY', 'TNX'}  # Used internally as benchmarks, not user instruments
 
 def get_instruments(config: Dict[str, Any]) -> List[Dict[str, str]]:
     """Extract instruments list from config, strictly filtered to the allowed 5."""
@@ -80,6 +81,11 @@ def get_analysis_params(config: Dict[str, Any]) -> Dict[str, Any]:
 def get_alert_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """Extract alert settings from config."""
     return config.get('alerts', {})
+
+
+def get_newsapi_key(config: Dict[str, Any]) -> str:
+    """Extract NewsAPI key - env var takes priority over YAML config."""
+    return os.environ.get('NEWS_API_KEY') or config.get('newsapi', {}).get('api_key', '')
 
 
 def get_strategy_config(config: Dict[str, Any]) -> Dict[str, Any]:

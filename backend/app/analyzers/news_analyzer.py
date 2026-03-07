@@ -1,5 +1,5 @@
 import requests
-from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import logging
 import time
@@ -10,71 +10,149 @@ logger = logging.getLogger(__name__)
 
 # Global cache for news sentiment (15 minute TTL)
 _news_cache = {}
-_CACHE_TTL = 900 # 15 minutes
+_CACHE_TTL = 900  # 15 minutes
+
+# Map internal symbols to Yahoo Finance tickers for RSS
+_YAHOO_SYMBOL_MAP = {
+    'XAU':  ('GC=F',       'Gold'),
+    'XAG':  ('SI=F',       'Silver'),
+    'WTI':  ('CL=F',       'Crude Oil'),
+    'SPX':  ('^GSPC',      'S&P 500'),
+    'BTC':  ('BTC-USD',    'Bitcoin'),
+    'ETH':  ('ETH-USD',    'Ethereum'),
+    'EUR':  ('EURUSD=X',   'Euro'),
+    'GBP':  ('GBPUSD=X',   'British Pound'),
+    'JPY':  ('USDJPY=X',   'US Dollar Yen'),
+    'DXY':  ('DX-Y.NYB',   'US Dollar Index'),
+    'NAS':  ('NQ=F',       'Nasdaq'),
+    'DOW':  ('YM=F',       'Dow Jones'),
+}
+
 
 def fetch_rss_news(symbol: str) -> List[Dict[str, str]]:
-    """Fetch news from various RSS sources."""
+    """Fetch news from Yahoo Finance RSS. Works reliably from AWS Lambda."""
     news_items = []
-    
-    # Financial symbols often work well with Yahoo Finance and Google News search
-    # This is a robust free way to get headlines
+    symbol_upper = symbol.upper()
+
+    yf_ticker, _ = _YAHOO_SYMBOL_MAP.get(symbol_upper, (symbol_upper, symbol_upper))
+
     urls = [
-        f"https://www.google.com/search?q={symbol}+stock+news&tbm=nws&tbs=qdr:d",
+        f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={yf_ticker}&region=US&lang=en-US",
     ]
-    
+
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (compatible; MarketAnalyser/1.0)'
     }
-    
+
     for url in urls:
         try:
-            response = requests.get(url, headers=headers, timeout=2) # Shorter timeout
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                
-                # Google News scrape (simplified)
-                # Google often changes its structure, so we look for common title patterns
-                for item in soup.find_all('div', attrs={'role': 'heading'}):
-                    title = item.get_text()
-                    if title and len(title) > 10:
-                        news_items.append({
-                            "title": title,
-                            "source": "Google News (Search)",
-                            "url": url
-                        })
-                
-                # If Google News div fails, try common anchor tags in news search
-                if not news_items:
-                    for a in soup.find_all('a'):
-                        text = a.get_text()
-                        if len(text) > 30: # Likely a headline
-                            news_items.append({
-                                "title": text,
-                                "source": "News Search",
-                                "url": url
-                            })
-                            
+            response = requests.get(url, headers=headers, timeout=5)
+            if response.status_code == 200 and response.content:
+                try:
+                    root = ET.fromstring(response.content)
+                    channel = root.find('channel')
+                    if channel is not None:
+                        for item in channel.findall('item'):
+                            title_el  = item.find('title')
+                            link_el   = item.find('link')
+                            source_el = item.find('source')
+                            pubdate_el = item.find('pubDate')
+
+                            if title_el is not None and title_el.text and len(title_el.text.strip()) > 10:
+                                news_items.append({
+                                    "title":        title_el.text.strip(),
+                                    "source":       (source_el.text.strip()
+                                                     if source_el is not None and source_el.text
+                                                     else "Yahoo Finance"),
+                                    "url":          (link_el.text.strip()
+                                                     if link_el is not None and link_el.text
+                                                     else url),
+                                    "published_at": (pubdate_el.text.strip()
+                                                     if pubdate_el is not None and pubdate_el.text
+                                                     else None)
+                                })
+                except ET.ParseError as e:
+                    logger.error(f"RSS parse error for {symbol}: {e}")
+
             if len(news_items) >= 10:
                 break
         except Exception as e:
             logger.error(f"Failed to fetch news for {symbol}: {e}")
-            
+
     return news_items[:10]
 
-def analyze_news_sentiment(symbol: str) -> NewsSentiment:
-    """Analyze sentiment of recent news for a symbol with basic caching."""
+# NewsAPI search term mapping per symbol
+_NEWSAPI_SEARCH_MAP = {
+    'XAU': 'gold price commodities',
+    'XAG': 'silver price commodities',
+    'WTI': 'crude oil price WTI',
+    'SPX': 'S&P 500 stock market',
+    'BTC': 'bitcoin cryptocurrency',
+    'ETH': 'ethereum cryptocurrency',
+    'EUR': 'euro dollar forex',
+    'GBP': 'british pound forex',
+    'JPY': 'dollar yen forex',
+    'DXY': 'US dollar index',
+    'NAS': 'nasdaq stock market',
+    'DOW': 'dow jones stock market',
+}
+
+
+def fetch_newsapi_news(symbol: str, api_key: str) -> List[Dict[str, str]]:
+    """Fetch news from NewsAPI.org. Requires valid API key."""
+    search_term = _NEWSAPI_SEARCH_MAP.get(symbol.upper(), symbol)
+    url = (
+        f"https://newsapi.org/v2/everything"
+        f"?q={requests.utils.quote(search_term)}"
+        f"&sortBy=publishedAt&pageSize=10&language=en"
+        f"&apiKey={api_key}"
+    )
+    headers = {'User-Agent': 'Mozilla/5.0 (compatible; MarketAnalyser/1.0)'}
+    news_items = []
+    try:
+        response = requests.get(url, headers=headers, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            for article in data.get('articles', []):
+                title = article.get('title', '')
+                if title and len(title) > 10 and title != '[Removed]':
+                    news_items.append({
+                        'title':        title.strip(),
+                        'source':       article.get('source', {}).get('name', 'NewsAPI'),
+                        'url':          article.get('url', url),
+                        'published_at': article.get('publishedAt')
+                    })
+        else:
+            logger.warning(f"NewsAPI returned {response.status_code} for {symbol}: {response.text[:200]}")
+    except Exception as e:
+        logger.error(f"NewsAPI fetch failed for {symbol}: {e}")
+    return news_items[:10]
+
+
+def analyze_news_sentiment(symbol: str, api_key: str = '') -> NewsSentiment:
+    """Analyze sentiment of recent news for a symbol with basic caching.
+    Uses NewsAPI if api_key provided, falls back to Yahoo Finance RSS.
+    """
     global _news_cache
-    
+
     symbol = symbol.upper()
     now = time.time()
-    
+
     # Check cache
     if symbol in _news_cache:
         cached_time, cached_sentiment = _news_cache[symbol]
         if now - cached_time < _CACHE_TTL:
             return cached_sentiment
 
-    news_data = fetch_rss_news(symbol)
+    # Prefer NewsAPI when key is present and not a placeholder
+    use_newsapi = bool(api_key and api_key.strip() and api_key != 'YOUR_NEWSAPI_KEY_HERE')
+    if use_newsapi:
+        news_data = fetch_newsapi_news(symbol, api_key)
+        if not news_data:
+            logger.warning(f"NewsAPI returned no results for {symbol}, falling back to RSS")
+            news_data = fetch_rss_news(symbol)
+    else:
+        news_data = fetch_rss_news(symbol)
     
     if not news_data:
         sentiment = NewsSentiment(
@@ -108,7 +186,8 @@ def analyze_news_sentiment(symbol: str) -> NewsSentiment:
             source=item["source"],
             url=item["url"],
             sentiment_score=round(compound, 2),
-            sentiment_label=item_label
+            sentiment_label=item_label,
+            published_at=item.get("published_at")
         ))
     
     avg_score = total_compound / len(news_data)

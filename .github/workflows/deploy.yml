@@ -31,10 +31,37 @@ env:
   TF_ROOT: infrastructure/terraform
 
 jobs:
+  # ─── Test Gate — must pass before any build or deploy ───────────────────────
+  test-gate:
+    name: Test Gate (Calculations)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install pytest --quiet
+          pip install -r backend/requirements.txt --quiet
+
+      - name: Run calculation tests
+        run: |
+          cd backend
+          python -m pytest tests/test_calculations.py tests/test_analyzers.py \
+            -v --tb=short
+        env:
+          PYTHONPATH: .
+
   # ─── Determine Environment ──────────────────────────────────────────────────
   setup:
     name: Setup Environment
     runs-on: ubuntu-latest
+    needs: [test-gate]
     outputs:
       environment: ${{ steps.env.outputs.environment }}
       image_tag: ${{ steps.env.outputs.image_tag }}
@@ -159,7 +186,8 @@ jobs:
             -var="jwt_secret_key=${{ secrets.JWT_SECRET_KEY }}" \
             -var="session_secret=${{ secrets.SESSION_SECRET || secrets.JWT_SECRET_KEY }}" \
             -var="twelvedata_api_key=${{ secrets.TWELVEDATA_API_KEY }}" \
-            -var="fmp_api_key=${{ secrets.FMP_API_KEY }}"
+            -var="fmp_api_key=${{ secrets.FMP_API_KEY }}" \
+            -var="news_api_key=${{ secrets.NEWS_API_KEY }}"
       - name: Save outputs
         run: |
           cd ${{ env.TF_ROOT }}

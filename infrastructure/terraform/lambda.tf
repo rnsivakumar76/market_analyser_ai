@@ -23,6 +23,7 @@ resource "aws_lambda_function" "api" {
       SESSION_SECRET       = var.session_secret
       TWELVEDATA_API_KEY   = var.twelvedata_api_key
       FMP_API_KEY          = var.fmp_api_key
+      NEWS_API_KEY         = var.news_api_key
       FRONTEND_URL          = var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend_fixed.domain_name}"
       GOOGLE_REDIRECT_URI   = var.domain_name != "" ? "https://${var.domain_name}/api/auth/callback" : "https://${aws_cloudfront_distribution.frontend_fixed.domain_name}/api/auth/callback"
       LOG_LEVEL             = "INFO"

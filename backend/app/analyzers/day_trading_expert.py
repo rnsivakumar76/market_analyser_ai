@@ -14,7 +14,7 @@ def detect_opening_range(df_15m: pd.DataFrame) -> Dict[str, Any]:
     For simplicity, we look for the highest volume/volatility spike in the morning.
     """
     if df_15m.empty:
-        return {"high": 0.0, "low": 0.0, "broken": "none"}
+        return {"or_high": 0.0, "or_low": 0.0, "broken": "none"}
     
     # Simple logic: Take the first candle of the most recent day in the data
     last_date = df_15m.index[-1].date()
@@ -95,42 +95,172 @@ def analyze_commodity_specifics(symbol: str, dxy_change: float, yield_change: fl
     return advice
 
 def generate_expert_trade_plan(
-    symbol: str, 
-    price: float, 
-    or_data: Dict, 
-    rvol: float, 
-    technical: Any, 
-    advice: str
+    symbol: str,
+    price: float,
+    or_data: Dict,
+    rvol: float,
+    technical: Any,
+    advice: str,
+    signal_direction: str = "neutral",
+    atr: float = 0.0,
+    rsi: Optional[float] = None,
+    adx: Optional[float] = None,
+    session_ctx: Any = None,
 ) -> Dict[str, Any]:
     """
-    Generates a concrete 'Battle Plan' for the day trader.
+    Generates a rich multi-line 'Battle Plan' for the day trader.
+    Covers: SITUATION → ENTRY → TARGETS → STOP/INVALIDATION → CONVICTION → CONTEXT
     """
-    plan = []
-    
-    # 1. Opening Range Breakout (ORB) Strategy
-    if or_data["broken"] == "bullish":
-        plan.append(f"ORB BULLISH: Price held above {or_data['or_high']:.2f}. Trend is UP.")
-    elif or_data["broken"] == "bearish":
-        plan.append(f"ORB BEARISH: Price broke below {or_data['or_low']:.2f}. Trend is DOWN.")
-    
-    # 2. RVOL Confirmation
-    if rvol > 2.0:
-        plan.append(f"HIGH CONVICTION: RVOL is {rvol}x. Institutions are active.")
-    
-    # 3. Pivot Targets
+    sections = []
+
+    orb_direction = or_data.get("broken", "none")
+    or_high = or_data.get("or_high", 0.0)
+    or_low  = or_data.get("or_low",  0.0)
+    is_bullish = signal_direction == "bullish"
+    is_bearish = signal_direction == "bearish"
+
+    # Derive session label from session_ctx fields (no 'session' field on SessionContext model)
+    session_name = None
+    if session_ctx:
+        if getattr(session_ctx, 'london_open', None):
+            session_name = "London"
+        elif hasattr(session_ctx, 'description') and session_ctx.description:
+            desc_lower = session_ctx.description.lower()
+            if 'london' in desc_lower:
+                session_name = "London"
+            elif 'asia' in desc_lower or 'tokyo' in desc_lower:
+                session_name = "Asia"
+            elif 'new york' in desc_lower or 'ny' in desc_lower:
+                session_name = "New York"
+
+    # ── 1. SITUATION ──────────────────────────────────────────────────────────
+    if orb_direction == "bullish":
+        sit = f"SITUATION: ORB BULLISH — Price broke above OR High ({or_high:.2f}). Intraday bias is UP."
+        if is_bearish:
+            sit += " ⚠ Counter-trend bounce: daily signal is bearish — reduce size and tighten stops."
+    elif orb_direction == "bearish":
+        sit = f"SITUATION: ORB BEARISH — Price broke below OR Low ({or_low:.2f}). Intraday bias is DOWN."
+        if is_bullish:
+            sit += " ⚠ Pullback within larger uptrend — look for a long reversal at key support, not a new short."
+    elif or_high and or_low:
+        sit = (f"SITUATION: INSIDE RANGE — Price is consolidating between OR Low ({or_low:.2f}) "
+               f"and OR High ({or_high:.2f}). No trade until a candle CLOSES outside the range.")
+    else:
+        sit = "SITUATION: WAITING FOR SETUP — No confirmed opening range yet. Stand aside and observe price action."
+    sections.append(sit)
+
+    # ── 2. ENTRY ZONE ─────────────────────────────────────────────────────────
+    if technical and technical.pivot_points:
+        p   = technical.pivot_points
+        fib = technical.fibonacci
+        entry = None
+
+        if orb_direction == "bullish" and not is_bearish:
+            fib_note = f" or Fib 38.2% pullback ({fib.ret_382:.2f})" if fib and fib.ret_382 else ""
+            entry = (f"ENTRY: Wait for a pullback to S1 ({p.s1:.2f}){fib_note}. "
+                     f"Enter on a 15m bullish close — do NOT chase the initial breakout.")
+        elif orb_direction == "bearish" and is_bullish:
+            fib_note = f" or Fib 38.2% ({fib.ret_382:.2f})" if fib and fib.ret_382 else ""
+            entry = (f"ENTRY: Watch S1 ({p.s1:.2f}){fib_note} for a reversal trigger. "
+                     f"Look for a hammer / bullish engulfing candle on the 15m before entering long.")
+        elif orb_direction == "bearish" and not is_bullish:
+            fib_note = f" or Fib 61.8% bounce ({fib.ret_618:.2f})" if fib and fib.ret_618 else ""
+            entry = (f"ENTRY: On a dead-cat bounce to R1 ({p.r1:.2f}){fib_note}. "
+                     f"Wait for a 15m bearish close confirming rejection before entering short.")
+        elif orb_direction == "none" and is_bullish and price < p.pivot:
+            fib_note = f" and Fib 38.2% ({fib.ret_382:.2f})" if fib and fib.ret_382 else ""
+            entry = (f"ENTRY: Watching S1 ({p.s1:.2f}){fib_note}. "
+                     f"Need a 15m close above Pivot ({p.pivot:.2f}) to confirm bullish momentum before committing.")
+        elif orb_direction == "bullish" and is_bearish:
+            fib_note = f" or Fib 61.8% ({fib.ret_618:.2f})" if fib and fib.ret_618 else ""
+            entry = (f"ENTRY (Fade): Wait for a 15m close below Pivot ({p.pivot:.2f}){fib_note} "
+                     f"to enter short toward S1 ({p.s1:.2f}). High-risk counter-trend play — small size only.")
+
+        if entry:
+            sections.append(entry)
+
+    # ── 3. TARGETS ────────────────────────────────────────────────────────────
+    # Signal direction (daily) takes priority over ORB direction when they conflict.
+    # A bearish ORB on a bullish daily signal = pullback entry → long targets.
     if technical and technical.pivot_points:
         p = technical.pivot_points
-        if price > p.pivot:
-            plan.append(f"TARGETS: Aim for R1 ({p.r1}) then R2 ({p.r2}).")
+        long_targets = is_bullish or (not is_bearish and orb_direction == "bullish")
+        short_targets = is_bearish or (not is_bullish and orb_direction == "bearish")
+        if long_targets:
+            sections.append(
+                f"TARGETS: T1 → R1 ({p.r1:.2f}) — book 50% profit and move stop to breakeven. "
+                f"T2 → R2 ({p.r2:.2f}) — trail stop on the remainder."
+            )
+        elif short_targets:
+            sections.append(
+                f"TARGETS: T1 → S1 ({p.s1:.2f}) — book 50% profit and move stop to breakeven. "
+                f"T2 → S2 ({p.s2:.2f}) — trail stop on the remainder."
+            )
+
+    # ── 4. STOP / INVALIDATION ────────────────────────────────────────────────
+    # Same priority logic: daily signal determines which side the stop goes.
+    if technical and technical.pivot_points:
+        p = technical.pivot_points
+        atr_note = f" ({atr:.2f} ATR buffer)" if atr and atr > 0 else ""
+        long_stop = is_bullish or (not is_bearish and orb_direction == "bullish")
+        short_stop = is_bearish or (not is_bullish and orb_direction == "bearish")
+        if long_stop:
+            stop_ref = or_low if or_low else p.s1
+            sections.append(
+                f"STOP: Hard stop below {stop_ref:.2f}{atr_note}. "
+                f"Plan is INVALIDATED on a 15m candle close below OR Low ({or_low:.2f})."
+            )
+        elif short_stop:
+            stop_ref = or_high if or_high else p.r1
+            sections.append(
+                f"STOP: Hard stop above {stop_ref:.2f}{atr_note}. "
+                f"Plan is INVALIDATED on a 15m candle close above OR High ({or_high:.2f})."
+            )
+
+    # ── 5. CONVICTION ─────────────────────────────────────────────────────────
+    conv = []
+    if rvol >= 2.0:
+        conv.append(f"RVOL {rvol}x (high — institutions active)")
+    elif rvol >= 1.5:
+        conv.append(f"RVOL {rvol}x (moderate — watch for volume surge)")
+    else:
+        conv.append(f"RVOL {rvol}x (light — wait for volume before full size)")
+
+    if adx is not None and adx > 0:
+        if adx >= 30:
+            conv.append(f"ADX {adx:.0f} (strong trend, trend-following favoured)")
+        elif adx >= 20:
+            conv.append(f"ADX {adx:.0f} (developing trend, avoid fading)")
         else:
-            plan.append(f"TARGETS: Aim for S1 ({p.s1}) then S2 ({p.s2}).")
-            
-    # 4. Expert Advice
+            conv.append(f"ADX {adx:.0f} (weak trend, wait for breakout confirmation)")
+
+    if rsi is not None:
+        if rsi >= 70:
+            conv.append(f"RSI {rsi:.0f} — overbought, reduce long size")
+        elif rsi <= 30:
+            conv.append(f"RSI {rsi:.0f} — oversold, bounce conditions present")
+        elif rsi >= 55:
+            conv.append(f"RSI {rsi:.0f} — bullish momentum")
+        elif rsi <= 45:
+            conv.append(f"RSI {rsi:.0f} — bearish momentum")
+
+    if session_name:
+        conv.append(f"{session_name} session active")
+
+    if conv:
+        sections.append("CONVICTION: " + "  ·  ".join(conv))
+
+    # ── 6. COMMODITY CONTEXT ──────────────────────────────────────────────────
     if advice:
-        plan.append(advice)
-        
+        sections.append(f"CONTEXT: {advice}")
+
+    battle_plan_text = "\n".join(sections) if sections else "Wait for Session Open / Clear Breakout."
+
     return {
-        "battle_plan": " | ".join(plan) if plan else "Wait for Session Open/Clear Breakout.",
+        "battle_plan": battle_plan_text,
         "rvol": rvol,
-        "is_high_intent": rvol > 1.8
+        "is_high_intent": rvol > 1.8,
+        "or_high": or_data.get("or_high", 0.0),
+        "or_low":  or_data.get("or_low",  0.0),
+        "or_broken": or_data.get("broken", "none"),
     }

@@ -106,8 +106,10 @@ def analyze_instrument_lazy(
     pre_pullback_df: Any = None,
     pre_execution_df: Any = None,
     pre_expert_df: Any = None,
+    pre_price: float = None,
     dxy_df: Any = None,
-    us10y_df: Any = None
+    us10y_df: Any = None,
+    news_api_key: str = ''
 ) -> Any:
     """Perform complete analysis on a single instrument with lazy imports."""
     from .data_fetcher import fetch_historical_data, fetch_weekly_data, get_current_price
@@ -151,26 +153,34 @@ def analyze_instrument_lazy(
     # 1. Macro Data (High latency, low change)
     if pre_macro_df is not None: macro_data = pre_macro_df
     else:
-        macro_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
+        macro_interval = "1month" if mode == StrategyMode.LONG_TERM else "1day"
         macro_days = 1000 if mode == StrategyMode.LONG_TERM else 500
         macro_data = get_cached_history(symbol, macro_interval, macro_days)
         if macro_data is None:
+            logger.info(f"[FETCH] {symbol} macro ({macro_interval}, {macro_days}d) - cache miss, fetching...")
             macro_data = fetch_historical_data(symbol, days=macro_days, interval=macro_interval)
             set_cached_history(symbol, macro_interval, macro_days, macro_data)
+            logger.info(f"[FETCH] {symbol} macro: {'OK' if macro_data is not None and not macro_data.empty else 'EMPTY'} ({len(macro_data) if macro_data is not None and not macro_data.empty else 0} bars)")
+        else:
+            logger.info(f"[FETCH] {symbol} macro: cache hit ({len(macro_data)} bars)")
 
     # 2. Pullback Data
     if pre_pullback_df is not None: pullback_data = pre_pullback_df
     else:
-        pull_interval = "1wk" if mode == StrategyMode.LONG_TERM else "4h"
+        pull_interval = "1week" if mode == StrategyMode.LONG_TERM else "4h"
         pull_days = 250 if mode == StrategyMode.LONG_TERM else 120
         pullback_data = get_cached_history(symbol, pull_interval, pull_days)
         if pullback_data is None:
+            logger.info(f"[FETCH] {symbol} pullback ({pull_interval}, {pull_days}d) - cache miss, fetching...")
             pullback_data = fetch_historical_data(symbol, days=pull_days, interval=pull_interval)
             set_cached_history(symbol, pull_interval, pull_days, pullback_data)
+            logger.info(f"[FETCH] {symbol} pullback: {'OK' if pullback_data is not None and not pullback_data.empty else 'EMPTY'} ({len(pullback_data) if pullback_data is not None and not pullback_data.empty else 0} bars)")
+        else:
+            logger.info(f"[FETCH] {symbol} pullback: cache hit ({len(pullback_data)} bars)")
 
     # 3. Execution Data (Low latency, high change - Always Fresh)
     if pre_execution_df is not None: execution_data = pre_execution_df
-    else: execution_data = fetch_historical_data(symbol, days=(500 if mode == StrategyMode.LONG_TERM else 300), interval=("1d" if mode == StrategyMode.LONG_TERM else "1h"))
+    else: execution_data = fetch_historical_data(symbol, days=(500 if mode == StrategyMode.LONG_TERM else 300), interval=("1day" if mode == StrategyMode.LONG_TERM else "1h"))
 
     if mode == StrategyMode.LONG_TERM:
         macro_label = "Institutional (Long-Term)"
@@ -181,23 +191,18 @@ def analyze_instrument_lazy(
         pullback_label = "Day Trading"
         execution_label = "Execution (H1)"
 
-    # Speed Optimization: Use the most recent close from history to avoid a redundant 1.2s call.
-    # This prevents the "Failed to fetch analysis" error by keeping total scan under 30s.
-    try:
-        if not execution_data.empty:
-            current_price = float(execution_data['Close'].iloc[-1])
-            logger.info(f"Using latest candle price for {symbol}: {current_price}")
-        else:
-            raise ValueError("History empty")
-    except Exception as e:
-        logger.warning(f"Defaulting to API price for {symbol}: {e}")
-        try:
-            from .twelvedata_fetcher import TwelveDataFetcher
-            fetcher = TwelveDataFetcher()
-            current_price = fetcher.get_current_price(symbol)
-        except Exception as api_err:
-            logger.error(f"Price fetch failed for {symbol}: {api_err}")
-            raise api_err
+    # Price Strategy:
+    # - pre_price: live price pre-fetched in batch by the scan endpoint (1 API call for all instruments).
+    # - Fallback: last candle close (hourly in SHORT_TERM = fresh enough; daily in LONG_TERM = may lag by hours).
+    candle_price = float(execution_data['Close'].iloc[-1]) if not execution_data.empty else None
+    if pre_price and pre_price > 0:
+        current_price = pre_price
+        logger.info(f"Using pre-fetched live price for {symbol}: {current_price}")
+    elif candle_price is not None:
+        current_price = candle_price
+        logger.info(f"Using latest candle price for {symbol}: {current_price}")
+    else:
+        raise ValueError(f"No price available for {symbol}")
     
     trend = analyze_monthly_trend(macro_data, params.get('monthly', {}))
     # Update description to reflect timeframe
@@ -225,30 +230,42 @@ def analyze_instrument_lazy(
     )
     
     tech_indicators = analyze_technical_indicators(execution_data)
-    news_sentiment = analyze_news_sentiment(symbol)
+    news_sentiment = analyze_news_sentiment(symbol, api_key=news_api_key)
     session_ctx = analyze_session_context(execution_data)
 
     # NEW: Expert Day Trader Logic (15m/short-term specific)
+    # Pre-compute inputs here; actual plan is built after trade_signal so it uses the final recommendation.
     expert_plan = None
+    _expert_or_data = None
+    _expert_rvol = 1.0
+    _expert_advice = ""
     if mode == StrategyMode.SHORT_TERM and pre_expert_df is not None and not pre_expert_df.empty:
-        or_data = detect_opening_range(pre_expert_df)
-        rvol = calculate_rvol(pre_expert_df)
-        
-        # Intermarket nuances
+        _expert_or_data = detect_opening_range(pre_expert_df)
+        _expert_rvol = calculate_rvol(pre_expert_df)
         dxy_chg = 0.0
         yield_chg = 0.0
         if dxy_df is not None and len(dxy_df) >= 2:
             dxy_chg = float((dxy_df['Close'].iloc[-1] - dxy_df['Close'].iloc[-2]) / dxy_df['Close'].iloc[-2] * 100)
         if us10y_df is not None and len(us10y_df) >= 2:
             yield_chg = float((us10y_df['Close'].iloc[-1] - us10y_df['Close'].iloc[-2]) / us10y_df['Close'].iloc[-2] * 100)
-            
-        advice = analyze_commodity_specifics(symbol, dxy_chg, yield_chg)
-        expert_plan = generate_expert_trade_plan(symbol, current_price, or_data, rvol, tech_indicators, advice)
+        _expert_advice = analyze_commodity_specifics(symbol, dxy_chg, yield_chg)
     
     # NEW: Intermarket Context (DXY / Yields)
     intermarket = analyze_intermarket_context(symbol, dxy_df, us10y_df)
-    
-    volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value)
+
+    # Derive ideal entry price for pending setups so stop/target anchor to entry zone.
+    # Frontend shows S1/Fib entry zone for any non-bearish signal (isBullish = rec != 'bearish'),
+    # so neutral must also anchor to S1/Fib — not to current price.
+    ideal_entry = None
+    if tech_indicators and tech_indicators.pivot_points and tech_indicators.fibonacci:
+        pp = tech_indicators.pivot_points
+        fib = tech_indicators.fibonacci
+        if trend.direction.value == "bearish" and pp.r1 and fib.ret_618:
+            ideal_entry = max(pp.r1, fib.ret_618)
+        elif pp.s1 and fib.ret_382:
+            ideal_entry = min(pp.s1, fib.ret_382)
+
+    volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value, entry_price=ideal_entry)
     fundamentals = analyze_fundamentals(symbol)
     
     # NEW: Relative Strength Analysis (Alpha vs Beta)
@@ -264,7 +281,7 @@ def analyze_instrument_lazy(
         bench_data = fetch_historical_data(
             bench_sym, 
             days=(500 if mode == StrategyMode.LONG_TERM else 20), 
-            interval=("1d" if mode == StrategyMode.LONG_TERM else "1h")
+            interval=("1day" if mode == StrategyMode.LONG_TERM else "1h")
         )
     
     rs_analysis = analyze_relative_strength(
@@ -326,10 +343,48 @@ def analyze_instrument_lazy(
         trade_signal.score = max(trade_signal.score - 15, -100)
         trade_signal.reasons.append(f"Market Laggard: Weak Relative Strength vs {bench_sym} (-15 penalty)")
 
+    # Build expert plan now that trade_signal.recommendation is final and volatility.atr is available
+    if _expert_or_data is not None:
+        expert_plan = generate_expert_trade_plan(
+            symbol, current_price, _expert_or_data, _expert_rvol, tech_indicators, _expert_advice,
+            signal_direction=trade_signal.recommendation.value,
+            atr=float(volatility.atr),
+            rsi=float(strength.rsi),
+            adx=float(strength.adx),
+            session_ctx=session_ctx,
+        )
+
     # Selection of daily data for backtesting (1Y perspective)
     backtest_source = execution_data if mode == StrategyMode.LONG_TERM else macro_data
     backtest = get_backtest_results(symbol, backtest_source, params, settings=strategy_settings)
-    
+
+    # P6: Volume Profile (50-bucket LT, 20-bucket ST)
+    from .analyzers.volume_profile_analyzer import calculate_volume_profile
+    volume_profile = calculate_volume_profile(execution_data, mode=mode)
+
+    # P7: Session VWAP (intraday data — use expert_df 15min or exec hourly)
+    from .analyzers.session_vwap_analyzer import calculate_session_vwap
+    vwap_source = pre_expert_df if pre_expert_df is not None and len(pre_expert_df) > 5 else pre_execution_df
+    session_vwap = calculate_session_vwap(vwap_source, current_price)
+
+    # P8: Liquidity Map (top 3 per side)
+    from .analyzers.liquidity_map_analyzer import calculate_liquidity_map
+    liquidity_map = calculate_liquidity_map(execution_data, current_price)
+
+    # P9: Block Flow Detector
+    from .analyzers.block_flow_analyzer import detect_block_flow
+    block_flow = detect_block_flow(execution_data, current_price)
+
+    # P10: Geopolitical Risk — cross-validate news keywords with indicators
+    from .analyzers.geo_risk_analyzer import analyze_geopolitical_risk
+    geopolitical_risk = analyze_geopolitical_risk(
+        symbol=symbol,
+        news_sentiment=news_sentiment,
+        strength=strength,
+        volatility=volatility,
+        trade_signal=trade_signal,
+    )
+
     return InstrumentAnalysis(
         symbol=symbol,
         name=name,
@@ -352,14 +407,19 @@ def analyze_instrument_lazy(
         expert_trade_plan=expert_plan,
         strategy_mode=mode,
         intermarket_context=intermarket,
-        session_context=session_ctx
+        session_context=session_ctx,
+        volume_profile=volume_profile,
+        session_vwap=session_vwap,
+        liquidity_map=liquidity_map,
+        block_flow=block_flow,
+        geopolitical_risk=geopolitical_risk,
     ), execution_data
 
 # In-memory store for sent alerts
 SENT_ALERTS = set()
 
 async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = None):
-    from .config_loader import load_config, get_instruments, get_analysis_params, get_alert_config, get_strategy_config
+    from .config_loader import load_config, get_instruments, get_analysis_params, get_alert_config, get_strategy_config, get_newsapi_key
     from .models import StrategySettings, Signal, StrategyMode
     from .data_fetcher import fetch_historical_data
     from .analyzers import (
@@ -402,13 +462,15 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 logger.warning(f"Failed to reconstruct models from cache: {e}")
                 # Fall back to fresh analysis
 
-    logger.info(f"Running parallel market scan for user: {user_id} ({mode.value})...")
+    t_scan_start = time.time()
+    logger.info(f"[SCAN_START] user={user_id} mode={mode.value} timestamp={datetime.now(timezone.utc).isoformat()}")
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
     logger.info(f"Loaded {len(instruments)} instruments for user {user_id}")
     
     params = get_analysis_params(config)
     alert_config = get_alert_config(config)
+    newsapi_key = get_newsapi_key(config)
     
     try:
         strategy_settings = StrategySettings(**get_strategy_config(config))
@@ -425,8 +487,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     
     # Performance Context: Intervals for scan
     from .models import StrategyMode
-    bench_interval = "1mo" if mode == StrategyMode.LONG_TERM else "1d"
-    exec_interval = "1d" if mode == StrategyMode.LONG_TERM else "1h"
+    bench_interval = "1month" if mode == StrategyMode.LONG_TERM else "1day"
+    exec_interval = "1day" if mode == StrategyMode.LONG_TERM else "1h"
     exec_days = 500 if mode == StrategyMode.LONG_TERM else 20
 
     # 4. Optimized Benchmarks: Fetch once and share (BATCHED)
@@ -434,26 +496,32 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
     now = time.time()
     
     if now - _BENCHMARK_CACHE["timestamp"] < _BENCH_TTL and _BENCHMARK_CACHE["data"] is not None:
-        logger.info("Using cached global benchmarks (macro/yields)")
+        cache_age = round(now - _BENCHMARK_CACHE["timestamp"], 0)
+        logger.info(f"[BENCHMARKS] Cache hit (age={cache_age}s, TTL={_BENCH_TTL}s)")
         benchmarks_data = _BENCHMARK_CACHE["data"]
     else:
-        logger.info("Fetching fresh global benchmarks via BATCH...")
+        logger.info(f"[BENCHMARKS] Cache miss or expired — fetching fresh via BATCH (bench={bench_interval}, exec={exec_interval})")
         from .twelvedata_fetcher import TwelveDataFetcher
         shared_fetcher = TwelveDataFetcher()
-        bench_batch = ["SPX", "BTC", "DX-Y.NYB", "TNX"]
-        
-        # BATCH FETCH Benchmarks using a single shared fetcher to respect rate limits
-        b_macro = shared_fetcher.fetch_batch_data(bench_batch, interval=bench_interval, days=1000)
-        b_exec = shared_fetcher.fetch_batch_data(bench_batch, interval=exec_interval, days=exec_days)
-        
+        # Fetch SPX/BTC in their own batch — isolate DXY/TNX so a DXY failure
+        # cannot contaminate the SPX/BTC chunk (DXY is invalid on some API plans)
+        core_bench = ["SPX", "BTC"]
+        b_macro = shared_fetcher.fetch_batch_data(core_bench, interval=bench_interval, days=1000)
+        b_exec  = shared_fetcher.fetch_batch_data(core_bench, interval=exec_interval, days=exec_days)
+
+        # DXY / TNX consistently fail on free-tier API keys (symbol not recognised in batch).
+        # Removing them eliminates ~4 wasted credit retries per scan.
+        # Intermarket analysis degrades gracefully to None when not available.
         benchmarks_data = {
             "SPX_macro": b_macro.get("SPX"),
             "BTC_macro": b_macro.get("BTC"),
             "SPX_exec": b_exec.get("SPX"),
             "BTC_exec": b_exec.get("BTC"),
-            "DXY": b_macro.get("DX-Y.NYB"),
-            "US10Y": b_macro.get("TNX")
+            "DXY": None,
+            "US10Y": None
         }
+        bench_summary = {k: ('OK' if v is not None and not v.empty else 'MISSING') for k, v in benchmarks_data.items()}
+        logger.info(f"[BENCHMARKS] Fetch result: {bench_summary}")
         _BENCHMARK_CACHE = {"timestamp": now, "data": benchmarks_data}
 
     spy_bench = Signal.NEUTRAL
@@ -472,15 +540,16 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         shared_fetcher = TwelveDataFetcher()
         
     sym_list = [inst['symbol'] for inst in instruments]
-    logger.info(f"Triggering Tiered Parallel Fetches for {len(sym_list)} instruments...")
+    exec_fetch_interval = "1day" if mode == StrategyMode.LONG_TERM else "1h"
+    logger.info(f"[INSTRUMENTS] Fetching execution data for {sym_list} @ {exec_fetch_interval}")
     
     with ThreadPoolExecutor(max_workers=2) as batch_executor: # Reduced workers to 2 to prevent rate-limit "bursts"
         # Always fetch Live Execution data (Daily/Hourly)
         f_exec = batch_executor.submit(
             shared_fetcher.fetch_batch_data, 
             sym_list, 
-            interval=("1day" if mode == StrategyMode.LONG_TERM else "1h"), 
-            days=500 if mode == StrategyMode.LONG_TERM else 300
+            interval=exec_fetch_interval, 
+            days=500 if mode == StrategyMode.LONG_TERM else 60  # SHORT_TERM: 60d×24h=1440 bars, enough for all indicators
         )
         
         # Optional: Expert 15-minute data
@@ -497,7 +566,16 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         # (Alternatively, we can fetch them only if Cache is empty)
         exec_batch = f_exec.result()
         expert_batch = f_expert.result() if f_expert else {}
-        
+        logger.info(f"[INSTRUMENTS] Exec batch fetched: {list(exec_batch.keys())} (missing: {[s for s in sym_list if s not in exec_batch]})")
+        if expert_batch:
+            logger.info(f"[INSTRUMENTS] Expert 15min batch: {list(expert_batch.keys())}")
+
+        # Fetch live prices for all instruments in ONE API call (LONG_TERM only — hourly candle is fresh in SHORT_TERM)
+        if mode == StrategyMode.LONG_TERM:
+            live_prices = shared_fetcher.fetch_batch_prices(sym_list)
+        else:
+            live_prices = {}
+
         # We'll allow the analyzer to use whatever history it has from previous runs or fall back
         macro_batch = {}
         pullback_batch = {}
@@ -507,6 +585,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
 
     def process_instrument(inst):
         sym = inst['symbol'].upper()
+        t_inst = time.time()
         try:
             # Improved Crypto Detection (Whitelisted for BTC)
             is_crypto = any(sub in sym for sub in ["BTC", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
@@ -521,12 +600,18 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 pre_pullback_df=pullback_batch.get(sym),
                 pre_execution_df=exec_batch.get(sym),
                 pre_expert_df=expert_batch.get(sym),
+                pre_price=live_prices.get(sym),
                 dxy_df=benchmarks_data.get("DXY"),
-                us10y_df=benchmarks_data.get("US10Y")
+                us10y_df=benchmarks_data.get("US10Y"),
+                news_api_key=newsapi_key
             )
+            elapsed_inst = round(time.time() - t_inst, 2)
+            signal_rec = analysis.trade_signal.recommendation if analysis and analysis.trade_signal else 'N/A'
+            price = analysis.current_price if analysis else 'N/A'
+            logger.info(f"[ANALYSIS] {sym}: price={price}, signal={signal_rec}, elapsed={elapsed_inst}s")
             return sym, analysis, hist_data
         except Exception as e:
-            logger.error(f"Error analyzing {sym}: {e}")
+            logger.error(f"[ANALYSIS] {sym} FAILED after {round(time.time()-t_inst,2)}s: {e}")
             return sym, None, None
 
     # Parallelize analysis only (data is already fetched)
@@ -551,7 +636,18 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         # Continue with whatever results we have (possibly empty)
 
     perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC": btc_bench}, strategy_settings)
-    correlation_results = calculate_correlations(data_map)
+
+    # Build combined data map including benchmarks for correlation
+    full_data_map = dict(data_map)
+    if benchmarks_data.get("DXY") is not None and not benchmarks_data["DXY"].empty:
+        full_data_map["DXY"] = benchmarks_data["DXY"]
+    if benchmarks_data.get("SPX_macro") is not None and not benchmarks_data["SPX_macro"].empty:
+        full_data_map["SPX"] = benchmarks_data["SPX_macro"]
+    if benchmarks_data.get("BTC_macro") is not None and not benchmarks_data["BTC_macro"].empty:
+        full_data_map["BTC"] = benchmarks_data["BTC_macro"]
+
+    correlation_results = calculate_correlations(full_data_map)
+    results = _attach_instrument_correlations(results, correlation_results)
     results = apply_position_sizing(results, correlation_results, strategy_settings)
     
     # NEW: Psychological Guardrail (Lockdown Logic)
@@ -562,10 +658,58 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         max_losing_streak=3
     )
 
-    logger.info(f"Analysis complete. Status: {guardrail.status}. Returning results for: {[a.symbol for a in results]}")
+    total_elapsed = round(time.time() - t_scan_start, 2)
+    logger.info(f"[SCAN_COMPLETE] user={user_id} mode={mode.value} instruments={[a.symbol for a in results]} guardrail={guardrail.status} total_elapsed={total_elapsed}s")
     return results, perf_summary, correlation_results, guardrail
 
 import math
+
+
+def _attach_instrument_correlations(results, correlation_results):
+    """Extract per-instrument correlation vs DXY, SPX, BTC from full matrix and attach to each analysis."""
+    from .models import InstrumentCorrelations
+    labels = correlation_results.get('labels', [])
+    matrix = correlation_results.get('matrix', [])
+    if not labels or not matrix:
+        return results
+
+    BENCHMARK_KEYS = {'DXY': 'vs_dxy', 'SPX': 'vs_spx', 'BTC': 'vs_btc'}
+
+    updated = []
+    for analysis in results:
+        sym = analysis.symbol.upper()
+        if sym not in labels:
+            updated.append(analysis)
+            continue
+        s_idx = labels.index(sym)
+        corr_vals = {}
+        for bench, field in BENCHMARK_KEYS.items():
+            if bench in labels:
+                b_idx = labels.index(bench)
+                corr_vals[field] = round(float(matrix[s_idx][b_idx]), 2)
+
+        # Build interpretation
+        dxy_corr = corr_vals.get('vs_dxy')
+        spx_corr = corr_vals.get('vs_spx')
+        parts = []
+        if dxy_corr is not None:
+            lbl = "strong negative" if dxy_corr < -0.6 else "negative" if dxy_corr < -0.3 else "positive" if dxy_corr > 0.3 else "neutral"
+            parts.append(f"{lbl} DXY correlation ({dxy_corr:+.2f})")
+        if spx_corr is not None:
+            lbl = "strong positive" if spx_corr > 0.6 else "positive" if spx_corr > 0.3 else "negative" if spx_corr < -0.3 else "neutral"
+            parts.append(f"{lbl} SPX correlation ({spx_corr:+.2f})")
+        interpretation = "; ".join(parts) if parts else "Insufficient correlation data"
+
+        inst_corr = InstrumentCorrelations(
+            vs_dxy=corr_vals.get('vs_dxy'),
+            vs_spx=corr_vals.get('vs_spx'),
+            vs_btc=corr_vals.get('vs_btc'),
+            period_days=30,
+            interpretation=interpretation
+        )
+        updated.append(analysis.model_copy(update={"instrument_correlations": inst_corr}))
+    return updated
+
 
 def _scrub_nans(obj):
     """Recursively replaces NaN and Infinity with 0.0 to prevent Starlette JSON crashes."""
@@ -591,13 +735,30 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
     if mode is None:
         mode = StrategyMode.LONG_TERM
     
+    def _cache_age_minutes(cached: dict) -> int:
+        """Calculate how many minutes old a cached result is."""
+        try:
+            ts = cached.get("analysis_timestamp", "")
+            if ts:
+                from datetime import datetime, timezone
+                cached_dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                delta = datetime.now(timezone.utc) - cached_dt
+                return max(0, int(delta.total_seconds() / 60))
+        except Exception:
+            pass
+        return 0
+
     # 1. Optimistic Cache check (if not forced refresh)
     # If we have something in cache less than 5 minutes old, serve it fast.
     if not refresh and nexus_db.is_dynamo_enabled():
         cached = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=300)
         if cached:
-            logger.info(f"Fast-path: Serving cached {mode.value} for {user_id}")
-            return _scrub_nans(AnalysisResponse(**cached).dict())
+            age_min = _cache_age_minutes(cached)
+            logger.info(f"Fast-path: Serving cached {mode.value} for {user_id} (age={age_min}m)")
+            resp = AnalysisResponse(**cached)
+            resp.served_from_cache = True
+            resp.data_age_minutes = age_min
+            return _scrub_nans(resp.dict())
     
     # 2. Perform Fresh Analysis
     try:
@@ -608,15 +769,23 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
             # If fresh scan returned empty (e.g. TwelveData partial outage), try stale cache fallback
             stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=7200) # 2 hours
             if stale:
-                logger.warning(f"Fresh scan empty, falling back to STALE cache for {user_id}")
-                return _scrub_nans(AnalysisResponse(**stale).dict())
+                age_min = _cache_age_minutes(stale)
+                logger.warning(f"Fresh scan empty, falling back to STALE cache for {user_id} (age={age_min}m)")
+                resp = AnalysisResponse(**stale)
+                resp.is_stale = True
+                resp.served_from_cache = True
+                resp.data_age_minutes = age_min
+                return _scrub_nans(resp.dict())
 
         response = AnalysisResponse(
             analysis_timestamp=datetime.now(timezone.utc).isoformat(),
             instruments=results,
             weekly_performance=perf,
             correlation_data=corr,
-            psychological_guardrail=guardrail
+            psychological_guardrail=guardrail,
+            is_stale=False,
+            served_from_cache=False,
+            data_age_minutes=0
         )
 
         # Save to Cache
@@ -634,14 +803,24 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
         if nexus_db.is_dynamo_enabled():
             emergency_stale = nexus_db.get_latest_analysis_results(user_id, mode.value, max_age_seconds=14400)
             if emergency_stale:
-                logger.info(f"Returning EMERGENCY STALE data for {user_id} due to error: {e}")
-                return _scrub_nans(AnalysisResponse(**emergency_stale).dict())
+                age_min = _cache_age_minutes(emergency_stale)
+                logger.info(f"Returning EMERGENCY STALE data for {user_id} (age={age_min}m) due to error: {e}")
+                resp = AnalysisResponse(**emergency_stale)
+                resp.is_stale = True
+                resp.served_from_cache = True
+                resp.data_age_minutes = age_min
+                return _scrub_nans(resp.dict())
             
             # 4. Final Fallback: Serve the GLOBAL DEFAULT cache so the UI isn't blank for new users
             global_stale = nexus_db.get_latest_analysis_results("global_default", mode.value, max_age_seconds=14400)
             if global_stale:
-                logger.info(f"Returning GLOBAL DEFAULT cache for {user_id} (fallback)")
-                return _scrub_nans(AnalysisResponse(**global_stale).dict())
+                age_min = _cache_age_minutes(global_stale)
+                logger.info(f"Returning GLOBAL DEFAULT cache for {user_id} (age={age_min}m) (fallback)")
+                resp = AnalysisResponse(**global_stale)
+                resp.is_stale = True
+                resp.served_from_cache = True
+                resp.data_age_minutes = age_min
+                return _scrub_nans(resp.dict())
         
         # If absolutely nothing works, raise the error
         raise HTTPException(status_code=503, detail="Market analysis currently unavailable. System is performing a fresh scan, please retry in 30 seconds.")
@@ -672,9 +851,9 @@ async def analyze_single(symbol: str, mode: Any = None, user_id: str = Depends(g
 
     # Fetch Benchmarks in parallel
     with ThreadPoolExecutor(max_workers=3) as executor:
-        f_spy = executor.submit(fetch_historical_data, "SPX", days=1000, interval=("1mo" if mode == StrategyMode.LONG_TERM else "1d"))
-        f_dxy = executor.submit(fetch_historical_data, "DX-Y.NYB", days=30, interval="1d")
-        f_tnx = executor.submit(fetch_historical_data, "TNX", days=30, interval="1d")
+        f_spy = executor.submit(fetch_historical_data, "SPX", days=1000, interval=("1month" if mode == StrategyMode.LONG_TERM else "1day"))
+        f_dxy = executor.submit(fetch_historical_data, "DXY", days=30, interval="1day")
+        f_tnx = executor.submit(fetch_historical_data, "TNX", days=30, interval="1day")
         
         spy_df = f_spy.result()
         dxy_df = f_dxy.result()
@@ -705,7 +884,13 @@ async def add_instrument(instrument_data: Dict[str, str], user_id: str = Depends
     
     symbol = instrument_data.get("symbol", "").upper()
     name = instrument_data.get("name", "")
-    
+
+    from .config_loader import ALLOWED_SYMBOLS, BENCHMARK_ONLY_SYMBOLS
+    if symbol in BENCHMARK_ONLY_SYMBOLS:
+        raise HTTPException(status_code=400, detail=f"{symbol} is a benchmark used internally and cannot be added as a user instrument.")
+    if symbol not in ALLOWED_SYMBOLS:
+        raise HTTPException(status_code=400, detail=f"{symbol} is not a supported instrument. Allowed: {', '.join(sorted(ALLOWED_SYMBOLS))}")
+
     if any(i['symbol'].upper() == symbol for i in instruments):
         raise HTTPException(status_code=400, detail=f"Symbol {symbol} already exists")
     

@@ -104,6 +104,9 @@ interface TimeframeSignal {
       justify-content: center;
       gap: 8px;
       padding: 12px 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 8px;
     }
 
     .tf-node {
@@ -237,11 +240,65 @@ interface TimeframeSignal {
     }
 
     .mtf-description {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: #a6adc8;
       margin: 12px 0 0;
       font-style: italic;
       text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .mtf-container {
+        padding: 12px;
+      }
+
+      .mtf-header {
+        margin-bottom: 10px;
+      }
+
+      .timeframe-chain {
+        justify-content: flex-start;
+        padding-bottom: 10px;
+      }
+
+      .tf-node {
+        min-width: 70px;
+        padding: 8px 10px;
+      }
+
+      .tf-label {
+        font-size: 0.5rem;
+        letter-spacing: 0.5px;
+      }
+
+      .tf-direction-badge {
+        font-size: 0.58rem;
+        padding: 2px 6px;
+      }
+
+      .connector-line {
+        width: 12px;
+      }
+
+      .mtf-description {
+        font-size: 0.68rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .mtf-title {
+        font-size: 0.55rem;
+      }
+
+      .alignment-badge {
+        font-size: 0.5rem;
+        padding: 2px 7px;
+      }
+
+      .tf-node {
+        min-width: 62px;
+        padding: 6px 8px;
+      }
     }
   `]
 })

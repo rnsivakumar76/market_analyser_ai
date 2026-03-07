@@ -17,6 +17,10 @@ from .psychological_analyzer import analyze_psychological_state
 from .intermarket_analyzer import analyze_intermarket_context
 from .technical_analyzer import analyze_session_context
 from .day_trading_expert import detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan
+from .volume_profile_analyzer import calculate_volume_profile
+from .session_vwap_analyzer import calculate_session_vwap
+from .liquidity_map_analyzer import calculate_liquidity_map
+from .block_flow_analyzer import detect_block_flow
 from ..models import CandleAnalysis, PerformanceSummary, CorrelationData, PullbackWarningAnalysis
 
 __all__ = [
@@ -44,5 +48,9 @@ __all__ = [
     'analyze_relative_strength',
     'analyze_psychological_state',
     'analyze_intermarket_context',
-    'analyze_session_context'
+    'analyze_session_context',
+    'calculate_volume_profile',
+    'calculate_session_vwap',
+    'calculate_liquidity_map',
+    'detect_block_flow'
 ]

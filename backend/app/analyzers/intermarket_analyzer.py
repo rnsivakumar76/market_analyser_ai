@@ -6,7 +6,7 @@ from ..models import IntermarketContext
 logger = logging.getLogger(__name__)
 
 # Symbols used for intermarket context
-DXY_SYMBOL = 'DX-Y.NYB'   # TwelveData DXY equivalent; fallback to 'UUP'
+DXY_SYMBOL = 'DXY'   # US Dollar Index on TwelveData; ETF fallback is 'UUP'
 US10Y_SYMBOL = 'TNX'       # 10-Year Treasury Yield Index
 
 # Commodity symbols that are negatively correlated with DXY

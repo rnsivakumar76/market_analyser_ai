@@ -41,16 +41,28 @@ class TwelveDataFetcher:
         self.client = TDClient(apikey=api_key)
         
     def _rate_limit_wait(self):
-        """Ensures safe interval between calls. For Lambda/Free-Tier, we use a 2.5s burst gap."""
+        """Ensures safe interval between calls. 1.0s gap is safe for a single Lambda since
+        sequential calls stay well under 55 credits/min; concurrent Lambda collisions are
+        handled by the DynamoDB cache layer, not by slowing down individual scans."""
         with self._lock:
             now = time.time()
             elapsed = now - TwelveDataFetcher._last_call_time
-            # 2.5s interval is safer for free keys while still beating 30s Lambda timeout
-            wait_time = 2.5 - elapsed
+            wait_time = 1.0 - elapsed
             if wait_time > 0:
                 time.sleep(wait_time)
             TwelveDataFetcher._last_call_time = time.time()
             
+    # Interval aliases — normalize Yahoo/pandas style to TwelveData format
+    _INTERVAL_ALIASES = {
+        '1d':  '1day',
+        '1w':  '1week',
+        '1wk': '1week',
+        '1mo': '1month',
+        '1m':  '1month',
+        'd':   '1day',
+        'w':   '1week',
+    }
+
     # Primary tickers (Spot Rates / Indices)
     PRIMARY_MAPPINGS = {
         'XAU': 'XAU/USD', 
@@ -58,6 +70,8 @@ class TwelveDataFetcher:
         'WTI': 'WTI/USD',
         'SPX': 'SPX', 
         'BTC': 'BTC/USD',
+        'DXY': 'DXY',
+        'TNX': 'TNX',
     }
 
     # Fallback tickers (ETFs) for restricted API keys
@@ -66,8 +80,13 @@ class TwelveDataFetcher:
         'XAG': 'SLV',
         'WTI': 'USO',
         'BTC': 'BITO',
-        'SPX': 'SPY'
+        'SPX': 'SPY',
+        'DXY': 'UUP',
     }
+
+    def _normalize_interval(self, interval: str) -> str:
+        """Converts Yahoo/pandas-style interval strings to TwelveData format."""
+        return self._INTERVAL_ALIASES.get(interval.lower(), interval)
 
     def get_symbol_mapping(self, symbol: str) -> str:
         """Maps internal symbols to primary Twelve Data tickers."""
@@ -84,7 +103,10 @@ class TwelveDataFetcher:
         """
         if not symbols: return {}
         
+        interval = self._normalize_interval(interval)
         results = {}
+        t_start = time.time()
+        logger.info(f"[BATCH_FETCH] START: {len(symbols)} symbols={symbols} interval={interval} days={days}")
         outputsize = min(days * 24 if "h" in interval else days, 5000)
 
         def _fetch_chunked(symbols_to_fetch: List[str], get_td_ticker_fn) -> None:
@@ -102,6 +124,7 @@ class TwelveDataFetcher:
             CHUNK_SIZE = 20 # Increased from 8 to reduce total calls (Standard batch limit is 30)
             for i in range(0, len(requested_td_symbols), CHUNK_SIZE):
                 chunk = requested_td_symbols[i:i + CHUNK_SIZE]
+                prev_keys = set(results.keys())
                 try:
                     self._rate_limit_wait()
                     ts = self.client.time_series(
@@ -140,7 +163,36 @@ class TwelveDataFetcher:
                                     df_sym.reset_index(inplace=True)
                                     results[orig_sym] = self._normalize_df(df_sym)
                 except Exception as chunk_e:
+                    err_msg = str(chunk_e)
                     logger.warning(f"Batch chunk failed: {chunk_e}")
+                    # If the chunk failed due to an unknown symbol, retry each symbol individually
+                    # so that one bad symbol doesn't block the rest of the chunk.
+                    if len(chunk) > 1 and 'symbol' in err_msg.lower() and 'not found' in err_msg.lower():
+                        logger.warning(f"[BATCH_FETCH] Retrying chunk individually to isolate bad symbol: {chunk}")
+                        for single_sym in chunk:
+                            orig_sym = map_back.get(single_sym)
+                            if not orig_sym or orig_sym in results:
+                                continue
+                            try:
+                                self._rate_limit_wait()
+                                ts_single = self.client.time_series(
+                                    symbol=single_sym,
+                                    interval=interval,
+                                    outputsize=outputsize,
+                                    timezone="UTC"
+                                )
+                                df_single = ts_single.as_pandas()
+                                if df_single is not None and not df_single.empty:
+                                    df_single = df_single.copy()
+                                    df_single.reset_index(inplace=True)
+                                    results[orig_sym] = self._normalize_df(df_single)
+                                    logger.info(f"[BATCH_FETCH] Individual retry OK: {orig_sym}")
+                            except Exception as single_e:
+                                logger.warning(f"[BATCH_FETCH] Individual fetch failed for {single_sym}: {single_e}")
+                else:
+                    new_keys = [k for k in results if k not in prev_keys]
+                    if new_keys:
+                        logger.info(f"[BATCH_FETCH] Chunk OK: got {new_keys}")
 
         try:
             # 1. First Pass: Fetch Primary Symbols (Spot Rates)
@@ -149,13 +201,17 @@ class TwelveDataFetcher:
             # 2. Second Pass: Fetch Fallbacks (ETFs) ONLY for failed symbols
             missing_symbols = [s for s in symbols if s not in results]
             if missing_symbols:
-                logger.info(f"Missing primary data for {missing_symbols}. Attempting ETF fallbacks...")
+                logger.info(f"[BATCH_FETCH] Primary missing {missing_symbols}. Trying ETF fallbacks...")
                 _fetch_chunked(missing_symbols, self.get_fallback_mapping)
-            
+
+            elapsed = round(time.time() - t_start, 2)
+            still_missing = [s for s in symbols if s not in results]
+            logger.info(f"[BATCH_FETCH] DONE in {elapsed}s: fetched={list(results.keys())} missing={still_missing}")
             return results
 
         except Exception as e:
-            logger.error(f"Global Batch fetch failed: {e}. Falling back to serial.")
+            elapsed = round(time.time() - t_start, 2)
+            logger.error(f"[BATCH_FETCH] Global failure after {elapsed}s: {e}. Falling back to serial.")
             return self._fallback_serial(symbols, interval, days)
 
     def _fallback_serial(self, symbols: List[str], interval: str, days: int) -> Dict[str, pd.DataFrame]:
@@ -185,6 +241,7 @@ class TwelveDataFetcher:
 
     def _fetch_single(self, td_symbol: str, interval: str, days: int) -> pd.DataFrame:
         """Low-level single fetch call."""
+        interval = self._normalize_interval(interval)
         self._rate_limit_wait()
         ts = self.client.time_series(
             symbol=td_symbol, 
@@ -227,7 +284,41 @@ class TwelveDataFetcher:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
             
-        return df.sort_index(ascending=True)
+        df = df.sort_index(ascending=True)
+        # Remove duplicate timestamps (can arise from DST changes or API quirks)
+        if df.index.duplicated().any():
+            df = df[~df.index.duplicated(keep='last')]
+        return df
+
+    def fetch_batch_prices(self, symbols: List[str]) -> Dict[str, float]:
+        """
+        Fetch live prices for multiple symbols in ONE API call (1 credit total).
+        Replaces N individual get_current_price() calls to stay within rate limits.
+        Returns dict of {internal_symbol: price}. Missing symbols are silently skipped.
+        """
+        if not symbols:
+            return {}
+        td_symbols = [self.get_symbol_mapping(s) for s in symbols]
+        td_to_orig = {self.get_symbol_mapping(s): s for s in symbols}
+        try:
+            self._rate_limit_wait()
+            data = self.client.price(symbol=",".join(td_symbols)).as_json()
+            result = {}
+            if isinstance(data, dict):
+                if 'price' in data:
+                    orig = td_to_orig.get(td_symbols[0])
+                    if orig:
+                        result[orig] = float(data['price'])
+                else:
+                    for td_sym, price_data in data.items():
+                        orig = td_to_orig.get(td_sym)
+                        if orig and isinstance(price_data, dict) and 'price' in price_data:
+                            result[orig] = float(price_data['price'])
+            logger.info(f"[BATCH_PRICES] Fetched {len(result)}/{len(symbols)}: {result}")
+            return result
+        except Exception as e:
+            logger.warning(f"[BATCH_PRICES] Failed: {e}. Prices will fall back to candle close.")
+            return {}
 
     def get_current_price(self, symbol: str) -> float:
         """Get latest price with ETF fallback."""

@@ -58,10 +58,12 @@ def analyze_fundamentals(symbol: str) -> FundamentalsAnalysis:
     """Check macro events and corporate earnings."""
     now = datetime.now()
     cutoff_48h = now + timedelta(hours=48)
-    
+
     events = []
     has_high_impact = False
-    
+    event_timestamps = []
+    minutes_to_next: Optional[int] = None
+
     # 1. Economic Calendar (Macro Events)
     currencies = _detect_relevant_currencies(symbol)
     if currencies:
@@ -71,33 +73,52 @@ def analyze_fundamentals(symbol: str) -> FundamentalsAnalysis:
             country = item.get('country', '')
             date_str = item.get('date', '')
             title = item.get('title', '')
-            
-            # High impact red folder events only
+
             if impact == 'High' and country in currencies:
                 try:
-                    # e.g., "2023-09-06T10:00:00-04:00"
-                    event_date_str = date_str.split("-0")[0] if "-" in date_str[11:] else date_str
-                    event_date_str = event_date_str.split("+")[0]
-                    # Attempt naive parsing (ForexFactory JSON often strips tz but has it at end, we just use raw ISO prefix)
                     dt = datetime.fromisoformat(date_str[:19])
-                    
                     if now <= dt <= cutoff_48h:
-                        events.append(f"🔴 [{country}] {title} ({(dt - now).resolution}/{(dt - now).seconds//3600}h away)")
+                        hours_away = int((dt - now).total_seconds() // 3600)
+                        mins_away = int((dt - now).total_seconds() // 60)
+                        events.append(f"🔴 [{country}] {title} ({hours_away}h away)")
                         has_high_impact = True
+                        event_timestamps.append({
+                            "event": f"[{country}] {title}",
+                            "time_utc": dt.strftime('%Y-%m-%dT%H:%M:%S'),
+                            "impact": "HIGH"
+                        })
+                        if minutes_to_next is None or mins_away < minutes_to_next:
+                            minutes_to_next = mins_away
                 except Exception:
                     pass
-    
-    # 2. Corporate Earnings (Stocks) - DISABLED (Used yfinance)
-    # logger.debug("Corporate Earnings currently disabled to maintain pure professional data flow.")
+
+    # Pre-event risk reduction logic
+    risk_reduction_active = False
+    pre_event_caution = False
+    position_multiplier = 1.0
+
+    if minutes_to_next is not None:
+        if minutes_to_next <= 60:
+            risk_reduction_active = True
+            position_multiplier = 0.5
+        elif minutes_to_next <= 1440:  # 24 hours
+            pre_event_caution = True
+            position_multiplier = 0.75
 
     # Build description
     if not events:
         desc = "No major high-impact macro events or earnings in the next 48 hours. Clear fundamental skies."
     else:
         desc = "WARNING! High volatility expected: " + " | ".join(events)
-        
+
+    from app.models import EventEntry
     return FundamentalsAnalysis(
         has_high_impact_events=has_high_impact,
         events=events,
-        description=desc
+        description=desc,
+        event_timestamps=[EventEntry(**e) for e in event_timestamps],
+        risk_reduction_active=risk_reduction_active,
+        recommended_position_multiplier=position_multiplier,
+        pre_event_caution=pre_event_caution,
+        minutes_to_next_event=minutes_to_next
     )

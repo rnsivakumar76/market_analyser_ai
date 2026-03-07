@@ -1,0 +1,509 @@
+/* ========================================
+   THEME SYSTEM BASE
+   ======================================== */
+
+/* Default to dark theme if no theme class is present */
+:root {
+  /* Default to dark theme variables */
+  --bg-primary: #11111b;
+  --bg-secondary: #1e1e2e;
+  --bg-tertiary: #313244;
+  --bg-quaternary: #45475a;
+  
+  --surface-primary: #1e1e2e;
+  --surface-secondary: #313244;
+  --surface-tertiary: #45475a;
+  --surface-elevated: #1a1a2a;
+  
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-tertiary: #6c7086;
+  --text-quaternary: #45475a;
+  --text-inverse: #11111b;
+  
+  --border-primary: #313244;
+  --border-secondary: #45475a;
+  --border-tertiary: #585b70;
+  --border-focus: #89b4fa;
+  
+  --accent-primary: #89b4fa;
+  --accent-primary-hover: #b4befe;
+  --accent-primary-light: rgba(137, 180, 250, 0.1);
+  --accent-primary-lighter: rgba(137, 180, 250, 0.05);
+  
+  --accent-secondary: #6c7086;
+  --accent-secondary-hover: #7f849c;
+  
+  --success: #a6e3a1;
+  --success-light: rgba(166, 227, 161, 0.1);
+  --success-lighter: rgba(166, 227, 161, 0.05);
+  
+  --warning: #fab387;
+  --warning-light: rgba(250, 179, 135, 0.1);
+  --warning-lighter: rgba(250, 179, 135, 0.05);
+  
+  --error: #f38ba8;
+  --error-light: rgba(243, 139, 168, 0.1);
+  --error-lighter: rgba(243, 139, 168, 0.05);
+  
+  --info: #89b4fa;
+  --info-light: rgba(137, 180, 250, 0.1);
+  --info-lighter: rgba(137, 180, 250, 0.05);
+  
+  --bullish: #a6e3a1;
+  --bullish-light: rgba(166, 227, 161, 0.1);
+  --bearish: #f38ba8;
+  --bearish-light: rgba(243, 139, 168, 0.1);
+  --neutral: #fab387;
+  --neutral-light: rgba(250, 179, 135, 0.1);
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  
+  --gradient-primary: linear-gradient(135deg, #89b4fa, #cba6f7);
+  --gradient-success: linear-gradient(135deg, #a6e3a1, #94e2d4);
+  --gradient-error: linear-gradient(135deg, #f38ba8, #eba0ac);
+  --gradient-warning: linear-gradient(135deg, #fab387, #f9e2af);
+  
+  --card-bg: #1e1e2e;
+  --card-border: #313244;
+  --card-shadow: var(--shadow);
+  
+  --input-bg: #1e1e2e;
+  --input-border: #45475a;
+  --input-border-focus: var(--accent-primary);
+  
+  --button-primary-bg: var(--accent-primary);
+  --button-primary-text: #1e1e2e;
+  --button-primary-hover: var(--accent-primary-hover);
+  
+  --button-secondary-bg: #313244;
+  --button-secondary-text: var(--text-primary);
+  --button-secondary-hover: #45475a;
+  
+  --header-bg: #1e1e2e;
+  --header-border: #313244;
+  
+  --sidebar-bg: #11111b;
+  --sidebar-border: #313244;
+  
+  --footer-bg: #181825;
+  --footer-border: #313244;
+}
+
+/* ========================================
+   LIGHT THEME STYLES
+   ======================================== */
+
+/* Light Theme Base Colors */
+:root.light-theme {
+  /* Primary Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-quaternary: #e2e8f0;
+  
+  /* Surface Colors */
+  --surface-primary: #ffffff;
+  --surface-secondary: #f8fafc;
+  --surface-tertiary: #f1f5f9;
+  --surface-elevated: #ffffff;
+  
+  /* Text Colors */
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-tertiary: #64748b;
+  --text-quaternary: #94a3b8;
+  --text-inverse: #ffffff;
+  
+  /* Border Colors */
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
+  --border-tertiary: #f1f5f9;
+  --border-focus: #3b82f6;
+  
+  /* Accent Colors */
+  --accent-primary: #3b82f6;
+  --accent-primary-hover: #2563eb;
+  --accent-primary-light: #dbeafe;
+  --accent-primary-lighter: #eff6ff;
+  
+  --accent-secondary: #64748b;
+  --accent-secondary-hover: #475569;
+  
+  /* Status Colors */
+  --success: #10b981;
+  --success-light: #d1fae5;
+  --success-lighter: #ecfdf5;
+  
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --warning-lighter: #fffbeb;
+  
+  --error: #ef4444;
+  --error-light: #fee2e2;
+  --error-lighter: #fef2f2;
+  
+  --info: #06b6d4;
+  --info-light: #cffafe;
+  --info-lighter: #f0fdfa;
+  
+  /* Trading Colors */
+  --bullish: #10b981;
+  --bullish-light: #d1fae5;
+  --bearish: #ef4444;
+  --bearish-light: #fee2e2;
+  --neutral: #f59e0b;
+  --neutral-light: #fef3c7;
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* Gradient Colors */
+  --gradient-primary: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  --gradient-success: linear-gradient(135deg, #10b981, #059669);
+  --gradient-error: linear-gradient(135deg, #ef4444, #dc2626);
+  --gradient-warning: linear-gradient(135deg, #f59e0b, #d97706);
+  
+  /* Component Specific */
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --card-shadow: var(--shadow);
+  
+  --input-bg: #ffffff;
+  --input-border: #d1d5db;
+  --input-border-focus: var(--accent-primary);
+  
+  --button-primary-bg: var(--accent-primary);
+  --button-primary-text: #ffffff;
+  --button-primary-hover: var(--accent-primary-hover);
+  
+  --button-secondary-bg: #f1f5f9;
+  --button-secondary-text: var(--text-primary);
+  --button-secondary-hover: #e2e8f0;
+  
+  --header-bg: #ffffff;
+  --header-border: #e2e8f0;
+  
+  --sidebar-bg: #f8fafc;
+  --sidebar-border: #e2e8f0;
+  
+  --footer-bg: #f8fafc;
+  --footer-border: #e2e8f0;
+}
+
+/* ========================================
+   DARK THEME STYLES (Existing - Enhanced)
+   ======================================== */
+
+:root.dark-theme {
+  /* Primary Colors */
+  --bg-primary: #11111b;
+  --bg-secondary: #1e1e2e;
+  --bg-tertiary: #313244;
+  --bg-quaternary: #45475a;
+  
+  /* Surface Colors */
+  --surface-primary: #1e1e2e;
+  --surface-secondary: #313244;
+  --surface-tertiary: #45475a;
+  --surface-elevated: #1a1a2a;
+  
+  /* Text Colors */
+  --text-primary: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-tertiary: #6c7086;
+  --text-quaternary: #45475a;
+  --text-inverse: #11111b;
+  
+  /* Border Colors */
+  --border-primary: #313244;
+  --border-secondary: #45475a;
+  --border-tertiary: #585b70;
+  --border-focus: #89b4fa;
+  
+  /* Accent Colors */
+  --accent-primary: #89b4fa;
+  --accent-primary-hover: #b4befe;
+  --accent-primary-light: rgba(137, 180, 250, 0.1);
+  --accent-primary-lighter: rgba(137, 180, 250, 0.05);
+  
+  --accent-secondary: #6c7086;
+  --accent-secondary-hover: #7f849c;
+  
+  /* Status Colors */
+  --success: #a6e3a1;
+  --success-light: rgba(166, 227, 161, 0.1);
+  --success-lighter: rgba(166, 227, 161, 0.05);
+  
+  --warning: #fab387;
+  --warning-light: rgba(250, 179, 135, 0.1);
+  --warning-lighter: rgba(250, 179, 135, 0.05);
+  
+  --error: #f38ba8;
+  --error-light: rgba(243, 139, 168, 0.1);
+  --error-lighter: rgba(243, 139, 168, 0.05);
+  
+  --info: #89b4fa;
+  --info-light: rgba(137, 180, 250, 0.1);
+  --info-lighter: rgba(137, 180, 250, 0.05);
+  
+  /* Trading Colors */
+  --bullish: #a6e3a1;
+  --bullish-light: rgba(166, 227, 161, 0.1);
+  --bearish: #f38ba8;
+  --bearish-light: rgba(243, 139, 168, 0.1);
+  --neutral: #fab387;
+  --neutral-light: rgba(250, 179, 135, 0.1);
+  
+  /* Shadow Colors */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  
+  /* Gradient Colors */
+  --gradient-primary: linear-gradient(135deg, #89b4fa, #cba6f7);
+  --gradient-success: linear-gradient(135deg, #a6e3a1, #94e2d4);
+  --gradient-error: linear-gradient(135deg, #f38ba8, #eba0ac);
+  --gradient-warning: linear-gradient(135deg, #fab387, #f9e2af);
+  
+  /* Component Specific */
+  --card-bg: #1e1e2e;
+  --card-border: #313244;
+  --card-shadow: var(--shadow);
+  
+  --input-bg: #1e1e2e;
+  --input-border: #45475a;
+  --input-border-focus: var(--accent-primary);
+  
+  --button-primary-bg: var(--accent-primary);
+  --button-primary-text: #1e1e2e;
+  --button-primary-hover: var(--accent-primary-hover);
+  
+  --button-secondary-bg: #313244;
+  --button-secondary-text: var(--text-primary);
+  --button-secondary-hover: #45475a;
+  
+  --header-bg: #1e1e2e;
+  --header-border: #313244;
+  
+  --sidebar-bg: #11111b;
+  --sidebar-border: #313244;
+  
+  --footer-bg: #181825;
+  --footer-border: #313244;
+}
+
+/* ========================================
+   THEME-AWARE COMPONENT STYLES
+   ======================================== */
+
+/* Apply theme variables to existing components */
+.dashboard {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.header {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
+}
+
+.header h1 {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bottom-bar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.sidebar-panel {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+}
+
+.detail-panel {
+  background: var(--bg-secondary);
+}
+
+.performance-panel {
+  background: var(--sidebar-bg);
+  border-left: 1px solid var(--sidebar-border);
+}
+
+/* Cards and Surfaces */
+.perf-card,
+.ctx-card,
+.summary-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+/* Buttons */
+.settings-btn,
+.menu-btn,
+.manual-btn,
+.strategy-btn {
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  border: 1px solid var(--border-primary);
+}
+
+.settings-btn:hover,
+.menu-btn:hover,
+.manual-btn:hover,
+.strategy-btn:hover {
+  background: var(--button-secondary-hover);
+  border-color: var(--border-secondary);
+}
+
+.refresh-btn {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: var(--button-primary-hover);
+}
+
+/* Status Colors */
+.stat.bullish,
+.perf-card-value.positive,
+.pcs-value.good {
+  color: var(--bullish);
+}
+
+.stat.bearish,
+.perf-card-value.negative,
+.pcs-value.bad {
+  color: var(--bearish);
+}
+
+.stat.highlight {
+  color: var(--accent-primary);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  background: var(--button-secondary-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--button-secondary-hover);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.theme-icon {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.theme-toggle-btn:hover .theme-icon {
+  transform: scale(1.2) rotate(15deg);
+}
+
+/* Light Theme Specific Adjustments */
+:root.light-theme {
+  /* Adjust shadows for light theme */
+  --card-shadow: var(--shadow-sm);
+  
+  /* Adjust borders for better contrast */
+  --card-border: var(--border-secondary);
+  
+  /* Make text slightly more readable in light mode */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+}
+
+/* Light Theme Component Overrides */
+:root.light-theme .dashboard {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+:root.light-theme .header {
+  box-shadow: var(--shadow-sm);
+}
+
+:root.light-theme .perf-card,
+:root.light-theme .ctx-card {
+  box-shadow: var(--shadow-sm);
+}
+
+:root.light-theme .perf-card:hover,
+:root.light-theme .ctx-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* Light Theme Scrollbar */
+:root.light-theme .sidebar-panel::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+:root.light-theme .sidebar-panel::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 4px;
+}
+
+:root.light-theme .sidebar-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--border-primary);
+}
+
+/* Light Theme Loading Screen */
+:root.light-theme .loading-screen {
+  background: radial-gradient(circle at center, #f8fafc 0%, #ffffff 100%);
+}
+
+:root.light-theme .loading-screen::before {
+  background: repeating-linear-gradient(0deg,
+      rgba(59, 130, 246, 0.03) 0px,
+      rgba(59, 130, 246, 0.03) 1px,
+      transparent 1px,
+      transparent 2px);
+}
+
+/* Light Theme Mobile Bottom Nav */
+:root.light-theme .mobile-bottom-nav {
+  background: var(--surface-primary);
+  border-top: 1px solid var(--border-primary);
+}
+
+/* Theme Transitions */
+* {
+  transition: background-color 0.3s ease,
+              color 0.3s ease,
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+/* Prevent transitions on theme toggle itself */
+.theme-toggle-btn,
+.theme-icon {
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export interface GeopoliticalEvent {
@@ -145,6 +146,24 @@ export interface TradeSignal {
   pyramiding_plan: string;
   scaling_plan: string;
   executive_summary: string;
+  signal_conflict?: SignalConflict;
+}
+
+export interface SignalConflict {
+  conflict_type: 'adx_direction_mismatch' | 'mtf_disagreement' | 'none';
+  severity: 'high' | 'medium' | 'none';
+  headline: string;
+  guidance: string;
+  trigger_price_up?: number;
+  trigger_price_down?: number;
+}
+
+export interface InstrumentCorrelations {
+  vs_dxy?: number;
+  vs_spx?: number;
+  vs_btc?: number;
+  period_days: number;
+  interpretation: string;
 }
 
 export interface VolatilityAnalysis {
@@ -155,12 +174,28 @@ export interface VolatilityAnalysis {
   take_profit_level2?: number;
   risk_reward_ratio: number;
   description: string;
+  atr_percentile_rank: number;
+  atr_regime: 'LOW' | 'NORMAL' | 'ELEVATED' | 'EXTREME';
+  historical_volatility_14: number;
+  hv_percentile: number;
+  volatility_regime_label: string;
+}
+
+export interface EventEntry {
+  event: string;
+  time_utc?: string;
+  impact: string;
 }
 
 export interface FundamentalsAnalysis {
   has_high_impact_events: boolean;
   events: string[];
   description: string;
+  event_timestamps: EventEntry[];
+  risk_reduction_active: boolean;
+  recommended_position_multiplier: number;
+  pre_event_caution: boolean;
+  minutes_to_next_event?: number;
 }
 
 export interface BacktestAnalysis {
@@ -170,6 +205,12 @@ export interface BacktestAnalysis {
   avg_win: number;
   avg_loss: number;
   description: string;
+  sharpe_ratio: number;
+  max_drawdown_pct: number;
+  max_consecutive_losses: number;
+  max_adverse_excursion_pct: number;
+  sample_size: number;
+  expectancy: number;
 }
 
 export interface StrategySettings {
@@ -204,6 +245,7 @@ export interface NewsItem {
   url: string;
   sentiment_score: number;
   sentiment_label: string;
+  published_at?: string;
 }
 
 export interface NewsSentiment {
@@ -211,6 +253,27 @@ export interface NewsSentiment {
   label: string;
   sentiment_summary: string;
   news_items: NewsItem[];
+}
+
+export interface GeoIndicatorCheck {
+  name: string;
+  value: number;
+  status: 'confirming' | 'neutral' | 'diverging';
+  description: string;
+}
+
+export interface GeopoliticalRisk {
+  detected: boolean;
+  risk_score: number;
+  risk_level: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+  keywords_found: string[];
+  event_categories: string[];
+  expected_impact: string;
+  impact_confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  indicator_confirmation: 'CONFIRMED' | 'EARLY' | 'DIVERGING' | 'NONE';
+  indicators: GeoIndicatorCheck[];
+  ai_narrative: string;
+  action_bias: string;
 }
 
 export interface ChartData {
@@ -242,6 +305,9 @@ export interface ExpertTradePlan {
   battle_plan: string;
   rvol: number;
   is_high_intent: boolean;
+  or_high: number;
+  or_low: number;
+  or_broken: 'bullish' | 'bearish' | 'none';
 }
 
 export type StrategyMode = 'long_term' | 'short_term';
@@ -271,6 +337,71 @@ export interface InstrumentAnalysis {
   strategy_mode: StrategyMode;
   intermarket_context?: IntermarketContext;
   session_context?: SessionContext;
+  instrument_correlations?: InstrumentCorrelations;
+  volume_profile?: VolumeProfile;
+  session_vwap?: SessionVWAP;
+  liquidity_map?: LiquidityMap;
+  block_flow?: BlockFlowDetection;
+  geopolitical_risk?: GeopoliticalRisk;
+}
+
+export interface VolumeProfileBucket {
+  price_low: number;
+  price_high: number;
+  volume: number;
+  pct_of_max: number;
+  is_poc: boolean;
+}
+
+export interface VolumeProfile {
+  poc: number;
+  vah: number;
+  val: number;
+  num_buckets: number;
+  buckets: VolumeProfileBucket[];
+  interpretation: string;
+}
+
+export interface SessionVWAP {
+  vwap: number;
+  upper_band: number;
+  lower_band: number;
+  distance_pct: number;
+  position: string;
+  bar_count: number;
+  interpretation: string;
+}
+
+export interface LiquidityLevel {
+  price: number;
+  distance_pct: number;
+  level_type: string;
+  strength: string;
+  touches: number;
+}
+
+export interface LiquidityMap {
+  resistance_levels: LiquidityLevel[];
+  support_levels: LiquidityLevel[];
+  interpretation: string;
+}
+
+export interface BlockFlowEvent {
+  bar_index: number;
+  timestamp: string;
+  price: number;
+  volume_ratio: number;
+  direction: string;
+  body_ratio: number;
+}
+
+export interface BlockFlowDetection {
+  detected: boolean;
+  events: BlockFlowEvent[];
+  net_direction: string;
+  bull_blocks: number;
+  bear_blocks: number;
+  interpretation: string;
 }
 
 export interface WeeklyPerformance {
@@ -305,6 +436,9 @@ export interface AnalysisResponse {
   weekly_performance: WeeklyPerformance;
   correlation_data: CorrelationData;
   psychological_guardrail: PsychologicalGuardrail;
+  is_stale: boolean;
+  served_from_cache: boolean;
+  data_age_minutes: number | null;
 }
 
 export interface NotificationPrefs {
@@ -335,7 +469,8 @@ export class MarketAnalyzerService {
 
   analyzeAll(mode: StrategyMode = 'long_term', refresh: boolean = false): Observable<AnalysisResponse> {
     const refreshParam = refresh ? '&refresh=true' : '';
-    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}${refreshParam}`);
+    return this.http.get<AnalysisResponse>(`${this.apiUrl}/analyze?mode=${mode}${refreshParam}`)
+      .pipe(timeout(28000));
   }
 
   analyzeSingle(symbol: string, mode: StrategyMode = 'long_term'): Observable<InstrumentAnalysis> {

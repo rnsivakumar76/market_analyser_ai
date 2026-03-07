@@ -9,22 +9,26 @@ import { UserManualComponent } from './components/user-manual/user-manual.compon
 import { LoginComponent } from './components/login/login.component';
 import { AuthService, User } from './services/auth.service';
 import { WatchlistHeatmapComponent } from './components/watchlist-heatmap/watchlist-heatmap.component';
+import { OrbDashboardComponent } from './components/orb-dashboard/orb-dashboard.component';
 import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component';
 import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
 import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
 import { GeopoliticalAnalysisComponent } from './components/geopolitical-analysis/geopolitical-analysis.component';
+import { ThemeService } from './services/theme.service';
+import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { interval, Subscription, timer } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, OrbDashboardComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, ThemeToggleComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements OnInit, OnDestroy {
   private analyzerService = inject(MarketAnalyzerService);
   public authService = inject(AuthService);
+  public themeService = inject(ThemeService);
   private analysisSub?: Subscription;
 
   instruments = signal<InstrumentAnalysis[]>([]);
@@ -38,6 +42,8 @@ export class App implements OnInit, OnDestroy {
   showTradeJournal = signal(false);
   showSmartAlerts = signal(false);
   showGeopoliticalAnalysis = signal(false);
+  showContextMenu = signal(false);
+  lastUpdatedTime = signal<string>('');
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
   correlationData = signal<CorrelationData | null>(null);
   psychologicalGuardrail = signal<PsychologicalGuardrail | null>(null);
@@ -46,6 +52,7 @@ export class App implements OnInit, OnDestroy {
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
   mobileTab = signal<'watchlist' | 'analysis' | 'context'>('watchlist');
+  sidebarTab = signal<'heatmap' | 'orb'>('heatmap');
 
   // Auto-refresh properties
   nextRefreshCountdown = signal<string>('05:00');
@@ -54,7 +61,34 @@ export class App implements OnInit, OnDestroy {
   private readonly REFRESH_INTERVAL_SEC = 300; // 5 minutes
   private secondsRemaining = 300;
 
+  // Data freshness tracking
+  isDataStale = signal<boolean>(false);
+  servedFromCache = signal<boolean>(false);
+  dataAgeMinutes = signal<number>(0);
+  dataAgeLabel = signal<string>('');
+  dataFreshnessClass = signal<'fresh' | 'recent' | 'stale' | 'outdated'>('fresh');
+  private analysisTimestamp: Date | null = null;
+  private ageTickerSub?: Subscription;
+
+  // Background scheduler monitoring
+  private consecutiveFailures = 0;
+  private readonly MAX_CONSECUTIVE_FAILURES = 2;
+  private lastSuccessfulRefresh?: Date;
+  private isInitialStartup = true;
+  private startupTimeout?: any;
+  schedulerHealthStatus = signal<'healthy' | 'warning' | 'critical' | 'initializing'>('initializing');
+  schedulerHealthMessage = signal<string>('Initializing scheduler...');
+  showDiagnostics = signal<boolean>(false);
+  lastErrorInfo = signal<any>(null);
+
   ngOnInit() {
+    // Load any previous error information
+    this.loadLastError();
+    
+    // Ensure theme is initialized early
+    console.log('App: ngOnInit - ensuring theme is initialized');
+    this.themeService.setTheme(this.themeService.currentTheme());
+    
     // Check for auth token in URL (from Google callback)
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
@@ -84,12 +118,13 @@ export class App implements OnInit, OnDestroy {
     this.refreshSubscription?.unsubscribe();
     this.countdownSubscription?.unsubscribe();
     this.analysisSub?.unsubscribe();
+    this.ageTickerSub?.unsubscribe();
   }
 
   private startAutoRefresh() {
     // 1. Scheduler for Analysis
     this.refreshSubscription = interval(this.REFRESH_INTERVAL_SEC * 1000).subscribe(() => {
-      this.runAnalysis(true); // Background update: silent
+      this.runAnalysis(true, true); // Background update: silent + force fresh prices
       this.secondsRemaining = this.REFRESH_INTERVAL_SEC;
     });
 
@@ -102,6 +137,40 @@ export class App implements OnInit, OnDestroy {
       const secs = this.secondsRemaining % 60;
       this.nextRefreshCountdown.set(`${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
     });
+  }
+
+  private startAgeTicker() {
+    this.ageTickerSub?.unsubscribe();
+    // Update the live "X min ago" label every 60 seconds
+    this.ageTickerSub = interval(60000).subscribe(() => this.updateDataAge());
+  }
+
+  private updateDataAge() {
+    if (!this.analysisTimestamp) return;
+    const now = new Date();
+    const diffMs = now.getTime() - this.analysisTimestamp.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    this.dataAgeMinutes.set(diffMin);
+
+    if (diffMin < 1) {
+      this.dataAgeLabel.set('just now');
+      this.dataFreshnessClass.set('fresh');
+    } else if (diffMin < 6) {
+      this.dataAgeLabel.set(`${diffMin} min ago`);
+      this.dataFreshnessClass.set('fresh');
+    } else if (diffMin < 15) {
+      this.dataAgeLabel.set(`${diffMin} min ago`);
+      this.dataFreshnessClass.set('recent');
+    } else if (diffMin < 60) {
+      this.dataAgeLabel.set(`${diffMin} min ago`);
+      this.dataFreshnessClass.set('stale');
+      this.isDataStale.set(true);
+    } else {
+      const hrs = Math.floor(diffMin / 60);
+      this.dataAgeLabel.set(`${hrs}h ago`);
+      this.dataFreshnessClass.set('outdated');
+      this.isDataStale.set(true);
+    }
   }
 
   loadPreferences() {
@@ -179,16 +248,273 @@ export class App implements OnInit, OnDestroy {
         this.correlationData.set(response.correlation_data);
         this.psychologicalGuardrail.set(response.psychological_guardrail);
         this.lastUpdated.set(new Date(response.analysis_timestamp).toLocaleString());
+        this.lastUpdatedTime.set(new Date(response.analysis_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }));
         this.loading.set(false);
+
+        // Track data freshness from backend
+        this.analysisTimestamp = new Date(response.analysis_timestamp);
+        this.isDataStale.set(response.is_stale ?? false);
+        this.servedFromCache.set(response.served_from_cache ?? false);
+        this.updateDataAge();
+        this.startAgeTicker();
+
+        // Track scheduler health
+        this.handleSchedulerSuccess();
       },
       error: (err) => {
+        console.error('Analysis failed:', err);
         if (!silent) {
           this.error.set('Failed to fetch analysis. Make sure the backend is running.');
         }
         this.loading.set(false);
-        console.error('Analysis error:', err);
+
+        // Track scheduler health
+        this.handleSchedulerFailure(err);
       }
     });
+  }
+
+  private handleSchedulerSuccess(): void {
+    this.consecutiveFailures = 0;
+    this.lastSuccessfulRefresh = new Date();
+    
+    if (this.isInitialStartup) {
+      this.isInitialStartup = false;
+      this.schedulerHealthStatus.set('healthy');
+      this.schedulerHealthMessage.set('Scheduler running normally');
+      console.log('App: Initial startup completed - scheduler healthy');
+    } else {
+      this.schedulerHealthStatus.set('healthy');
+      this.schedulerHealthMessage.set('Scheduler running normally');
+    }
+
+    // Clear any startup timeout
+    if (this.startupTimeout) {
+      clearTimeout(this.startupTimeout);
+      this.startupTimeout = undefined;
+    }
+  }
+
+  private handleSchedulerFailure(error: any): void {
+    this.consecutiveFailures++;
+    
+    console.error(`Scheduler failure #${this.consecutiveFailures}:`, error);
+
+    // Enhanced error analysis for CloudWatch issues
+    const errorMessage = this.extractErrorMessage(error);
+    const isCloudWatchError = this.isCloudWatchError(error);
+    const isTimeoutError = this.isTimeoutError(error);
+    const isNetworkError = this.isNetworkError(error);
+
+    // Get detailed CloudWatch analysis if applicable
+    const cloudWatchAnalysis = isCloudWatchError ? this.analyzeCloudWatchError(error) : null;
+
+    if (this.isInitialStartup) {
+      this.schedulerHealthStatus.set('critical');
+      
+      if (cloudWatchAnalysis) {
+        this.schedulerHealthMessage.set(`${cloudWatchAnalysis.service}: ${cloudWatchAnalysis.issue}`);
+      } else if (isTimeoutError) {
+        this.schedulerHealthMessage.set('Analysis timeout - Backend may be overloaded');
+      } else if (isNetworkError) {
+        this.schedulerHealthMessage.set('Network connectivity issues - Check connection');
+      } else {
+        this.schedulerHealthMessage.set('Initial analysis failed - Data may be stale');
+      }
+      
+      // Set a timeout to show critical message if startup takes too long
+      if (!this.startupTimeout) {
+        this.startupTimeout = setTimeout(() => {
+          if (this.isInitialStartup) {
+            this.schedulerHealthStatus.set('critical');
+            this.schedulerHealthMessage.set('Startup failed - Check backend and AWS services');
+          }
+        }, 10000); // 10 seconds
+      }
+    } else if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
+      this.schedulerHealthStatus.set('critical');
+      
+      if (cloudWatchAnalysis) {
+        this.schedulerHealthMessage.set(`${cloudWatchAnalysis.service} errors (${this.consecutiveFailures}x): ${cloudWatchAnalysis.issue}`);
+      } else if (isTimeoutError) {
+        this.schedulerHealthMessage.set(`Analysis timeouts (${this.consecutiveFailures}x) - Backend overloaded`);
+      } else if (isNetworkError) {
+        this.schedulerHealthMessage.set(`Network failures (${this.consecutiveFailures}x) - Connection unstable`);
+      } else {
+        this.schedulerHealthMessage.set(`Scheduler failed ${this.consecutiveFailures} times - Data may be stale`);
+      }
+    } else if (this.consecutiveFailures === 1) {
+      this.schedulerHealthStatus.set('warning');
+      
+      if (cloudWatchAnalysis) {
+        this.schedulerHealthMessage.set(`${cloudWatchAnalysis.service} issue: ${cloudWatchAnalysis.issue}`);
+      } else if (isTimeoutError) {
+        this.schedulerHealthMessage.set('Analysis timeout - Retrying...');
+      } else if (isNetworkError) {
+        this.schedulerHealthMessage.set('Network connectivity issues');
+      } else {
+        this.schedulerHealthMessage.set('Scheduler experiencing issues');
+      }
+    }
+
+    // Log detailed error information for debugging
+    this.logDetailedError(error, this.consecutiveFailures, cloudWatchAnalysis);
+  }
+
+  private extractErrorMessage(error: any): string {
+    if (typeof error === 'string') return error;
+    if (error?.message) return error.message;
+    if (error?.error?.message) return error.error.message;
+    if (error?.statusText) return error.statusText;
+    return 'Unknown error occurred';
+  }
+
+  private isCloudWatchError(error: any): boolean {
+    const message = this.extractErrorMessage(error).toLowerCase();
+    const cloudWatchIndicators = [
+      'cloudwatch',
+      'aws',
+      'lambda',
+      'api gateway',
+      'execution timeout',
+      'function timeout',
+      'resource not found',
+      'access denied',
+      'credentials',
+      'task timed out',
+      'lambda timeout',
+      'cold start',
+      'memory limit',
+      'concurrency limit',
+      'throttling',
+      'rate limit',
+      'service unavailable',
+      'internal server error',
+      'bad gateway',
+      'gateway timeout'
+    ];
+    return cloudWatchIndicators.some(indicator => message.includes(indicator));
+  }
+
+  private analyzeCloudWatchError(error: any): { service: string; issue: string; severity: 'high' | 'medium' | 'low' } {
+    const message = this.extractErrorMessage(error).toLowerCase();
+    
+    // Lambda-specific issues
+    if (message.includes('lambda') || message.includes('function timeout') || message.includes('task timed out')) {
+      if (message.includes('timeout')) {
+        return { service: 'AWS Lambda', issue: 'Function timeout - Analysis taking too long', severity: 'high' };
+      } else if (message.includes('memory')) {
+        return { service: 'AWS Lambda', issue: 'Memory limit exceeded', severity: 'high' };
+      } else if (message.includes('cold start')) {
+        return { service: 'AWS Lambda', issue: 'Cold start delay', severity: 'medium' };
+      }
+    }
+    
+    // API Gateway issues
+    if (message.includes('api gateway') || message.includes('gateway')) {
+      if (message.includes('timeout')) {
+        return { service: 'API Gateway', issue: 'Gateway timeout - Backend overloaded', severity: 'high' };
+      } else if (message.includes('bad gateway')) {
+        return { service: 'API Gateway', issue: 'Bad gateway - Lambda not responding', severity: 'high' };
+      }
+    }
+    
+    // General AWS service issues
+    if (message.includes('service unavailable') || message.includes('internal server error')) {
+      return { service: 'AWS Services', issue: 'Service temporarily unavailable', severity: 'medium' };
+    }
+    
+    // Throttling/Rate limiting
+    if (message.includes('throttling') || message.includes('rate limit') || message.includes('concurrency')) {
+      return { service: 'AWS Lambda', issue: 'Throttling - Too many concurrent requests', severity: 'medium' };
+    }
+    
+    // Credentials/Permissions
+    if (message.includes('access denied') || message.includes('credentials')) {
+      return { service: 'AWS IAM', issue: 'Access permissions or credentials issue', severity: 'high' };
+    }
+    
+    return { service: 'AWS', issue: 'Unknown AWS service error', severity: 'medium' };
+  }
+
+  private isTimeoutError(error: any): boolean {
+    const message = this.extractErrorMessage(error).toLowerCase();
+    const timeoutIndicators = [
+      'timeout',
+      'timed out',
+      'deadline',
+      'timeout exceeded',
+      'connection timeout',
+      'read timeout'
+    ];
+    return timeoutIndicators.some(indicator => message.includes(indicator));
+  }
+
+  private isNetworkError(error: any): boolean {
+    const message = this.extractErrorMessage(error).toLowerCase();
+    const networkIndicators = [
+      'network',
+      'connection',
+      'fetch',
+      'cors',
+      'offline',
+      'unreachable',
+      'dns',
+      'socket'
+    ];
+    return networkIndicators.some(indicator => message.includes(indicator));
+  }
+
+  private logDetailedError(error: any, failureCount: number, cloudWatchAnalysis?: any): void {
+    const errorInfo = {
+      timestamp: new Date().toISOString(),
+      failureCount: failureCount,
+      errorMessage: this.extractErrorMessage(error),
+      errorType: this.classifyError(error),
+      isCloudWatch: this.isCloudWatchError(error),
+      isTimeout: this.isTimeoutError(error),
+      isNetwork: this.isNetworkError(error),
+      cloudWatchAnalysis: cloudWatchAnalysis,
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+
+    console.group('🚨 Scheduler Error Analysis');
+    console.error('Error Details:', errorInfo);
+    console.error('Original Error:', error);
+    console.groupEnd();
+
+    // Store error info for potential debugging
+    this.storeLastError(errorInfo);
+  }
+
+  private classifyError(error: any): string {
+    if (this.isCloudWatchError(error)) return 'CloudWatch/AWS';
+    if (this.isTimeoutError(error)) return 'Timeout';
+    if (this.isNetworkError(error)) return 'Network';
+    if (error?.status >= 500) return 'Server Error';
+    if (error?.status >= 400) return 'Client Error';
+    return 'Unknown';
+  }
+
+  private storeLastError(errorInfo: any): void {
+    try {
+      localStorage.setItem('lastSchedulerError', JSON.stringify(errorInfo));
+      this.lastErrorInfo.set(errorInfo);
+    } catch (e) {
+      console.warn('Could not store error info:', e);
+    }
+  }
+
+  private loadLastError(): void {
+    try {
+      const stored = localStorage.getItem('lastSchedulerError');
+      if (stored) {
+        this.lastErrorInfo.set(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('Could not load error info:', e);
+    }
   }
 
   refreshInstrument(symbol: string) {
@@ -223,5 +549,35 @@ export class App implements OnInit, OnDestroy {
 
   get bearishCount(): number {
     return this.instruments().filter(i => i.trade_signal.recommendation === 'bearish').length;
+  }
+
+  formatNewsAge(published_at?: string): string {
+    if (!published_at) return '';
+    try {
+      const pub = new Date(published_at);
+      if (isNaN(pub.getTime())) return '';
+      const diffMs = Date.now() - pub.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1)   return 'just now';
+      if (diffMins < 60)  return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 7)   return `${diffDays}d ago`;
+      return pub.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  }
+
+  isStaleNews(published_at?: string): boolean {
+    if (!published_at) return false;
+    try {
+      const pub = new Date(published_at);
+      if (isNaN(pub.getTime())) return false;
+      return (Date.now() - pub.getTime()) > 48 * 60 * 60 * 1000; // older than 48h
+    } catch {
+      return false;
+    }
   }
 }

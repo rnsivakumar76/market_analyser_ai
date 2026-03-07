@@ -4,6 +4,8 @@ twelvedata:
   api_key: 0bdb613a23cd4d1a945114a224503e7b
 fmp:
   api_key: bF2I9pQqYw0jRnnJbv3yrDmFwA4yyESM
+newsapi:
+  api_key: ""
 instruments:
 - symbol: XAU
   name: Gold
@@ -11,8 +13,6 @@ instruments:
   name: Silver
 - symbol: WTI
   name: Crude Oil
-- symbol: SPX
-  name: S&P 500
 - symbol: BTC
   name: Bitcoin
 analysis:
