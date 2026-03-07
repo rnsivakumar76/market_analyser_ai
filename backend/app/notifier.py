@@ -7,6 +7,49 @@ from .models import InstrumentAnalysis, Signal
 
 logger = logging.getLogger(__name__)
 
+def send_expert_alert(analysis: InstrumentAnalysis, config: Dict[str, Any]):
+    """Send Expert Battle Plan to Telegram whenever a new ORB/plan is available."""
+    expert_plan = analysis.expert_trade_plan
+    if not expert_plan:
+        return
+
+    symbol = analysis.symbol
+    price = analysis.current_price
+    or_broken = expert_plan.get('or_broken', 'none')
+    rvol = expert_plan.get('rvol', 1.0)
+    battle_plan = expert_plan.get('battle_plan', '')
+    is_high_intent = expert_plan.get('is_high_intent', False)
+
+    if or_broken == 'bullish':
+        emoji = "⚡"
+        direction = "ORB BREAKOUT (BULLISH)"
+    elif or_broken == 'bearish':
+        emoji = "🔻"
+        direction = "ORB BREAKDOWN (BEARISH)"
+    else:
+        emoji = "⏸"
+        direction = "CONSOLIDATING (RANGE)"
+
+    intent_flag = "  🔥 HIGH INTENT" if is_high_intent else ""
+    message = (
+        f"{emoji} *EXPERT BATTLE PLAN: {symbol}*{intent_flag}\n"
+        f"*Price:* ${price}  |  *RVOL:* {rvol:.1f}x\n"
+        f"*Status:* {direction}\n\n"
+        f"{battle_plan}"
+    )
+
+    tg_config = config.get('telegram', {})
+    if tg_config.get('enabled'):
+        try:
+            token = tg_config.get('bot_token')
+            chat_id = tg_config.get('chat_id')
+            url = f"https://api.telegram.org/bot{token}/sendMessage"
+            requests.post(url, json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}, timeout=5)
+            logger.info(f"Telegram expert alert sent for {symbol}")
+        except Exception as e:
+            logger.error(f"Failed to send Telegram expert alert: {e}")
+
+
 def send_alerts(analysis: InstrumentAnalysis, config: Dict[str, Any]):
     """Send alerts if the signal is trade worthy."""
     if not analysis.trade_signal.trade_worthy:

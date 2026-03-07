@@ -454,7 +454,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         analyze_monthly_trend, calculate_weekly_performance, 
         calculate_correlations, apply_position_sizing, analyze_psychological_state
     )
-    from .notifier import send_alerts
+    from .notifier import send_alerts, send_expert_alert
     from concurrent.futures import ThreadPoolExecutor, as_completed
     
     if mode is None:
@@ -663,6 +663,13 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                         if alert_key not in SENT_ALERTS:
                             send_alerts(analysis, alert_config)
                             SENT_ALERTS.add(alert_key)
+                    # Expert Battle Plan alert (SHORT_TERM mode only)
+                    if analysis.expert_trade_plan:
+                        or_broken = analysis.expert_trade_plan.get('or_broken', 'none')
+                        expert_key = f"expert_{user_id}_{sym}_{or_broken}_{date.today()}_{mode.value}"
+                        if expert_key not in SENT_ALERTS:
+                            send_expert_alert(analysis, alert_config)
+                            SENT_ALERTS.add(expert_key)
                 else:
                     logger.warning(f"Analysis produced no result for {sym}")
     except Exception as e:
