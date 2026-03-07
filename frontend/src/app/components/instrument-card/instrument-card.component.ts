@@ -695,8 +695,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .sz-item--hit { border-color: rgba(166,227,161,0.4) !important; background: rgba(166,227,161,0.06) !important; opacity: 0.7; }
     .sz-item--hit .sz-val { color: #6c7086; text-decoration: line-through; }
     .sz-interpretation { margin-top: 14px; padding-top: 12px; border-top: 1px solid #1f1f3a; }
-    .sz-action-read { font-size: 0.68rem; color: #a6adc8; line-height: 1.6; margin: 0; padding: 10px 12px; background: rgba(17,17,27,0.6); border-left: 3px solid #585b70; border-radius: 0 6px 6px 0; }
-    .sz-action-read:first-letter { font-size: 0.9rem; }
+    .sz-action-read { font-size: 0.82rem; color: #cdd6f4; line-height: 1.65; margin: 0; padding: 12px 14px; background: rgba(137,180,250,0.05); border-left: 3px solid #89b4fa; border-radius: 0 6px 6px 0; font-weight: 500; }
+    .sz-action-read:first-letter { font-size: 1rem; }
     .mm-footer { display: flex; gap: 10px; margin-bottom: 24px; }
     .mmf-item { flex: 1; padding: 12px; background: #121220; border-radius: 6px; text-align: center; }
     .mmf-item span { font-size: 0.5rem; color: #45475a; display: block; margin-bottom: 4px; }
