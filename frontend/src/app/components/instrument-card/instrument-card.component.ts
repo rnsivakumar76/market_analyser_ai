@@ -1349,6 +1349,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
       .deep-grid { grid-template-columns: 1fr; }
       .risk-dual-panel { grid-template-columns: 1fr; }
       .risk-panel-card:first-child { border-right: none; border-bottom: 1px solid #1f1f3a; }
+      .tech-section { padding: 16px; }
+      .levels-stack { align-items: flex-start; }
     }
 
     @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
