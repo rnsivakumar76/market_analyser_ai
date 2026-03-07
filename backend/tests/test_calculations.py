@@ -313,8 +313,11 @@ class TestExpertBattlePlan:
             signal_direction="bearish"
         )
         plan = result["battle_plan"].upper()
-        assert "CAUTION" in plan or "RESISTANCE" in plan, (
+        assert "COUNTER-TREND" in plan or "FADE" in plan, (
             f"Expected caution/fade framing for bullish ORB + bearish signal, got: {plan}"
+        )
+        assert "R1" not in plan.split("ENTRY")[0], (
+            f"Bullish R1/R2 targets should not appear when daily signal is bearish, got: {plan}"
         )
 
     def test_no_orb_fallback_uses_price_vs_pivot(
