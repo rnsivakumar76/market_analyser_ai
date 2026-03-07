@@ -55,7 +55,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         <!-- 2.5 SIGNAL REASONS STRIP (compact) -->
         <div class="signal-reasons-strip">
           @for (reason of analysis.trade_signal.reasons; track reason) {
-            <span class="syn-tag" [class]="getReasonImpactClass(reason)"># {{ reason }}</span>
+            <span class="syn-tag" [class]="getReasonImpactClass(reason)">{{ reason }}</span>
           }
         </div>
 
@@ -661,15 +661,15 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     /* HUD UPGRADE (ZERO WASTE) */
     .terminal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: #0b0b15; border-bottom: 1px solid #1f1f3a; }
-    .th-symbol-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .th-left { min-width: 0; flex: 1; }
+    .th-right-compact { flex-shrink: 0; display: flex; align-items: center; gap: 12px; }
+    .th-symbol-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
     .th-symbol { font-size: 1.4rem; font-weight: 950; color: #cdd6f4; }
-    .th-price-stack { display: flex; gap: 8px; align-items: baseline; }
+    .th-price-stack { display: flex; gap: 6px; align-items: baseline; min-width: 0; flex-wrap: wrap; }
     .th-price { font-size: 1.1rem; font-weight: 900; color: #bac2de; }
     .th-change { font-size: 0.8rem; font-weight: 800; }
     .th-badges { display: flex; gap: 6px; align-items: center; }
     .th-clock { font-size: 0.5rem; padding: 1px 4px; }
-    
-    .th-right-compact { display: flex; align-items: center; gap: 12px; }
     .th-status-pill { padding: 4px 10px; border-radius: 4px; display: flex; align-items: center; gap: 8px; border: 1px solid; }
     .th-status-pill.bullish { border-color: #a6e3a1; color: #a6e3a1; background: rgba(166, 227, 161, 0.1); }
     .th-status-pill.bearish { border-color: #f38ba8; color: #f38ba8; background: rgba(243, 139, 168, 0.1); }
@@ -1340,7 +1340,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
       .t-tile { border-right: none; border-bottom: 1px solid #1f1f3a; }
       .insight-tile { grid-column: span 1; }
       .th-metrics { display: none; }
-      .th-symbol { font-size: 1.5rem; }
+      .th-symbol { font-size: 1.3rem; }
+      .th-price { font-size: 0.95rem; }
+      .th-change { font-size: 0.7rem; }
       .aph-text { font-size: 1.2rem; }
       .lvl-box { padding: 6px; }
       .lv { font-size: 0.8rem; }

@@ -22,7 +22,6 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
                [class]="getCellClass(instrument)"
                [class.selected]="selectedSymbol === instrument.symbol"
                [class.trade-worthy]="instrument.trade_signal.trade_worthy"
-               [style.flex-grow]="getCellWeight(instrument)"
                [title]="getCellTooltip(instrument)"
                (click)="select.emit(instrument)">
             <div class="cell-content">
@@ -83,8 +82,8 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     .legend-item.neutral { color: #f9e2af; }
 
     .heatmap-grid {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       gap: 6px;
       flex: 1;
       align-content: flex-start;
@@ -92,7 +91,6 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
     .heat-cell {
       position: relative;
-      min-width: 100px;
       min-height: 90px;
       border-radius: 10px;
       cursor: pointer;
