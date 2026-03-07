@@ -156,6 +156,22 @@ class TestOpeningRangeBreakout:
         orb = ORBData(or_high=105.0, or_low=95.0, broken="none")
         assert classify_orb_context(orb, "bullish") == "inside_range"
 
+    def test_orb_degenerate_single_candle_flat_bar(self):
+        """Regression: when the first bar is flat (high == low == close), or_high == or_low.
+        domain must return broken='none' so the battle plan shows WAITING FOR SETUP, not
+        INSIDE RANGE — Price is consolidating between OR Low (84.37) and OR High (84.37)."""
+        price = 84.37
+        result = detect_opening_range([price], [price], current_price=price)
+        assert result.or_high == pytest.approx(84.37)
+        assert result.or_low == pytest.approx(84.37)
+        assert result.broken == "none"
+
+    def test_orb_degenerate_range_is_not_a_breakout(self):
+        """A price exactly equal to a degenerate (flat) range must not trigger bullish/bearish."""
+        price = 100.0
+        result = detect_opening_range([price], [price], current_price=price)
+        assert result.broken == "none"
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Position Sizer Tests

@@ -126,11 +126,11 @@ def generate_expert_trade_plan(
         sit = f"SITUATION: ORB BEARISH — Price broke below OR Low ({or_low:.2f}). Intraday bias is DOWN."
         if is_bullish:
             sit += " ⚠ Pullback within larger uptrend — look for a long reversal at key support, not a new short."
-    elif or_high and or_low:
+    elif or_high and or_low and or_high != or_low:
         sit = (f"SITUATION: INSIDE RANGE — Price is consolidating between OR Low ({or_low:.2f}) "
                f"and OR High ({or_high:.2f}). No trade until a candle CLOSES outside the range.")
     else:
-        sit = "SITUATION: WAITING FOR SETUP — No confirmed opening range yet. Stand aside and observe price action."
+        sit = "SITUATION: WAITING FOR SETUP — Opening range not yet established (insufficient session data). Stand aside and observe price action."
     sections.append(sit)
 
     # ── 2. ENTRY ZONE ─────────────────────────────────────────────────────────
@@ -188,17 +188,20 @@ def generate_expert_trade_plan(
         atr_note = f" ({atr:.2f} ATR buffer)" if atr and atr > 0 else ""
         long_stop = is_bullish or (not is_bearish and orb_direction == "bullish")
         short_stop = is_bearish or (not is_bullish and orb_direction == "bearish")
+        valid_range = or_high and or_low and or_high != or_low
         if long_stop:
-            stop_ref = or_low if or_low else p.s1
+            stop_ref = or_low if valid_range else p.s1
+            inv_note = f"OR Low ({or_low:.2f})" if valid_range else f"S1 ({p.s1:.2f})"
             sections.append(
                 f"STOP: Hard stop below {stop_ref:.2f}{atr_note}. "
-                f"Plan is INVALIDATED on a 15m candle close below OR Low ({or_low:.2f})."
+                f"Plan is INVALIDATED on a 15m candle close below {inv_note}."
             )
         elif short_stop:
-            stop_ref = or_high if or_high else p.r1
+            stop_ref = or_high if valid_range else p.r1
+            inv_note = f"OR High ({or_high:.2f})" if valid_range else f"R1 ({p.r1:.2f})"
             sections.append(
                 f"STOP: Hard stop above {stop_ref:.2f}{atr_note}. "
-                f"Plan is INVALIDATED on a 15m candle close above OR High ({or_high:.2f})."
+                f"Plan is INVALIDATED on a 15m candle close above {inv_note}."
             )
 
     # ── 5. CONVICTION ─────────────────────────────────────────────────────────
