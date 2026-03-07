@@ -89,6 +89,12 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       align-content: flex-start;
     }
 
+    @media (max-width: 600px) {
+      .heatmap-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .heat-cell {
       position: relative;
       min-height: 90px;
