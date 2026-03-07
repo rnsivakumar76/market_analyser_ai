@@ -297,18 +297,29 @@ def analyze_instrument_lazy(
     fundamentals = analyze_fundamentals(symbol)
     
     # NEW: Relative Strength Analysis (Alpha vs Beta)
-    # Determine which benchmark to use
-    is_crypto = any(sub in symbol.upper() for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(symbol) > 6 and "USD" in symbol.upper())
-    bench_sym = "BTC" if is_crypto else "SPX"
-    
-    # Use pre-fetched data if available, otherwise fetch on the fly
-    if benchmark_data_df is not None:
-        bench_data = benchmark_data_df
+    # Commodities (WTI/XAU/XAG) → compare against DXY (DXY falls = gold/oil outperforms).
+    # Crypto → compare against BTC.  Everything else → SPX.
+    _COMMODITY_SYMS_RS = {"WTI", "XAU", "XAG", "GOLD", "SILVER", "OIL"}
+    _is_crypto_rs  = any(sub in symbol.upper() for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(symbol) > 6 and "USD" in symbol.upper())
+    _is_commodity_rs = any(sub in symbol.upper() for sub in _COMMODITY_SYMS_RS)
+
+    if _is_commodity_rs:
+        bench_sym = "DXY"
+        # Use the already-fetched 60-day DXY dataframe; fall back to a live fetch if missing.
+        if dxy_df is not None and not dxy_df.empty:
+            bench_data = dxy_df
+        else:
+            bench_data = fetch_historical_data("DX=F", days=60, interval="1day")
+    elif _is_crypto_rs:
+        bench_sym = "BTC"
+        bench_data = benchmark_data_df if benchmark_data_df is not None else fetch_historical_data(
+            bench_sym, days=(500 if mode == StrategyMode.LONG_TERM else 20),
+            interval=("1day" if mode == StrategyMode.LONG_TERM else "1h")
+        )
     else:
-        # Fetch benchmark data at the SAME execution interval
-        bench_data = fetch_historical_data(
-            bench_sym, 
-            days=(500 if mode == StrategyMode.LONG_TERM else 20), 
+        bench_sym = "SPX"
+        bench_data = benchmark_data_df if benchmark_data_df is not None else fetch_historical_data(
+            bench_sym, days=(500 if mode == StrategyMode.LONG_TERM else 20),
             interval=("1day" if mode == StrategyMode.LONG_TERM else "1h")
         )
     
