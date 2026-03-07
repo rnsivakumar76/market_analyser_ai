@@ -129,10 +129,10 @@ class TestAnalyzeInstrumentLazy:
 
         if analysis:
             try:
-                json_str = json.dumps(analysis.dict())
+                json_str = analysis.json()
                 assert isinstance(json_str, str)
             except (TypeError, ValueError) as e:
-                pytest.fail(f"analysis.dict() is not JSON-serialisable: {e}")
+                pytest.fail(f"analysis.json() is not JSON-serialisable: {e}")
 
     def test_wti_analysis_does_not_crash(self, mock_fetcher):
         from app.main import analyze_instrument_lazy
@@ -189,7 +189,7 @@ class TestAnalyzeInstrumentLazy:
             us10y_df=_tnx_df(),
         )
 
-        assert analysis is None or analysis.intermarket is not None or True  # no crash
+        assert analysis is None or analysis.intermarket_context is not None or True  # no crash
 
 
 # ---------------------------------------------------------------------------
