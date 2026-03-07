@@ -95,70 +95,156 @@ def analyze_commodity_specifics(symbol: str, dxy_change: float, yield_change: fl
     return advice
 
 def generate_expert_trade_plan(
-    symbol: str, 
-    price: float, 
-    or_data: Dict, 
-    rvol: float, 
-    technical: Any, 
+    symbol: str,
+    price: float,
+    or_data: Dict,
+    rvol: float,
+    technical: Any,
     advice: str,
-    signal_direction: str = "neutral"
+    signal_direction: str = "neutral",
+    strength: Any = None,
+    session_ctx: Any = None,
 ) -> Dict[str, Any]:
     """
-    Generates a concrete 'Battle Plan' for the day trader.
+    Generates a rich multi-line 'Battle Plan' for the day trader.
+    Covers: SITUATION → ENTRY → TARGETS → STOP/INVALIDATION → CONVICTION → CONTEXT
     """
-    plan = []
-    
-    # 1. Opening Range Breakout (ORB) Strategy
-    if or_data["broken"] == "bullish":
-        plan.append(f"ORB BULLISH: Price held above {or_data['or_high']:.2f}. Trend is UP.")
-    elif or_data["broken"] == "bearish":
-        plan.append(f"ORB BEARISH: Price broke below {or_data['or_low']:.2f}. Trend is DOWN.")
-    
-    # 2. RVOL Confirmation
-    if rvol > 2.0:
-        plan.append(f"HIGH CONVICTION: RVOL is {rvol}x. Institutions are active.")
-    
-    # 3. Pivot Targets — contextualize ORB direction with overall signal direction
+    sections = []
+
+    orb_direction = or_data.get("broken", "none")
+    or_high = or_data.get("or_high", 0.0)
+    or_low  = or_data.get("or_low",  0.0)
+    is_bullish = signal_direction == "bullish"
+    is_bearish = signal_direction == "bearish"
+
+    # Pull in richer context from daily_strength
+    atr = getattr(strength, 'atr', None) if strength else None
+    rsi = getattr(strength, 'rsi', None) if strength else None
+    adx = getattr(strength, 'adx', None) if strength else None
+    session_name = None
+    if session_ctx:
+        session_name = getattr(session_ctx, 'session', None) or getattr(session_ctx, 'session_name', None)
+
+    # ── 1. SITUATION ──────────────────────────────────────────────────────────
+    if orb_direction == "bullish":
+        sit = f"SITUATION: ORB BULLISH — Price broke above OR High ({or_high:.2f}). Intraday bias is UP."
+        if is_bearish:
+            sit += " ⚠ Counter-trend bounce: daily signal is bearish — reduce size and tighten stops."
+    elif orb_direction == "bearish":
+        sit = f"SITUATION: ORB BEARISH — Price broke below OR Low ({or_low:.2f}). Intraday bias is DOWN."
+        if is_bullish:
+            sit += " ⚠ Pullback within larger uptrend — look for a long reversal at key support, not a new short."
+    elif or_high and or_low:
+        sit = (f"SITUATION: INSIDE RANGE — Price is consolidating between OR Low ({or_low:.2f}) "
+               f"and OR High ({or_high:.2f}). No trade until a candle CLOSES outside the range.")
+    else:
+        sit = "SITUATION: WAITING FOR SETUP — No confirmed opening range yet. Stand aside and observe price action."
+    sections.append(sit)
+
+    # ── 2. ENTRY ZONE ─────────────────────────────────────────────────────────
+    if technical and technical.pivot_points:
+        p   = technical.pivot_points
+        fib = technical.fibonacci
+        entry = None
+
+        if orb_direction == "bullish" and not is_bearish:
+            fib_note = f" or Fib 23.6% ({fib.ret_236:.2f})" if fib and fib.ret_236 else ""
+            entry = (f"ENTRY: Wait for a pullback to S1 ({p.s1:.2f}){fib_note}. "
+                     f"Enter on a 15m bullish close — do NOT chase the initial breakout.")
+        elif orb_direction == "bearish" and is_bullish:
+            fib_note = f" or Fib 38.2% ({fib.ret_382:.2f})" if fib and fib.ret_382 else ""
+            entry = (f"ENTRY: Watch S1 ({p.s1:.2f}){fib_note} for a reversal trigger. "
+                     f"Look for a hammer / bullish engulfing candle on the 15m before entering long.")
+        elif orb_direction == "bearish" and not is_bullish:
+            fib_note = f" or Fib 23.6% ({fib.ret_236:.2f})" if fib and fib.ret_236 else ""
+            entry = (f"ENTRY: On a dead-cat bounce to R1 ({p.r1:.2f}){fib_note}. "
+                     f"Wait for a 15m bearish close confirming rejection before entering short.")
+        elif orb_direction == "none" and is_bullish and price < p.pivot:
+            fib_note = f" and Fib 38.2% ({fib.ret_382:.2f})" if fib and fib.ret_382 else ""
+            entry = (f"ENTRY: Watching S1 ({p.s1:.2f}){fib_note}. "
+                     f"Need a 15m close above Pivot ({p.pivot:.2f}) to confirm bullish momentum before committing.")
+        elif orb_direction == "bullish" and is_bearish:
+            entry = (f"ENTRY (Fade): Wait for a 15m close below Pivot ({p.pivot:.2f}) "
+                     f"to enter short toward S1 ({p.s1:.2f}). High-risk counter-trend play — small size only.")
+
+        if entry:
+            sections.append(entry)
+
+    # ── 3. TARGETS ────────────────────────────────────────────────────────────
     if technical and technical.pivot_points:
         p = technical.pivot_points
-        orb_direction = or_data.get("broken")
-        is_bullish_signal = signal_direction == "bullish"
-        is_bearish_signal = signal_direction == "bearish"
+        if orb_direction == "bullish" or (orb_direction != "bearish" and is_bullish):
+            sections.append(
+                f"TARGETS: T1 → R1 ({p.r1:.2f}) — book 50% profit and move stop to breakeven. "
+                f"T2 → R2 ({p.r2:.2f}) — trail stop on the remainder."
+            )
+        elif orb_direction == "bearish" or is_bearish:
+            sections.append(
+                f"TARGETS: T1 → S1 ({p.s1:.2f}) — book 50% profit and move stop to breakeven. "
+                f"T2 → S2 ({p.s2:.2f}) — trail stop on the remainder."
+            )
 
-        if orb_direction == "bullish" and is_bearish_signal:
-            # ORB up but signal is bearish — intraday bounce into resistance, fade opportunity
-            plan.append(f"CAUTION: Bullish ORB against bearish signal. R1 ({p.r1:.2f}) is resistance to fade — watch for rejection.")
-        elif orb_direction == "bearish" and is_bullish_signal:
-            # ORB down but signal is bullish — price pulling back to entry zone, not a short signal
-            plan.append(f"PULLBACK IN PROGRESS: Price heading to entry zone near S1 ({p.s1:.2f}). Watch for long reversal at support.")
-        elif orb_direction == "bullish":
-            plan.append(f"TARGETS: Aim for R1 ({p.r1:.2f}) then R2 ({p.r2:.2f}).")
-        elif orb_direction == "bearish":
-            plan.append(f"TARGETS: Aim for S1 ({p.s1:.2f}) then S2 ({p.s2:.2f}).")
-        elif price > p.pivot:
-            if is_bearish_signal:
-                plan.append(f"CAUTION: Price above Pivot ({p.pivot:.2f}) against bearish signal. Wait for Pivot break before shorting. Target S1 ({p.s1:.2f}) on breakdown.")
-            else:
-                plan.append(f"TARGETS: Aim for R1 ({p.r1:.2f}) then R2 ({p.r2:.2f}).")
+    # ── 4. STOP / INVALIDATION ────────────────────────────────────────────────
+    if technical and technical.pivot_points:
+        p = technical.pivot_points
+        atr_note = f" ({atr:.2f} ATR buffer)" if atr else ""
+        if orb_direction == "bullish" or (orb_direction != "bearish" and is_bullish):
+            stop_ref = or_low if or_low else p.s1
+            sections.append(
+                f"STOP: Hard stop below {stop_ref:.2f}{atr_note}. "
+                f"Plan is INVALIDATED on a 15m candle close below OR Low ({or_low:.2f})."
+            )
+        elif orb_direction == "bearish" or is_bearish:
+            stop_ref = or_high if or_high else p.r1
+            sections.append(
+                f"STOP: Hard stop above {stop_ref:.2f}{atr_note}. "
+                f"Plan is INVALIDATED on a 15m candle close above OR High ({or_high:.2f})."
+            )
+
+    # ── 5. CONVICTION ─────────────────────────────────────────────────────────
+    conv = []
+    if rvol >= 2.0:
+        conv.append(f"RVOL {rvol}x (high — institutions active)")
+    elif rvol >= 1.5:
+        conv.append(f"RVOL {rvol}x (moderate — watch for volume surge)")
+    else:
+        conv.append(f"RVOL {rvol}x (light — wait for volume before full size)")
+
+    if adx is not None:
+        if adx >= 30:
+            conv.append(f"ADX {adx:.0f} (strong trend, trend-following favoured)")
+        elif adx >= 20:
+            conv.append(f"ADX {adx:.0f} (developing trend, avoid fading)")
         else:
-            # Price is below pivot — no ORB break yet
-            if is_bullish_signal:
-                plan.append(f"PULLBACK ZONE: Price below Pivot ({p.pivot:.2f}). Watch for long entry near S1 ({p.s1:.2f}). Targets on bounce: R1 ({p.r1:.2f}) then R2 ({p.r2:.2f}).")
-            else:
-                plan.append(f"TARGETS: Aim for S1 ({p.s1:.2f}) then S2 ({p.s2:.2f}).")
+            conv.append(f"ADX {adx:.0f} (weak trend, wait for breakout confirmation)")
 
-        if technical.fibonacci and orb_direction == "bearish" and is_bullish_signal:
-            plan.append(f"KEY ENTRY: Fib 38.2% at {technical.fibonacci.ret_382:.2f} is the ideal long trigger zone.")
-            
-    # 4. Expert Advice
+    if rsi is not None:
+        if rsi >= 70:
+            conv.append(f"RSI {rsi:.0f} — overbought, reduce long size")
+        elif rsi <= 30:
+            conv.append(f"RSI {rsi:.0f} — oversold, bounce conditions present")
+        elif rsi >= 55:
+            conv.append(f"RSI {rsi:.0f} — bullish momentum")
+        elif rsi <= 45:
+            conv.append(f"RSI {rsi:.0f} — bearish momentum")
+
+    if session_name:
+        conv.append(f"{session_name} session active")
+
+    if conv:
+        sections.append("CONVICTION: " + "  ·  ".join(conv))
+
+    # ── 6. COMMODITY CONTEXT ──────────────────────────────────────────────────
     if advice:
-        plan.append(advice)
-        
+        sections.append(f"CONTEXT: {advice}")
+
+    battle_plan_text = "\n".join(sections) if sections else "Wait for Session Open / Clear Breakout."
+
     return {
-        "battle_plan": " | ".join(plan) if plan else "Wait for Session Open/Clear Breakout.",
+        "battle_plan": battle_plan_text,
         "rvol": rvol,
         "is_high_intent": rvol > 1.8,
         "or_high": or_data.get("or_high", 0.0),
-        "or_low": or_data.get("or_low", 0.0),
+        "or_low":  or_data.get("or_low",  0.0),
         "or_broken": or_data.get("broken", "none"),
     }

@@ -657,7 +657,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .eat-title { font-size: 0.6rem; font-weight: 950; letter-spacing: 1.5px; color: #f59e0b; text-transform: uppercase; flex: 1; }
     .eat-rvol { font-size: 0.58rem; font-weight: 900; color: #6c7086; letter-spacing: 0.5px; }
     .eat-rvol.rvol-hot { color: #fab387; }
-    .eat-text { font-size: 0.88rem; color: #e2e8f0; line-height: 1.6; margin: 0; font-weight: 600; }
+    .eat-text { font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; margin: 0; font-weight: 500; white-space: pre-line; }
 
     /* HUD UPGRADE (ZERO WASTE) */
     .terminal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: #0b0b15; border-bottom: 1px solid #1f1f3a; }
