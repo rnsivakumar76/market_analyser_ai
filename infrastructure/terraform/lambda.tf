@@ -24,6 +24,8 @@ resource "aws_lambda_function" "api" {
       TWELVEDATA_API_KEY   = var.twelvedata_api_key
       FMP_API_KEY          = var.fmp_api_key
       NEWS_API_KEY         = var.news_api_key
+      TELEGRAM_BOT_TOKEN   = var.telegram_bot_token
+      TELEGRAM_CHAT_ID     = var.telegram_chat_id
       FRONTEND_URL          = var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.frontend_fixed.domain_name}"
       GOOGLE_REDIRECT_URI   = var.domain_name != "" ? "https://${var.domain_name}/api/auth/callback" : "https://${aws_cloudfront_distribution.frontend_fixed.domain_name}/api/auth/callback"
       LOG_LEVEL             = "INFO"

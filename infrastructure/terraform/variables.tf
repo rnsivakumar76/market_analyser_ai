@@ -125,3 +125,17 @@ variable "news_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "telegram_bot_token" {
+  description = "Telegram Bot API token for trade signal alerts"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "telegram_chat_id" {
+  description = "Telegram chat/channel ID to receive trade alerts"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

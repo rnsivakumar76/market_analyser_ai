@@ -79,8 +79,30 @@ def get_analysis_params(config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_alert_config(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract alert settings from config."""
-    return config.get('alerts', {})
+    """Extract alert settings from config.
+
+    Env vars take priority over YAML values for sensitive credentials.
+    When TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are both set the Telegram
+    channel is automatically enabled, even if instruments.yaml still has
+    ``enabled: false``.
+    """
+    alerts = config.get('alerts', {})
+
+    tg_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+    tg_chat  = os.environ.get('TELEGRAM_CHAT_ID')
+
+    if tg_token or tg_chat:
+        tg = dict(alerts.get('telegram', {}))
+        if tg_token:
+            tg['bot_token'] = tg_token
+        if tg_chat:
+            tg['chat_id'] = tg_chat
+        if tg_token and tg_chat:
+            tg['enabled'] = True
+        alerts = dict(alerts)
+        alerts['telegram'] = tg
+
+    return alerts
 
 
 def get_newsapi_key(config: Dict[str, Any]) -> str:
