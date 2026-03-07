@@ -3,7 +3,7 @@ import numpy as np
 from scipy.stats import percentileofscore
 from app.models import VolatilityAnalysis
 from domain.indicators.atr import calculate_atr as _domain_calculate_atr, calculate_atr_series
-from domain.constants import INDICATOR_ATR_PERIOD
+from domain.constants import INDICATOR_ATR_PERIOD, VOLATILITY_REGIME_ATR_MULTIPLIERS
 
 
 def calculate_atr(data: pd.DataFrame, period: int = INDICATOR_ATR_PERIOD) -> float:
@@ -19,21 +19,29 @@ def calculate_atr(data: pd.DataFrame, period: int = INDICATOR_ATR_PERIOD) -> flo
 
 
 def analyze_volatility_and_risk(
-    data: pd.DataFrame, 
-    current_price: float, 
+    data: pd.DataFrame,
+    current_price: float,
     signal_direction: str,
     atr_multiplier_sl: float = 1.5,
     atr_multiplier_tp: float = 3.0,
     entry_price: float = None
 ) -> VolatilityAnalysis:
     """Analyze volatility, calculate stop loss and take profit.
-    
+
+    Multipliers are regime-adaptive by default:
+      - COMPRESSED (≤25th pct ATR): tighter stops — 1.0× SL / 2.0× TP3
+      - NORMAL     (26–60th pct):   standard    — 1.5× SL / 3.0× TP3
+      - ELEVATED   (61–80th pct):   wider stops — 2.0× SL / 4.0× TP3
+      - EXTREME    (>80th pct):     max width   — 2.5× SL / 5.0× TP3
+
+    If atr_multiplier_sl / atr_multiplier_tp differ from their NORMAL defaults
+    (1.5 / 3.0) the caller's explicit values override the adaptive table.
+
     If entry_price is provided (e.g. a pending pullback level), stop/target are
     anchored at entry_price rather than current_price for accurate R/R display.
     """
-    
     atr = calculate_atr(data, period=14)
-    
+
     if atr == 0.0:
         return VolatilityAnalysis(
             atr=0.0,
@@ -43,39 +51,55 @@ def analyze_volatility_and_risk(
             description="Insufficient data for Volatility/ATR calculation."
         )
 
-    # Use entry_price as the anchor when a pending entry level is known;
-    # otherwise fall back to current_price (immediate/market entry).
+    # ── 1. Compute regime FIRST so multipliers can adapt ────────────────────
+    atr_pct_rank, atr_regime, hv_14, hv_pct, regime_label = _calc_volatility_regime(data, atr)
+
+    # ── 2. Select multipliers ────────────────────────────────────────────────
+    _NORMAL_SL = 1.5
+    _NORMAL_TP = 3.0
+    caller_override = (atr_multiplier_sl != _NORMAL_SL or atr_multiplier_tp != _NORMAL_TP)
+
+    if caller_override:
+        sl_mult  = atr_multiplier_sl
+        tp1_mult = 1.0
+        tp2_mult = 2.0
+        tp3_mult = atr_multiplier_tp
+    else:
+        mults    = VOLATILITY_REGIME_ATR_MULTIPLIERS.get(atr_regime, VOLATILITY_REGIME_ATR_MULTIPLIERS["NORMAL"])
+        sl_mult  = mults["sl"]
+        tp1_mult = mults["tp1"]
+        tp2_mult = mults["tp2"]
+        tp3_mult = mults["tp3"]
+
+    # ── 3. Anchor to ideal entry if provided ────────────────────────────────
     anchor = entry_price if (entry_price and entry_price > 0) else current_price
 
-    # Calculate stop loss and take profit levels (Institutional Scaling Model)
-    # TP1: 1.0x ATR (Initial de-risk)
-    # TP2: 2.0x ATR (Core target)
-    # TP3: 3.0x ATR (Runner)
-    
+    # ── 4. SL / TP levels ───────────────────────────────────────────────────
+    regime_note = f" [{regime_label} vol, {sl_mult}×/{tp3_mult}× ATR]"
+
     if signal_direction == "bullish":
-        sl = anchor - (atr * atr_multiplier_sl)
-        tp1 = anchor + (atr * 1.0)
-        tp2 = anchor + (atr * 2.0)
-        tp3 = anchor + (atr * atr_multiplier_tp)
-        desc = f"Bullish setup: Stop Loss at {sl:.2f}. Scaling Targets: TP1 (De-risk) at {tp1:.2f}, TP2 at {tp2:.2f}, Final TP at {tp3:.2f}."
+        sl  = anchor - (atr * sl_mult)
+        tp1 = anchor + (atr * tp1_mult)
+        tp2 = anchor + (atr * tp2_mult)
+        tp3 = anchor + (atr * tp3_mult)
+        desc = (f"Bullish setup{regime_note}: Stop Loss at {sl:.2f}. "
+                f"Scaling Targets: TP1 (De-risk) at {tp1:.2f}, TP2 at {tp2:.2f}, Final TP at {tp3:.2f}.")
     elif signal_direction == "bearish":
-        sl = anchor + (atr * atr_multiplier_sl)
-        tp1 = anchor - (atr * 1.0)
-        tp2 = anchor - (atr * 2.0)
-        tp3 = anchor - (atr * atr_multiplier_tp)
-        desc = f"Bearish setup: Stop Loss at {sl:.2f}. Scaling Targets: TP1 (De-risk) at {tp1:.2f}, TP2 at {tp2:.2f}, Final TP at {tp3:.2f}."
+        sl  = anchor + (atr * sl_mult)
+        tp1 = anchor - (atr * tp1_mult)
+        tp2 = anchor - (atr * tp2_mult)
+        tp3 = anchor - (atr * tp3_mult)
+        desc = (f"Bearish setup{regime_note}: Stop Loss at {sl:.2f}. "
+                f"Scaling Targets: TP1 (De-risk) at {tp1:.2f}, TP2 at {tp2:.2f}, Final TP at {tp3:.2f}.")
     else:
-        # Neutral - hypothetical symmetric bounds
-        sl = anchor - (atr * atr_multiplier_sl)
-        tp1 = anchor + (atr * 1.0)
-        tp2 = anchor + (atr * 2.0)
-        tp3 = anchor + (atr * atr_multiplier_tp)
-        desc = f"Neutral market. ATR is {atr:.2f}. Expect daily swings between {sl:.2f} and {tp3:.2f}."
+        sl  = anchor - (atr * sl_mult)
+        tp1 = anchor + (atr * tp1_mult)
+        tp2 = anchor + (atr * tp2_mult)
+        tp3 = anchor + (atr * tp3_mult)
+        desc = (f"Neutral market{regime_note}. ATR is {atr:.2f}. "
+                f"Expect daily swings between {sl:.2f} and {tp3:.2f}.")
 
-    # Standard risk-reward is usually TP_dist / SL_dist
-    rr_ratio = atr_multiplier_tp / atr_multiplier_sl if atr_multiplier_sl > 0 else 0
-
-    atr_pct_rank, atr_regime, hv_14, hv_pct, regime_label = _calc_volatility_regime(data, atr)
+    rr_ratio = tp3_mult / sl_mult if sl_mult > 0 else 0
 
     return VolatilityAnalysis(
         atr=float(round(atr, 4)),

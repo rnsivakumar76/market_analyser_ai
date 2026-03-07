@@ -35,7 +35,35 @@ _BENCH_TTL = 600
 
 # GLOBAL CACHE for heavy history data (Monthly/Weekly) - 4 hour TTL
 _HISTORY_CACHE = {} # { "SYMBOL_TIME": {"timestamp": 0, "df": df} }
-_HISTORY_TTL = 14400 
+_HISTORY_TTL = 14400
+
+
+def _fetch_via_yfinance(ticker: str, days: int = 30):
+    """Fetch daily OHLCV data via yfinance as a free alternative for DXY / US10Y.
+
+    TwelveData free-tier consistently rejects DXY and TNX symbols.
+    yfinance requires no API key and provides:
+      - DX=F  → US Dollar Index (continuous futures, closely tracks spot DXY)
+      - ^TNX  → CBOE 10-Year Treasury Yield (value = yield × 10, e.g. 42.5 = 4.25%)
+    """
+    try:
+        import yfinance as yf  # lazy import — optional dependency
+        import pandas as pd
+        tkr = yf.Ticker(ticker)
+        df = tkr.history(period=f"{days}d", interval="1d", auto_adjust=True)
+        if df is None or df.empty:
+            logger.warning(f"[YFINANCE] {ticker}: empty response")
+            return None
+        df.index = pd.to_datetime(df.index)
+        if df.index.tz is not None:
+            df.index = df.index.tz_localize(None)
+        cols = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]
+        result = df[cols].dropna()
+        logger.info(f"[YFINANCE] {ticker}: {len(result)} daily bars fetched")
+        return result
+    except Exception as exc:
+        logger.warning(f"[YFINANCE] {ticker} fetch failed: {exc}")
+        return None 
 
 # CORS Middleware
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:4200")
@@ -509,16 +537,22 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         b_macro = shared_fetcher.fetch_batch_data(core_bench, interval=bench_interval, days=1000)
         b_exec  = shared_fetcher.fetch_batch_data(core_bench, interval=exec_interval, days=exec_days)
 
-        # DXY / TNX consistently fail on free-tier API keys (symbol not recognised in batch).
-        # Removing them eliminates ~4 wasted credit retries per scan.
-        # Intermarket analysis degrades gracefully to None when not available.
+        # DXY / TNX are fetched via yfinance (free, no API key) in parallel with
+        # the TwelveData batch above.  If yfinance is unavailable or returns empty
+        # data, intermarket analysis degrades gracefully to None.
+        with ThreadPoolExecutor(max_workers=2) as _yfin_pool:
+            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DX=F",  60)
+            _f_us10y = _yfin_pool.submit(_fetch_via_yfinance, "^TNX",  60)
+            _dxy_df   = _f_dxy.result()
+            _us10y_df = _f_us10y.result()
+
         benchmarks_data = {
             "SPX_macro": b_macro.get("SPX"),
             "BTC_macro": b_macro.get("BTC"),
             "SPX_exec": b_exec.get("SPX"),
             "BTC_exec": b_exec.get("BTC"),
-            "DXY": None,
-            "US10Y": None
+            "DXY": _dxy_df,
+            "US10Y": _us10y_df,
         }
         bench_summary = {k: ('OK' if v is not None and not v.empty else 'MISSING') for k, v in benchmarks_data.items()}
         logger.info(f"[BENCHMARKS] Fetch result: {bench_summary}")

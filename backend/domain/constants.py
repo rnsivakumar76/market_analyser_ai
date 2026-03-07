@@ -89,6 +89,18 @@ VOLATILITY_ATR_TP1_MULTIPLIER: float = 1.0
 VOLATILITY_ATR_TP2_MULTIPLIER: float = 2.0
 VOLATILITY_ATR_TP3_MULTIPLIER: float = 3.0
 
+# ── Regime-Adaptive ATR Multiplier Table ─────────────────────────────────────
+# Multipliers are widened in ELEVATED/EXTREME regimes (fast markets need room)
+# and tightened in COMPRESSED/LOW regimes (range contraction → precision entries).
+# Keys match the regime strings returned by _calc_volatility_regime().
+# R/R maintained at 2:1 across all regimes (tp3 / sl = 2.0).
+VOLATILITY_REGIME_ATR_MULTIPLIERS: dict = {
+    "LOW":      {"sl": 1.0, "tp1": 0.75, "tp2": 1.5, "tp3": 2.0},
+    "NORMAL":   {"sl": 1.5, "tp1": 1.0,  "tp2": 2.0, "tp3": 3.0},
+    "ELEVATED": {"sl": 2.0, "tp1": 1.25, "tp2": 2.5, "tp3": 4.0},
+    "EXTREME":  {"sl": 2.5, "tp1": 1.5,  "tp2": 3.0, "tp3": 5.0},
+}
+
 # ── Breakout Detection ──────────────────────────────────────────────────────
 BREAKOUT_DONCHIAN_PERIOD: int = 20      # Donchian channel lookback
 BREAKOUT_MIN_BARS_REQUIRED: int = 21

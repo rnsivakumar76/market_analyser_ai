@@ -94,8 +94,8 @@ class TestVolatilityAnchor:
 
     def test_rr_ratio_is_consistent_with_multipliers(self, xau_ohlcv):
         """
-        R:R ratio = atr_multiplier_tp / atr_multiplier_sl (default 3.0/1.5 = 2.0).
-        This must hold regardless of which price is used as anchor.
+        R:R ratio = tp3_mult / sl_mult.  The regime-adaptive table maintains 2:1
+        across all four regimes (LOW 2.0/1.0=2, NORMAL 3.0/1.5=2, etc.).
         """
         result = analyze_volatility_and_risk(xau_ohlcv, 5382.97, "bullish", entry_price=5277.66)
         atr = result.atr
@@ -129,7 +129,119 @@ class TestVolatilityAnchor:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 2. LIQUIDITY MAP — Division-by-Zero Guards
+# 2. VOLATILITY — Regime-Adaptive ATR Multipliers
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _make_volatility_df(history_range: float, recent_range: float,
+                         n_history: int = 186, n_recent: int = 14) -> pd.DataFrame:
+    """
+    Build a synthetic OHLCV DataFrame with two volatility phases.
+
+    history_range: H-L of the first n_history bars (sets the baseline ATR distribution).
+    recent_range:  H-L of the last n_recent bars (determines the current ATR).
+
+    By keeping history_range >> recent_range we force a COMPRESSED regime;
+    by keeping recent_range >> history_range we force an EXTREME regime.
+    """
+    dates = pd.date_range("2024-01-01", periods=n_history + n_recent, freq="B")
+    close = 1000.0
+    rows = []
+    for i in range(n_history + n_recent):
+        r = recent_range if i >= n_history else history_range
+        rows.append({
+            "Open": close,
+            "High": close + r,
+            "Low": close,
+            "Close": close + r / 2,
+            "Volume": 1_000_000,
+        })
+        close += 0.1
+    return pd.DataFrame(rows, index=dates)
+
+
+class TestRegimeAdaptiveMultipliers:
+    """
+    Regression: ATR multipliers must widen in EXTREME volatility and tighten
+    in COMPRESSED volatility.  R/R must remain 2:1 across all regimes.
+    """
+
+    def test_compressed_regime_uses_tighter_sl_than_normal(self):
+        """In a flat/compressed market the stop should be tighter than 1.5× ATR."""
+        df = _make_volatility_df(history_range=20.0, recent_range=0.5)
+        result = analyze_volatility_and_risk(df, 1000.0, "bullish")
+        if result.atr > 0:
+            sl_distance = abs(result.stop_loss - 1000.0)
+            normal_sl_distance = result.atr * 1.5
+            assert sl_distance <= normal_sl_distance + 0.01, (
+                f"COMPRESSED regime: SL distance {sl_distance:.4f} must be ≤ NORMAL "
+                f"1.5× ATR distance {normal_sl_distance:.4f}."
+            )
+            assert "Compressed" in result.description or "Low" in result.description or \
+                   "Normal" in result.description, \
+                "Description must include the regime label"
+
+    def test_extreme_regime_uses_wider_sl_than_normal(self):
+        """In a highly volatile market the stop should be wider than 1.5× ATR."""
+        df = _make_volatility_df(history_range=0.5, recent_range=20.0)
+        result = analyze_volatility_and_risk(df, 1000.0, "bullish")
+        if result.atr > 0:
+            sl_distance = abs(result.stop_loss - 1000.0)
+            normal_sl_distance = result.atr * 1.5
+            assert sl_distance >= normal_sl_distance - 0.01, (
+                f"EXTREME regime: SL distance {sl_distance:.4f} must be ≥ NORMAL "
+                f"1.5× ATR distance {normal_sl_distance:.4f}."
+            )
+
+    def test_rr_is_two_to_one_in_compressed_regime(self):
+        """R/R must be 2:1 even when COMPRESSED multipliers are used."""
+        df = _make_volatility_df(history_range=20.0, recent_range=0.5)
+        result = analyze_volatility_and_risk(df, 1000.0, "bullish")
+        if result.atr > 0:
+            risk   = abs(result.stop_loss - 1000.0)
+            reward = abs(result.take_profit - 1000.0)
+            assert risk > 0
+            assert abs(reward / risk - 2.0) < 0.01, (
+                f"COMPRESSED R:R = {reward/risk:.3f}, expected 2.0"
+            )
+
+    def test_rr_is_two_to_one_in_extreme_regime(self):
+        """R/R must be 2:1 even when EXTREME multipliers are used."""
+        df = _make_volatility_df(history_range=0.5, recent_range=20.0)
+        result = analyze_volatility_and_risk(df, 1000.0, "bullish")
+        if result.atr > 0:
+            risk   = abs(result.stop_loss - 1000.0)
+            reward = abs(result.take_profit - 1000.0)
+            assert risk > 0
+            assert abs(reward / risk - 2.0) < 0.01, (
+                f"EXTREME R:R = {reward/risk:.3f}, expected 2.0"
+            )
+
+    def test_description_contains_regime_label(self):
+        """Description must always include the volatility regime label and multipliers."""
+        df = _make_volatility_df(history_range=5.0, recent_range=5.0)
+        result = analyze_volatility_and_risk(df, 1000.0, "bullish")
+        if result.atr > 0:
+            assert "vol" in result.description.lower() or "×" in result.description, (
+                f"Description missing regime note: {result.description!r}"
+            )
+
+    def test_caller_override_bypasses_adaptive_table(self):
+        """Explicit non-default multipliers must override regime-adaptive selection."""
+        df = _make_volatility_df(history_range=0.5, recent_range=20.0)  # EXTREME regime
+        result = analyze_volatility_and_risk(
+            df, 1000.0, "bullish",
+            atr_multiplier_sl=1.0, atr_multiplier_tp=2.0  # explicit override
+        )
+        if result.atr > 0:
+            sl_distance = abs(result.stop_loss - 1000.0)
+            expected_sl = result.atr * 1.0
+            assert abs(sl_distance - expected_sl) < 0.01, (
+                f"Override: expected SL=1.0×ATR ({expected_sl:.4f}), got {sl_distance:.4f}"
+            )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 3. LIQUIDITY MAP — Division-by-Zero Guards
 # ══════════════════════════════════════════════════════════════════════════════
 
 class TestLiquidityMapGuards:
