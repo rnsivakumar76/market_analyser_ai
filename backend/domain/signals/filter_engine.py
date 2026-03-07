@@ -140,7 +140,11 @@ def apply_macro_shield(
     current_score: int,
 ) -> tuple[FilterResult, int]:
     """
-    Filter 4: Fundamental macro shield — block trade during high-impact events.
+    Filter 4: Fundamental macro shield — penalise score during high-impact events.
+
+    Changed from hard-block to penalty-only so high-conviction setups (score >= 90)
+    can still generate signals. Position sizing is already reduced to 0.5x/0.75x
+    by fundamentals_analyzer based on minutes_to_next_event.
 
     Args:
         has_high_impact_events: Whether macro calendar flags high-impact events.
@@ -148,22 +152,23 @@ def apply_macro_shield(
         current_score:          Current composite score.
 
     Returns:
-        (FilterResult, adjusted_score)
+        (FilterResult, adjusted_score) — blocked is always False (penalty only)
     """
-    if not trade_worthy or not has_high_impact_events:
+    if not has_high_impact_events:
         return _PASS, current_score
 
-    # Penalise score
+    # Apply score penalty — only high-conviction setups (>= 90 before penalty) survive
     if current_score > 0:
         adjusted = max(current_score - FILTER_MACRO_SCORE_PENALTY, -100)
     else:
         adjusted = min(current_score + FILTER_MACRO_SCORE_PENALTY, 100)
 
+    # Return as warning (not a block) — score penalty is the control mechanism
     return FilterResult(
-        blocked=True,
+        blocked=False,
         reason=(
-            "Macro Shield Active: Trade blocked due to high-impact economic events "
-            "or earnings within 48h."
+            "Macro Caution: High-impact economic event within 48h. "
+            "Score penalised by 20 pts. Position size auto-reduced."
         ),
     ), adjusted
 
@@ -251,11 +256,12 @@ def apply_all_hard_filters(
         any_blocked = True
         blocked_reasons.append(r.reason)
 
-    # Filter 4: Macro shield (score penalty applies regardless)
+    # Filter 4: Macro shield (penalty-only — never hard-blocks, but always warns)
     r, current_score = apply_macro_shield(has_high_impact_events, initial_trade_worthy, current_score)
-    if r.blocked:
-        any_blocked = True
+    if r.reason:  # append warning regardless of blocked flag
         blocked_reasons.append(r.reason)
+    if r.blocked:  # kept for safety if policy reverts
+        any_blocked = True
 
     # Filter 5: Relative strength
     if is_outperforming is not None:
