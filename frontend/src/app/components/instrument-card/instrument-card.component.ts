@@ -1344,9 +1344,11 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
       .th-price { font-size: 0.95rem; }
       .th-change { font-size: 0.7rem; }
       .aph-text { font-size: 1.2rem; }
-      .lvl-box { padding: 6px; }
-      .lv { font-size: 0.8rem; }
+      .lvl-box { padding: 6px; min-width: 0; }
+      .lv { font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .deep-grid { grid-template-columns: 1fr; }
+      .risk-dual-panel { grid-template-columns: 1fr; }
+      .risk-panel-card:first-child { border-right: none; border-bottom: 1px solid #1f1f3a; }
     }
 
     @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
