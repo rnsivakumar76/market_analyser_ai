@@ -64,7 +64,8 @@ def _load_local_config(user_id: str = DEFAULT_USER_ID, config_path: str = None) 
         return {"instruments": [], "strategy": {}, "alerts": {}}
 
 
-ALLOWED_SYMBOLS = {'XAU', 'XAG', 'WTI', 'SPX', 'BTC'}
+ALLOWED_SYMBOLS = {'XAU', 'XAG', 'WTI', 'BTC'}
+BENCHMARK_ONLY_SYMBOLS = {'SPX', 'DXY', 'TNX'}  # Used internally as benchmarks, not user instruments
 
 def get_instruments(config: Dict[str, Any]) -> List[Dict[str, str]]:
     """Extract instruments list from config, strictly filtered to the allowed 5."""

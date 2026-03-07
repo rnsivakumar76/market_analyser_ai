@@ -873,7 +873,13 @@ async def add_instrument(instrument_data: Dict[str, str], user_id: str = Depends
     
     symbol = instrument_data.get("symbol", "").upper()
     name = instrument_data.get("name", "")
-    
+
+    from .config_loader import ALLOWED_SYMBOLS, BENCHMARK_ONLY_SYMBOLS
+    if symbol in BENCHMARK_ONLY_SYMBOLS:
+        raise HTTPException(status_code=400, detail=f"{symbol} is a benchmark used internally and cannot be added as a user instrument.")
+    if symbol not in ALLOWED_SYMBOLS:
+        raise HTTPException(status_code=400, detail=f"{symbol} is not a supported instrument. Allowed: {', '.join(sorted(ALLOWED_SYMBOLS))}")
+
     if any(i['symbol'].upper() == symbol for i in instruments):
         raise HTTPException(status_code=400, detail=f"Symbol {symbol} already exists")
     
