@@ -234,26 +234,21 @@ def analyze_instrument_lazy(
     session_ctx = analyze_session_context(execution_data)
 
     # NEW: Expert Day Trader Logic (15m/short-term specific)
+    # Pre-compute inputs here; actual plan is built after trade_signal so it uses the final recommendation.
     expert_plan = None
+    _expert_or_data = None
+    _expert_rvol = 1.0
+    _expert_advice = ""
     if mode == StrategyMode.SHORT_TERM and pre_expert_df is not None and not pre_expert_df.empty:
-        or_data = detect_opening_range(pre_expert_df)
-        rvol = calculate_rvol(pre_expert_df)
-        
-        # Intermarket nuances
+        _expert_or_data = detect_opening_range(pre_expert_df)
+        _expert_rvol = calculate_rvol(pre_expert_df)
         dxy_chg = 0.0
         yield_chg = 0.0
         if dxy_df is not None and len(dxy_df) >= 2:
             dxy_chg = float((dxy_df['Close'].iloc[-1] - dxy_df['Close'].iloc[-2]) / dxy_df['Close'].iloc[-2] * 100)
         if us10y_df is not None and len(us10y_df) >= 2:
             yield_chg = float((us10y_df['Close'].iloc[-1] - us10y_df['Close'].iloc[-2]) / us10y_df['Close'].iloc[-2] * 100)
-            
-        advice = analyze_commodity_specifics(symbol, dxy_chg, yield_chg)
-        expert_plan = generate_expert_trade_plan(
-            symbol, current_price, or_data, rvol, tech_indicators, advice,
-            signal_direction=trend.direction.value,
-            strength=strength,
-            session_ctx=session_ctx,
-        )
+        _expert_advice = analyze_commodity_specifics(symbol, dxy_chg, yield_chg)
     
     # NEW: Intermarket Context (DXY / Yields)
     intermarket = analyze_intermarket_context(symbol, dxy_df, us10y_df)
@@ -347,6 +342,17 @@ def analyze_instrument_lazy(
     elif rs_analysis.label == "Laggard":
         trade_signal.score = max(trade_signal.score - 15, -100)
         trade_signal.reasons.append(f"Market Laggard: Weak Relative Strength vs {bench_sym} (-15 penalty)")
+
+    # Build expert plan now that trade_signal.recommendation is final and volatility.atr is available
+    if _expert_or_data is not None:
+        expert_plan = generate_expert_trade_plan(
+            symbol, current_price, _expert_or_data, _expert_rvol, tech_indicators, _expert_advice,
+            signal_direction=trade_signal.recommendation.value,
+            atr=float(volatility.atr),
+            rsi=float(strength.rsi),
+            adx=float(strength.adx),
+            session_ctx=session_ctx,
+        )
 
     # Selection of daily data for backtesting (1Y perspective)
     backtest_source = execution_data if mode == StrategyMode.LONG_TERM else macro_data
