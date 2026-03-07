@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 def detect_opening_range(df_15m: pd.DataFrame) -> Dict[str, Any]:
     """
-    Detects the 15-minute Opening Range (first candle of NY Session).
+    Detects the 30-minute Opening Range (first TWO 15-minute candles of the session).
+    Using two candles is more robust against anomalous single-candle news spikes at the
+    open.  OR High = max(candle-1-high, candle-2-high); OR Low = min(c1-low, c2-low).
     Delegates to domain layer.
     """
     if df_15m.empty:

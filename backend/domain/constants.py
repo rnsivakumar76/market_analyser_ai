@@ -71,6 +71,22 @@ SIGNAL_BEARISH_BOUNCE: int = 10        # Bounce in downtrend
 SIGNAL_CONVICTION_THRESHOLD: int = 70  # Minimum score for trade-worthy
 SIGNAL_DEVELOPING_THRESHOLD: int = 20  # Below this = truly neutral
 
+# ── ADX Regime Boundaries (for adaptive scoring) ─────────────────────────────
+SIGNAL_ADX_RANGING: float = 20.0   # ADX < 20  → no clear trend (mean-reversion valid)
+SIGNAL_ADX_TRENDING: float = 30.0  # ADX >= 30 → trending (momentum valid)
+SIGNAL_ADX_STRONG: float = 45.0    # ADX >= 45 → strong trend
+
+# ── Regime-Adaptive Weight Table ──────────────────────────────────────────────
+# Total always = 100 so the SIGNAL_CONVICTION_THRESHOLD (70) needs no change.
+# In RANGING markets pullback-to-support is more reliable than raw trend direction.
+# In TRENDING markets, the prevailing trend dominates and mean-reversion weight drops.
+SIGNAL_ADX_REGIME_WEIGHTS: dict = {
+    "RANGING":  {"trend": 25, "pullback": 45, "strength": 30},  # ADX < 20
+    "NORMAL":   {"trend": 40, "pullback": 30, "strength": 30},  # 20 <= ADX < 30
+    "TRENDING": {"trend": 50, "pullback": 20, "strength": 30},  # 30 <= ADX < 45
+    "STRONG":   {"trend": 55, "pullback": 15, "strength": 30},  # ADX >= 45
+}
+
 # ── Hard Filters ────────────────────────────────────────────────────────────
 FILTER_ADX_THRESHOLD: float = 25.0     # ADX must exceed this for trade-worthy
 FILTER_MACRO_SCORE_PENALTY: int = 20   # Score reduction when macro shield active

@@ -1,8 +1,10 @@
 """
 Opening Range Breakout (ORB) — pure calculation, no pandas dependency.
 
-Detects whether the current price has broken above/below the opening range
-(the high and low of the first bar of the session).
+Detects whether the current price has broken above/below the opening range.
+By default the range is the first bar of the session; set opening_range_bars=2
+to use the first 30 minutes (two 15-minute candles), which is more robust
+against anomalous single-candle news spikes at the open.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ def detect_opening_range(
     session_lows: Sequence[float],
     current_price: float,
     opening_bar_index: int = 0,
+    opening_range_bars: int = 2,
 ) -> ORBData:
     """
     Detect the Opening Range and whether current price has broken it.
@@ -34,7 +37,11 @@ def detect_opening_range(
         session_highs:      High prices for current session bars (first = opening bar).
         session_lows:       Low prices for current session bars.
         current_price:      The latest close/price to evaluate.
-        opening_bar_index:  Index of the opening-range bar (default 0 = first bar).
+        opening_bar_index:  Index of the first opening-range bar (default 0).
+        opening_range_bars: Number of consecutive bars that define the opening range
+                            (default 2 = first 30 minutes on 15m data).
+                            Using 2 bars is more robust against single-candle news
+                            spikes at the open.  Set to 1 to restore legacy behaviour.
 
     Returns:
         ORBData with or_high, or_low, and broken direction.
@@ -46,8 +53,12 @@ def detect_opening_range(
     if not h or opening_bar_index >= len(h):
         return _EMPTY_ORB
 
-    or_high = float(h[opening_bar_index])
-    or_low = float(l[opening_bar_index])
+    end_idx = min(opening_bar_index + max(1, opening_range_bars), len(h))
+    or_high = float(max(h[opening_bar_index:end_idx]))
+    or_low  = float(min(l[opening_bar_index:end_idx]))
+
+    if or_high == or_low:
+        return ORBData(or_high=or_high, or_low=or_low, broken="none")
 
     broken = "none"
     if current_price > or_high:

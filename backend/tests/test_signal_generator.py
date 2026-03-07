@@ -189,8 +189,8 @@ class TestScoreCalculation:
             benchmark_direction=Signal.BULLISH,
             settings=_settings(),
         )
-        # 40 (monthly) + 15 (pullback no support) + 30 (daily) = 85
-        assert sig.score == 85
+        # TRENDING regime (ADX=35): trend=50 + pullback_half=10 + strength=30 = 90
+        assert sig.score == 90
 
     def test_no_pullback_small_bonus(self):
         """No pullback in uptrend → +5."""
@@ -202,8 +202,8 @@ class TestScoreCalculation:
             benchmark_direction=Signal.BULLISH,
             settings=_settings(),
         )
-        # 40 + 5 + 30 = 75
-        assert sig.score == 75
+        # TRENDING regime (ADX=35): trend=50 + no_pb=round(20*5/30)=3 + strength=30 = 83
+        assert sig.score == 83
 
 
 # ---------------------------------------------------------------------------

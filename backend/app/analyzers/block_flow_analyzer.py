@@ -69,12 +69,14 @@ def detect_block_flow(df: pd.DataFrame, current_price: float) -> Optional[BlockF
         # Keep last 5 events
         events = events[-5:]
 
+        _CAVEAT = " [Price proxy — closed-bar vol×ATR; not L2 tape data. Use for context only.]"
+
         if not events:
             return BlockFlowDetection(
                 detected=False,
                 events=[],
                 net_direction="neutral",
-                interpretation="No institutional block flow detected in recent price action."
+                interpretation="No high-volume block bars detected in recent price action." + _CAVEAT,
             )
 
         bull_count = sum(1 for e in events if e.direction == "bullish")
@@ -82,20 +84,25 @@ def detect_block_flow(df: pd.DataFrame, current_price: float) -> Optional[BlockF
 
         if bull_count > bear_count:
             net_direction = "bullish"
-            bias = f"{bull_count} bullish vs {bear_count} bearish blocks"
+            bias = f"{bull_count} bullish vs {bear_count} bearish high-volume bars"
         elif bear_count > bull_count:
             net_direction = "bearish"
-            bias = f"{bear_count} bearish vs {bull_count} bullish blocks"
+            bias = f"{bear_count} bearish vs {bull_count} bullish high-volume bars"
         else:
             net_direction = "neutral"
-            bias = "equal bullish and bearish blocks"
+            bias = "equal bullish and bearish high-volume bars"
 
         latest = events[-1]
+        intent_label = (
+            "possible accumulation." if net_direction == "bullish"
+            else "possible distribution." if net_direction == "bearish"
+            else "mixed high-volume activity."
+        )
         interpretation = (
-            f"Block flow detected: {bias}. "
-            f"Latest block: {latest.direction.upper()} at ${latest.price:.2f} "
-            f"({latest.volume_ratio}x avg vol). "
-            f"{'Institutional accumulation signal.' if net_direction == 'bullish' else 'Institutional distribution signal.' if net_direction == 'bearish' else 'Mixed institutional activity.'}"
+            f"Block flow proxy: {bias}. "
+            f"Latest: {latest.direction.upper()} at ${latest.price:.2f} "
+            f"({latest.volume_ratio}x avg vol) — {intent_label}"
+            + _CAVEAT
         )
 
         return BlockFlowDetection(
@@ -104,7 +111,7 @@ def detect_block_flow(df: pd.DataFrame, current_price: float) -> Optional[BlockF
             net_direction=net_direction,
             bull_blocks=bull_count,
             bear_blocks=bear_count,
-            interpretation=interpretation
+            interpretation=interpretation,
         )
 
     except Exception as e:

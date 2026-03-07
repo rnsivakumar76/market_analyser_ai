@@ -126,7 +126,9 @@ class TestOpeningRangeBreakout:
     def test_orb_custom_opening_bar_index(self):
         highs = [105.0, 108.0, 110.0]
         lows = [95.0, 98.0, 100.0]
-        result = detect_opening_range(highs, lows, current_price=109.0, opening_bar_index=1)
+        result = detect_opening_range(
+            highs, lows, current_price=109.0, opening_bar_index=1, opening_range_bars=1
+        )
         assert result.or_high == pytest.approx(108.0, abs=0.01)
         assert result.or_low == pytest.approx(98.0, abs=0.01)
         assert result.broken == "bullish"
@@ -171,6 +173,50 @@ class TestOpeningRangeBreakout:
         price = 100.0
         result = detect_opening_range([price], [price], current_price=price)
         assert result.broken == "none"
+
+    # ── 30-minute (2-candle) ORB ─────────────────────────────────────────────
+
+    def test_orb_two_bar_range_uses_max_high(self):
+        """OR High = max of first 2 candle highs when opening_range_bars=2."""
+        highs = [100.0, 105.0, 103.0]
+        lows  = [95.0,  98.0,  96.0]
+        result = detect_opening_range(highs, lows, current_price=101.0, opening_range_bars=2)
+        assert result.or_high == pytest.approx(105.0, abs=0.01)
+        assert result.or_low  == pytest.approx(95.0,  abs=0.01)
+        assert result.broken == "none"  # 101 is inside [95, 105]
+
+    def test_orb_two_bar_range_bullish_breakout(self):
+        """Price above 2-bar OR High → bullish breakout."""
+        highs = [100.0, 104.0, 103.0]
+        lows  = [95.0,  96.0,  97.0]
+        result = detect_opening_range(highs, lows, current_price=106.0, opening_range_bars=2)
+        assert result.or_high == pytest.approx(104.0)
+        assert result.broken == "bullish"
+
+    def test_orb_two_bar_range_bearish_breakout(self):
+        """Price below 2-bar OR Low → bearish breakout."""
+        highs = [100.0, 104.0, 103.0]
+        lows  = [95.0,  96.0,  97.0]
+        result = detect_opening_range(highs, lows, current_price=93.0, opening_range_bars=2)
+        assert result.or_low == pytest.approx(95.0)
+        assert result.broken == "bearish"
+
+    def test_orb_two_bar_graceful_with_single_bar_session(self):
+        """When only 1 bar exists, opening_range_bars=2 silently falls back to that 1 bar."""
+        result = detect_opening_range([105.0], [95.0], current_price=103.0, opening_range_bars=2)
+        assert result.or_high == pytest.approx(105.0)
+        assert result.or_low  == pytest.approx(95.0)
+        assert result.broken == "none"
+
+    def test_orb_spike_candle_is_absorbed_by_second_bar(self):
+        """A spike candle (very wide first bar) is validated by the second candle.
+        If the second bar is tight, the OR still spans the full 2-bar window."""
+        highs = [200.0, 102.0, 103.0]   # spike open then normal
+        lows  = [50.0,  99.0,  100.0]
+        result = detect_opening_range(highs, lows, current_price=101.0, opening_range_bars=2)
+        assert result.or_high == pytest.approx(200.0)
+        assert result.or_low  == pytest.approx(50.0)
+        assert result.broken == "none"  # price is inside the full window
 
 
 # ═══════════════════════════════════════════════════════════════════════════

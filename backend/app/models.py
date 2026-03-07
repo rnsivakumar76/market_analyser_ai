@@ -318,6 +318,10 @@ class BlockFlowDetection(BaseModel):
     bull_blocks: int = 0
     bear_blocks: int = 0
     interpretation: str = ""
+    signal_quality: str = "price_derived"  # 'price_derived' | 'l2_tape' (future)
+    data_caveat: str = ("Price-derived proxy (closed-bar vol × ATR). "
+                        "Identifies high-volume moves, not true institutional intent. "
+                        "Cross-reference with Level 2 / tape data before acting.")
 
 
 class InstrumentAnalysis(BaseModel):

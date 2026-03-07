@@ -180,6 +180,78 @@ class TestCompositeScore:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Scoring Engine — Regime-Adaptive Weights
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestRegimeAdaptiveScoring:
+    """
+    Regression: when ADX is provided the scoring weights must shift.
+    Total weight must always sum to 100 so the conviction threshold is stable.
+    """
+
+    def test_no_adx_uses_normal_weights(self):
+        """adx=None → NORMAL weights (backward compat). Ideal bullish = 100."""
+        result = compute_composite_score("bullish", True, True, "bullish", adx=None)
+        assert result.composite == 100, (
+            f"NORMAL (no ADX): expected 100, got {result.composite}"
+        )
+
+    def test_ranging_adx_raises_pullback_weight(self):
+        """ADX=15 → RANGING. pullback weight=45. Ideal bullish = 25+45+30=100."""
+        result = compute_composite_score("bullish", True, True, "bullish", adx=15.0)
+        assert result.composite == 100
+
+    def test_trending_adx_raises_trend_weight(self):
+        """ADX=35 → TRENDING. trend weight=50. Ideal bullish = 50+20+30=100."""
+        result = compute_composite_score("bullish", True, True, "bullish", adx=35.0)
+        assert result.composite == 100
+
+    def test_strong_adx_raises_trend_weight_further(self):
+        """ADX=50 → STRONG. trend weight=55. Ideal bullish = 55+15+30=100."""
+        result = compute_composite_score("bullish", True, True, "bullish", adx=50.0)
+        assert result.composite == 100
+
+    def test_ranging_no_pullback_score_lower_than_normal(self):
+        """In RANGING, a setup with NO pullback should score lower than NORMAL
+        because pullback weight is higher (missing pullback hurts more)."""
+        ranging = compute_composite_score("bullish", False, False, "bullish", adx=15.0)
+        normal  = compute_composite_score("bullish", False, False, "bullish", adx=None)
+        assert ranging.composite < normal.composite, (
+            "RANGING without pullback should penalise more than NORMAL"
+        )
+
+    def test_trending_full_bullish_score_same_as_normal(self):
+        """Full alignment in any regime sums to 100 (total weight invariant)."""
+        for adx_val in [0.0, 15.0, 25.0, 35.0, 50.0]:
+            adx = adx_val if adx_val > 0 else None
+            result = compute_composite_score("bullish", True, True, "bullish", adx=adx)
+            assert result.composite == 100, (
+                f"ADX={adx_val}: expected composite=100, got {result.composite}"
+            )
+
+    def test_regime_note_appears_in_reasons_for_non_normal(self):
+        """A regime-weight note must be prepended to reasons when regime != NORMAL."""
+        result = compute_composite_score("bullish", True, True, "bullish", adx=50.0)
+        regime_reasons = [r for r in result.reasons if "Regime-weighted" in r]
+        assert len(regime_reasons) == 1, (
+            f"Expected exactly 1 regime reason, got: {result.reasons}"
+        )
+
+    def test_no_regime_note_for_normal_regime(self):
+        """No regime-weight note when ADX is in NORMAL range (20–29)."""
+        result = compute_composite_score("bullish", True, True, "bullish", adx=25.0)
+        regime_reasons = [r for r in result.reasons if "Regime-weighted" in r]
+        assert len(regime_reasons) == 0
+
+    def test_decomposition_still_sums_in_trending_regime(self):
+        """composite = trend_score + pullback_score + strength_score for any regime."""
+        result = compute_composite_score("bullish", True, False, "neutral", adx=38.0)
+        assert result.composite == (
+            result.trend_score + result.pullback_score + result.strength_score
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Scoring Engine — classify_recommendation
 # ═══════════════════════════════════════════════════════════════════════════
 

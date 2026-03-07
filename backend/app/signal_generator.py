@@ -43,6 +43,7 @@ def generate_trade_signal(
         pullback_detected=pullback.detected,
         near_support=pullback.near_support,
         strength_direction=strength.signal.value,
+        adx=float(strength.adx) if strength.adx is not None else None,
     )
     score = components.composite
     reasons = list(components.reasons)
