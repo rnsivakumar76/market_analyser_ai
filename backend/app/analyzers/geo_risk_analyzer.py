@@ -195,64 +195,186 @@ def _indicator_checks(
 def _narrative(
     symbol: str,
     event_categories: List[str],
+    keywords_found: List[str],
     expected_direction: str,
     impact_confidence: str,
     confirmation: str,
     risk_score: int,
     confirming_count: int,
+    adx: float,
+    rsi: float,
+    vol_ratio: float,
+    atr_pct: float,
+    top_headlines: List[str],
 ) -> str:
-    if 'middle_east' in event_categories or 'conflict' in event_categories:
-        event_desc = "Middle East / conflict escalation"
+    """
+    Build a contextual narrative that incorporates real indicator values,
+    specific keywords, and actual news headline snippets.
+    """
+    import random
+
+    # ── Event description ─────────────────────────────────────────────────────
+    if 'middle_east' in event_categories and 'conflict' in event_categories:
+        event_desc = "Middle East conflict / military escalation"
+    elif 'middle_east' in event_categories:
+        event_desc = "Middle East geopolitical tension"
+    elif 'conflict' in event_categories:
+        event_desc = "armed conflict / military escalation"
     elif 'deescalation' in event_categories:
-        event_desc = "geopolitical de-escalation / peace signals"
+        event_desc = "geopolitical de-escalation / diplomatic progress"
     elif 'sanctions' in event_categories:
         event_desc = "sanctions / trade restrictions"
     elif 'supply_shock' in event_categories:
-        event_desc = "supply disruption"
+        event_desc = "energy supply disruption"
     elif 'safe_haven' in event_categories:
         event_desc = "risk-off / safe-haven demand"
     else:
-        event_desc = "geopolitical event"
+        event_desc = "geopolitical risk"
 
     dir_label = {
         'bullish': 'bullish', 'bearish': 'bearish',
         'usd_bullish': 'USD-strengthening', 'usd_bearish': 'USD-weakening', 'mixed': 'mixed'
     }.get(expected_direction, 'neutral')
 
-    if confirmation == 'CONFIRMED':
-        return (
-            f"{event_desc.capitalize()} detected. Historical pattern: {symbol} shows {dir_label} bias "
-            f"({impact_confidence} confidence). {confirming_count}/4 indicators confirm — price action "
-            f"is aligned with the geo event. Elevated volatility and trend momentum support the move. "
-            f"Manage position size carefully; geo-driven moves can reverse sharply on ceasefire/diplomacy news."
+    # ── Instrument-specific context sentence ──────────────────────────────────
+    sg = _get_symbol_group(symbol)
+    if sg == 'crude' and expected_direction == 'bullish':
+        _route_kws = [k for k in keywords_found if k in ['strait of hormuz', 'red sea', 'suez canal', 'pipeline', 'opec+']]
+        _routes = '\u2019, '.join(_route_kws) if _route_kws else 'key shipping routes'
+        instrument_ctx = (
+            f"Supply disruption risk via {_routes} "
+            f"typically adds a $2\u20136/bbl geopolitical premium to WTI."
         )
-    elif confirmation == 'DIVERGING':
-        return (
-            f"{event_desc.capitalize()} headlines are active, but price action is NOT confirming the "
-            f"expected {dir_label} impact on {symbol}. Only {confirming_count}/4 indicators show "
-            f"geo-driven momentum. Possible reasons: market is discounting the news, a diplomatic counter-"
-            f"narrative is tempering reaction, or reaction is delayed. Wait for volume and ATR expansion "
-            f"before entering. Risk of false breakout is elevated in this environment."
+    elif sg == 'gold' and expected_direction == 'bullish':
+        instrument_ctx = (
+            f"Gold historically outperforms during {event_desc} events, "
+            f"with safe-haven flows and USD debasement concerns amplifying the move."
         )
-    elif confirmation == 'EARLY':
-        return (
-            f"Early-stage {event_desc} signals detected. Expected {dir_label} impact on {symbol} "
-            f"(confidence: {impact_confidence}). {confirming_count}/4 indicators beginning to confirm. "
-            f"Monitor for ATR expansion above 70th percentile and volume surge (>1.5x avg) as the key "
-            f"confirmation triggers. A second-wave reaction is common within 24–48h of geo escalation."
+    elif sg == 'crypto' and expected_direction == 'bullish':
+        instrument_ctx = (
+            f"Crypto often attracts capital flight from sanctioned or conflict-affected economies, "
+            f"acting as a borderless store of value."
+        )
+    elif expected_direction == 'bearish':
+        instrument_ctx = (
+            f"Risk assets like {symbol} typically face selling pressure as capital rotates to safe havens."
         )
     else:
-        return (
-            f"Geopolitical keywords detected but risk score is low ({risk_score}/100). "
-            f"No material price impact confirmed by indicators yet. "
-            f"Monitor news flow — escalation could shift this rapidly."
+        instrument_ctx = ""
+
+    # ── Headline snippet (first matching title, truncated) ────────────────────
+    headline_str = ""
+    if top_headlines:
+        hl = top_headlines[0][:110]
+        if len(top_headlines[0]) > 110:
+            hl += "\u2026"
+        headline_str = f' Headlines driving this: \u201c{hl}\u201d'
+        if len(top_headlines) > 1:
+            hl2 = top_headlines[1][:80]
+            if len(top_headlines[1]) > 80:
+                hl2 += "\u2026"
+            headline_str += f' and \u201c{hl2}\u201d.'
+        else:
+            headline_str += "."
+
+    # ── Specific keywords context ─────────────────────────────────────────────
+    hot_kw = [k for k in keywords_found if k in {
+        'iran', 'israel', 'houthi', 'red sea', 'strait of hormuz', 'suez canal',
+        'opec', 'opec+', 'pipeline', 'airstrike', 'missile', 'ceasefire',
+        'sanctions', 'russia', 'taiwan', 'nuclear threat',
+    }]
+    kw_str = ""
+    if hot_kw:
+        kw_str = f" Key signals: {', '.join(hot_kw[:4])}."
+
+    # ── Indicator summary ─────────────────────────────────────────────────────
+    ind_parts = []
+    if atr_pct >= 70:
+        ind_parts.append(f"ATR at {atr_pct:.0f}th pct (elevated volatility)")
+    elif atr_pct >= 45:
+        ind_parts.append(f"ATR at {atr_pct:.0f}th pct (building volatility)")
+    else:
+        ind_parts.append(f"ATR at {atr_pct:.0f}th pct (subdued volatility)")
+
+    if adx >= 30:
+        ind_parts.append(f"ADX {adx:.1f} (strong trend)")
+    elif adx >= 20:
+        ind_parts.append(f"ADX {adx:.1f} (developing trend)")
+    else:
+        ind_parts.append(f"ADX {adx:.1f} (no clear trend yet)")
+
+    if vol_ratio >= 1.8:
+        ind_parts.append(f"volume {vol_ratio:.1f}\u00d7 avg (institutional activity)")
+    elif vol_ratio >= 1.3:
+        ind_parts.append(f"volume {vol_ratio:.1f}\u00d7 avg (above normal)")
+    else:
+        ind_parts.append(f"volume {vol_ratio:.1f}\u00d7 avg (light)")
+
+    ind_parts.append(f"RSI {rsi:.1f}")
+    ind_summary = "; ".join(ind_parts)
+
+    # ── State-specific narrative assembly ────────────────────────────────────
+    if confirmation == 'CONFIRMED':
+        openers = [
+            f"{event_desc.capitalize()} is confirmed as a live market driver for {symbol}.",
+            f"Price action on {symbol} is aligning with the unfolding {event_desc}.",
+            f"Technical indicators are now validating the {event_desc} narrative on {symbol}.",
+        ]
+        body = (
+            f"{confirming_count}/4 indicators confirm geo momentum [{ind_summary}]."
+            f"{headline_str}{kw_str}"
+            f" {impact_confidence} confidence {dir_label} bias. {instrument_ctx}"
+            f" Geo-driven moves can reverse sharply on ceasefire or diplomacy news — manage position size accordingly."
         )
+        return f"{random.choice(openers)} {body}"
+
+    elif confirmation == 'DIVERGING':
+        openers = [
+            f"{event_desc.capitalize()} headlines are active, but {symbol} price action is NOT confirming.",
+            f"Market is discounting the {event_desc} news — {symbol} indicators diverge from expected impact.",
+            f"Despite active {event_desc} signals, {symbol} is not reacting as expected.",
+        ]
+        body = (
+            f"Only {confirming_count}/4 indicators show geo-driven momentum [{ind_summary}]."
+            f"{headline_str}{kw_str}"
+            f" Possible explanations: market has already priced in the risk, a diplomatic counter-narrative"
+            f" is active, or the reaction is delayed. Wait for volume ({'>'}1.5\u00d7) and ATR ({'>'}70th pct)"
+            f" to confirm before entering. False breakout risk is elevated."
+        )
+        return f"{random.choice(openers)} {body}"
+
+    elif confirmation == 'EARLY':
+        openers = [
+            f"Early-stage {event_desc} signals are emerging for {symbol}.",
+            f"{event_desc.capitalize()} risk is building — {symbol} showing initial geo reaction.",
+            f"Geo radar is lit: early {event_desc} indicators detected for {symbol}.",
+        ]
+        body = (
+            f"{confirming_count}/4 indicators beginning to confirm [{ind_summary}]."
+            f"{headline_str}{kw_str}"
+            f" Expected {dir_label} impact ({impact_confidence} confidence). {instrument_ctx}"
+            f" Watch for ATR break above 70th pct and volume surge {'>'}1.5\u00d7 as primary triggers."
+            f" Second-wave reactions typically materialise within 24\u201348h of initial escalation."
+        )
+        return f"{random.choice(openers)} {body}"
+
+    else:  # NONE
+        openers = [
+            f"Geopolitical keywords detected in {symbol} headlines, but market impact is not yet visible.",
+            f"Background {event_desc} noise present — no material price reaction confirmed yet for {symbol}.",
+        ]
+        body = (
+            f"Risk score: {risk_score}/100 [{ind_summary}]."
+            f"{headline_str}{kw_str}"
+            f" Indicators show normal conditions. Monitor news flow — a sudden escalation could shift"
+            f" this picture rapidly. Set alerts on ATR and volume for early warning."
+        )
+        return f"{random.choice(openers)} {body}"
 
 
 def analyze_geopolitical_risk(symbol: str, news_sentiment, strength, volatility, trade_signal):
     """
     Main entry point. Returns a GeopoliticalRisk model.
-
     Args:
         symbol:         Instrument symbol (e.g. 'XAU', 'WTI', 'BTC')
         news_sentiment: NewsSentiment model (may be None)
@@ -339,7 +461,18 @@ def analyze_geopolitical_risk(symbol: str, news_sentiment, strength, volatility,
     }
     action_bias = bias_map.get((confirmation, expected_dir), 'MONITOR NEWS')
 
-    ai_text = _narrative(symbol, cats, expected_dir, impact_conf, confirmation, total, confirming)
+    # Collect headlines that contain at least one matched keyword (top 2 for narrative)
+    _all_kw_set = {kw for kws in matches.values() for kw in kws}
+    top_headlines = [
+        item.title for item in news_sentiment.news_items
+        if any(kw in item.title.lower() for kw in _all_kw_set)
+    ][:2]
+
+    ai_text = _narrative(
+        symbol, cats, all_kw, expected_dir, impact_conf,
+        confirmation, total, confirming,
+        adx, rsi, vol_ratio, atr_pct, top_headlines,
+    )
 
     return GeopoliticalRisk(
         detected=True,
