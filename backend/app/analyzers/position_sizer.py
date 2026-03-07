@@ -1,6 +1,11 @@
 from typing import List, Dict, Any
 from ..models import InstrumentAnalysis, PositionSizing, StrategySettings, Signal
 import logging
+from domain.trading.position_sizer import (
+    calculate_correlation_penalty,
+    calculate_risk_per_unit,
+    calculate_position_units as _domain_size,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +64,7 @@ def apply_position_sizing(
             sl = entry - risk_per_unit  # assume long
             logger.warning(f"[{symbol}] SL equals entry, using ATR fallback for risk_per_unit={risk_per_unit:.4f}")
 
-        # ── Correlation Penalty ───────────────────────────────────────────
+        # ── Correlation Penalty (domain layer) ───────────────────────────
         avg_correlation = 0.0
         others = [s for s in trade_worthy_symbols if s != symbol]
 
@@ -68,31 +73,22 @@ def apply_position_sizing(
             matrix = correlation_data['matrix']
             if symbol in labels:
                 s_idx = labels.index(symbol)
-                corrs = []
-                for other in others:
-                    if other in labels:
-                        o_idx = labels.index(other)
-                        corrs.append(float(matrix[s_idx][o_idx]))
+                corrs = [
+                    float(matrix[s_idx][labels.index(other)])
+                    for other in others if other in labels
+                ]
                 if corrs:
                     avg_correlation = sum(corrs) / len(corrs)
 
-        # Penalty: 0% at corr=0.3, capped at 60% reduction at corr≥0.9
-        penalty_factor = 0.0
-        if avg_correlation > 0.3:
-            penalty_factor = min(0.6, (avg_correlation - 0.3) * 1.0)
-
-        final_risk_percent = base_risk_percent * (1.0 - penalty_factor)
-        adjusted_risk_amount = portfolio * (final_risk_percent / 100.0)
-
-        suggested_units = adjusted_risk_amount / risk_per_unit
-
-        # Round to a sensible precision
-        if suggested_units >= 100:
-            suggested_units = round(suggested_units)
-        elif suggested_units >= 10:
-            suggested_units = round(suggested_units, 1)
-        else:
-            suggested_units = round(suggested_units, 2)
+        # ── Domain layer: sizing ─────────────────────────────────────────
+        suggested_units, adjusted_risk_amount, penalty_factor, final_risk_percent = _domain_size(
+            portfolio_value=portfolio,
+            base_risk_percent=base_risk_percent,
+            entry_price=entry,
+            stop_loss=sl,
+            atr=atr,
+            avg_correlation=avg_correlation,
+        )
 
         # Build description
         desc = f"Risk {final_risk_percent:.1f}% of portfolio (${adjusted_risk_amount:.0f}). "

@@ -3,184 +3,103 @@ import numpy as np
 from typing import Dict, Any, Tuple, Optional
 from ..models import TechnicalAnalysis, PivotPoints, Signal, FibonacciLevels, SessionContext
 from .strength_analyzer import calculate_rsi
+from domain.levels.pivot_points import calculate_pivot_points as _domain_pivots
+from domain.levels.fibonacci import calculate_fibonacci_levels as _domain_fib
+from domain.levels.std_bands import calculate_std_dev_bands as _domain_std_bands
+from domain.levels.breakout import detect_donchian_breakout as _domain_breakout
+from domain.levels.linear_regression import calculate_linear_regression_slope, classify_slope
+from domain.indicators.rsi import detect_rsi_divergence as _domain_rsi_divergence
+from domain.constants import INDICATOR_LRL_PERIOD, STDBAND_PERIOD
+
 
 def calculate_pivot_points(df: pd.DataFrame) -> PivotPoints:
     """
     Calculate Standard Pivot Points using the previous day's data.
-    If the current session is ongoing, we use the OHLC of the previous complete candle.
+    Delegates to domain layer.
     """
     if len(df) < 2:
         zero = 0.0
         return PivotPoints(pivot=zero, r1=zero, r2=zero, r3=zero, s1=zero, s2=zero, s3=zero)
     
-    # Use the previous complete bar (the last one is usually the current live one)
     prev_bar = df.iloc[-2]
-    high = prev_bar['High']
-    low = prev_bar['Low']
-    close = prev_bar['Close']
-    
-    pivot = (high + low + close) / 3
-    r1 = (2 * pivot) - low
-    s1 = (2 * pivot) - high
-    r2 = pivot + (high - low)
-    s2 = pivot - (high - low)
-    r3 = high + 2 * (pivot - low)
-    s3 = low - 2 * (high - pivot)
-    
+    pv = _domain_pivots(
+        float(prev_bar['High']),
+        float(prev_bar['Low']),
+        float(prev_bar['Close']),
+    )
     return PivotPoints(
-        pivot=round(float(pivot), 2),
-        r1=round(float(r1), 2),
-        r2=round(float(r2), 2),
-        r3=round(float(r3), 2),
-        s1=round(float(s1), 2),
-        s2=round(float(s2), 2),
-        s3=round(float(s3), 2)
+        pivot=pv.pivot, r1=pv.r1, r2=pv.r2, r3=pv.r3,
+        s1=pv.s1, s2=pv.s2, s3=pv.s3,
     )
 
 def analyze_least_resistance_line(df: pd.DataFrame) -> str:
     """
-    Determine the 'Line of Least Resistance' based on the slope of the 
-    linear regression of the last 20 periods and current price position relative to it.
+    Determine the 'Line of Least Resistance'. Delegates to domain layer.
     """
-    if len(df) < 20:
+    if len(df) < INDICATOR_LRL_PERIOD:
         return "flat"
-    
-    y = df['Close'].tail(20).values
-    x = np.arange(len(y))
-    slope, intercept = np.polyfit(x, y, 1)
-    
-    # Normalizing slope by price to make it comparable
-    relative_slope = slope / df['Close'].iloc[-1]
-    
-    if relative_slope > 0.001:  # 0.1% growth per bar
-        return "up"
-    elif relative_slope < -0.001:
-        return "down"
-    else:
-        return "flat"
+    slope = calculate_linear_regression_slope(df['Close'].tolist(), period=INDICATOR_LRL_PERIOD)
+    return classify_slope(slope)
 
 def detect_trend_breakout(df: pd.DataFrame) -> Tuple[str, float]:
     """
-    Detect if the price is breaking out of a recent range.
-    Uses a 20-period Donchian Channel breakout.
+    Detect a Donchian Channel breakout. Delegates to domain layer.
     """
     if len(df) < 21:
         return "none", 0.0
-    
-    current_close = df['Close'].iloc[-1]
-    current_volume = df['Volume'].iloc[-1]
-    
-    # Previous 20 bars range
-    prev_20 = df.iloc[-21:-1]
-    upper_band = prev_20['High'].max()
-    lower_band = prev_20['Low'].min()
-    avg_vol = prev_20['Volume'].mean()
-    
-    vol_ratio = current_volume / avg_vol if avg_vol > 0 else 1.0
-    
-    if current_close > upper_band:
-        # Bullish breakout
-        confidence = min(vol_ratio / 2, 1.0) # Higher volume = higher confidence
-        return "bullish_breakout", confidence
-    elif current_close < lower_band:
-        # Bearish breakout
-        confidence = min(vol_ratio / 2, 1.0)
-        return "bearish_breakout", confidence
-    
-    return "none", 0.0
+    result = _domain_breakout(
+        df['High'].tolist(),
+        df['Low'].tolist(),
+        df['Close'].tolist(),
+        df['Volume'].tolist(),
+    )
+    return result.direction, result.confidence
 
 def calculate_fibonacci_levels(df: pd.DataFrame) -> FibonacciLevels:
-    """Calculate recent swing Fibonacci retracements and extensions."""
+    """Calculate recent swing Fibonacci retracements and extensions. Delegates to domain layer."""
     if len(df) < 20:
         zero = 0.0
         return FibonacciLevels(trend="flat", swing_high=zero, swing_low=zero, ret_382=zero, ret_500=zero, ret_618=zero, ext_1272=zero, ext_1618=zero)
-        
-    recent_period = df.tail(60) # look at last 60 days for major swing
-    high = recent_period['High'].max()
-    low = recent_period['Low'].min()
-    current = df['Close'].iloc[-1]
     
-    diff = high - low
-    if diff == 0:
-        return FibonacciLevels(trend="flat", swing_high=high, swing_low=low, ret_382=high, ret_500=high, ret_618=high, ext_1272=high, ext_1618=high)
-        
-    if (current - low) >= (high - current):
-        trend = "up"
-        ret_382 = high - (diff * 0.382)
-        ret_500 = high - (diff * 0.500)
-        ret_618 = high - (diff * 0.618)
-        ext_1272 = low + (diff * 1.272)
-        ext_1618 = low + (diff * 1.618)
-    else:
-        trend = "down"
-        ret_382 = low + (diff * 0.382)
-        ret_500 = low + (diff * 0.500)
-        ret_618 = low + (diff * 0.618)
-        ext_1272 = high - (diff * 1.272)
-        ext_1618 = high - (diff * 1.618)
-        
+    from domain.constants import FIB_LOOKBACK_BARS
+    recent = df.tail(FIB_LOOKBACK_BARS)
+    swing_high = float(recent['High'].max())
+    swing_low = float(recent['Low'].min())
+    current = float(df['Close'].iloc[-1])
+    
+    fv = _domain_fib(swing_high, swing_low, current)
     return FibonacciLevels(
-        trend=trend,
-        swing_high=round(float(high), 2),
-        swing_low=round(float(low), 2),
-        ret_382=round(float(ret_382), 2),
-        ret_500=round(float(ret_500), 2),
-        ret_618=round(float(ret_618), 2),
-        ext_1272=round(float(ext_1272), 2),
-        ext_1618=round(float(ext_1618), 2)
+        trend=fv.trend,
+        swing_high=fv.swing_high,
+        swing_low=fv.swing_low,
+        ret_382=fv.ret_382,
+        ret_500=fv.ret_500,
+        ret_618=fv.ret_618,
+        ext_1272=fv.ext_1272,
+        ext_1618=fv.ext_1618,
     )
 
 
 def detect_rsi_divergence(df: pd.DataFrame, lookback: int = 20) -> Optional[str]:
     """
-    Detect RSI divergence over the last `lookback` bars.
+    Detect RSI divergence over the last `lookback` bars. Delegates to domain layer.
     Returns: 'bullish' | 'bearish' | None
-    
-    Bullish divergence: price makes lower low, RSI makes higher low -> reversal up
-    Bearish divergence: price makes higher high, RSI makes lower high -> reversal down
     """
     if len(df) < lookback + 2:
         return None
-    
-    recent = df.tail(lookback + 2).copy()
-    closes = recent['Close']
-    
-    # Calculate RSI series
-    delta = closes.diff()
-    gain = delta.where(delta > 0, 0.0).rolling(14).mean()
-    loss = (-delta).where(delta < 0, 0.0).rolling(14).mean()
-    rs = gain / loss.replace(0, float('inf'))
-    rsi_series = (100 - (100 / (1 + rs))).dropna()
-    
-    if len(rsi_series) < 4:
-        return None
-    
-    # Mid-point vs current
-    mid = len(closes) // 2
-    price_mid = float(closes.iloc[mid])
-    price_now = float(closes.iloc[-1])
-    rsi_mid = float(rsi_series.iloc[len(rsi_series) // 2])
-    rsi_now = float(rsi_series.iloc[-1])
-    
-    # Bearish divergence: price higher high, RSI lower high
-    if price_now > price_mid * 1.005 and rsi_now < rsi_mid - 3:
-        return 'bearish'
-    
-    # Bullish divergence: price lower low, RSI higher low
-    if price_now < price_mid * 0.995 and rsi_now > rsi_mid + 3:
-        return 'bullish'
-    
-    return None
+    return _domain_rsi_divergence(
+        df['Close'].tolist(),
+        df['High'].tolist(),
+        df['Low'].tolist(),
+        lookback=lookback,
+    )
 
 
-def calculate_std_dev_bands(df: pd.DataFrame, period: int = 20) -> tuple[float, float]:
-    """Calculate 1 and 2 standard deviation levels from the 20-period mean."""
+def calculate_std_dev_bands(df: pd.DataFrame, period: int = STDBAND_PERIOD) -> tuple[float, float]:
+    """Calculate 1 and 2 standard deviation levels from the period mean. Delegates to domain layer."""
     if len(df) < period:
         return 0.0, 0.0
-    
-    recent_closes = df['Close'].tail(period)
-    std = recent_closes.std()
-    return float(std), float(std * 2)
+    return _domain_std_bands(df['Close'].tolist(), period=period)
 
 
 def analyze_session_context(df: pd.DataFrame) -> SessionContext:

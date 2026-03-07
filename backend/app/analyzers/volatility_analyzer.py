@@ -2,35 +2,20 @@ import pandas as pd
 import numpy as np
 from scipy.stats import percentileofscore
 from app.models import VolatilityAnalysis
+from domain.indicators.atr import calculate_atr as _domain_calculate_atr, calculate_atr_series
+from domain.constants import INDICATOR_ATR_PERIOD
 
 
-def calculate_atr(data: pd.DataFrame, period: int = 14) -> float:
-    """Calculate the Average True Range (ATR)."""
+def calculate_atr(data: pd.DataFrame, period: int = INDICATOR_ATR_PERIOD) -> float:
+    """Calculate the Average True Range (ATR). Delegates to domain layer."""
     if data is None or data.empty or len(data) < period + 1:
         return 0.0
-
-    df = data.copy()
-    
-    # Calculate TR (True Range)
-    df['Prev_Close'] = df['Close'].shift(1)
-    df['High-Low'] = df['High'] - df['Low']
-    df['High-PrevClose'] = abs(df['High'] - df['Prev_Close'])
-    df['Low-PrevClose'] = abs(df['Low'] - df['Prev_Close'])
-    
-    # True Range is the maximum of the three values
-    df['TR'] = df[['High-Low', 'High-PrevClose', 'Low-PrevClose']].max(axis=1)
-    
-    # Calculate ATR based on simple moving average of TR
-    df['ATR'] = df['TR'].rolling(window=period).mean()
-    
-    # Get the latest ATR
-    latest_atr = df['ATR'].iloc[-1]
-    
-    # Handle NaN
-    if np.isnan(latest_atr):
-        return 0.0
-        
-    return float(latest_atr)
+    return _domain_calculate_atr(
+        data['High'].tolist(),
+        data['Low'].tolist(),
+        data['Close'].tolist(),
+        period=period,
+    )
 
 
 def analyze_volatility_and_risk(

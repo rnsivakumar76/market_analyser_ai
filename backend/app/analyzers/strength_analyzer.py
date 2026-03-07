@@ -2,22 +2,15 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any
 from ..models import StrengthAnalysis, Signal
+from domain.indicators.rsi import calculate_rsi as _domain_rsi
+from domain.indicators.adx import calculate_adx as _domain_adx
+from domain.indicators.vwap import calculate_vwap as _domain_vwap, calculate_vwap_distance_pct
+from domain.constants import INDICATOR_RSI_PERIOD, INDICATOR_ADX_PERIOD, INDICATOR_VWAP_PERIOD
 
 
-def calculate_rsi(prices: pd.Series, period: int = 14) -> float:
-    """Calculate Relative Strength Index."""
-    delta = prices.diff()
-    
-    gain = delta.where(delta > 0, 0.0)
-    loss = (-delta).where(delta < 0, 0.0)
-    
-    avg_gain = gain.rolling(window=period).mean()
-    avg_loss = loss.rolling(window=period).mean()
-    
-    rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-    
-    return float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50.0
+def calculate_rsi(prices: pd.Series, period: int = INDICATOR_RSI_PERIOD) -> float:
+    """Calculate Relative Strength Index. Delegates to domain layer."""
+    return _domain_rsi(prices.tolist(), period=period)
 
 
 def calculate_volume_ratio(volume: pd.Series, ma_period: int = 20) -> float:
@@ -25,7 +18,6 @@ def calculate_volume_ratio(volume: pd.Series, ma_period: int = 20) -> float:
     Returns 0.0 for Forex/commodity pairs that have no real volume data."""
     current_volume = float(volume.iloc[-1])
     
-    # If current volume is zero, this is a no-volume instrument (XAU, XAG, indices)
     if current_volume == 0:
         return 0.0
     
@@ -38,74 +30,39 @@ def calculate_volume_ratio(volume: pd.Series, ma_period: int = 20) -> float:
     return round(current_volume / avg_volume, 2)
 
 
-def calculate_vwap(data: pd.DataFrame, period: int = 20) -> tuple[float, float]:
+def calculate_vwap(data: pd.DataFrame, period: int = INDICATOR_VWAP_PERIOD) -> tuple[float, float]:
     """
     Calculate Volume Weighted Average Price (VWAP).
-    Returns (vwap_value, distance_pct).
+    Returns (vwap_value, distance_pct). Delegates to domain layer.
     """
     if 'Volume' not in data.columns or (data['Volume'] == 0).all():
         return 0.0, 0.0
     
-    recent = data.tail(period).copy()
-    typical_price = (recent['High'] + recent['Low'] + recent['Close']) / 3
-    tp_v = typical_price * recent['Volume']
-    
-    total_tp_v = tp_v.sum()
-    total_vol = recent['Volume'].sum()
-    
-    if total_vol == 0:
+    vwap = _domain_vwap(
+        data['High'].tolist(),
+        data['Low'].tolist(),
+        data['Close'].tolist(),
+        data['Volume'].tolist(),
+        period=period,
+    )
+    if vwap == 0.0:
         return 0.0, 0.0
-    
-    vwap = total_tp_v / total_vol
     current_price = float(data['Close'].iloc[-1])
-    dist_pct = ((current_price - vwap) / vwap) * 100
-    
-    return float(vwap), float(dist_pct)
+    dist_pct = calculate_vwap_distance_pct(current_price, vwap)
+    return vwap, dist_pct
 
 
-def calculate_adx(data: pd.DataFrame, period: int = 14) -> float:
+def calculate_adx(data: pd.DataFrame, period: int = INDICATOR_ADX_PERIOD) -> float:
     """
-    Calculate Average Directional Index (ADX).
-    ADX measures the strength of the trend (not direction).
-    ADX > 25 = Strong trend
-    ADX < 20 = Weak trend / Sideways
+    Calculate Average Directional Index (ADX). Delegates to domain layer.
+    ADX > 25 = Strong trend,  ADX < 20 = Weak trend / Sideways
     """
-    high = data['High']
-    low = data['Low']
-    close = data['Close']
-    
-    # Calculate True Range (TR)
-    t1 = high - low
-    t2 = abs(high - close.shift(1))
-    t3 = abs(low - close.shift(1))
-    tr = pd.concat([t1, t2, t3], axis=1).max(axis=1)
-    
-    # Directional Movement
-    plus_dm = high.diff()
-    minus_dm = low.diff().apply(lambda x: -x)
-    
-    # Filter DM
-    plus_dm[plus_dm < 0] = 0
-    minus_dm[minus_dm < 0] = 0
-    plus_dm = plus_dm.where(plus_dm > minus_dm, 0)
-    minus_dm = minus_dm.where(minus_dm > plus_dm, 0)
-    
-    # Smoothing (Wilder's method)
-    tr_smoothed = tr.rolling(window=period).mean() # Simple mean for TR smoothing
-    plus_dm_smoothed = plus_dm.rolling(window=period).mean()
-    minus_dm_smoothed = minus_dm.rolling(window=period).mean()
-    
-    # Directional Indicators
-    plus_di = 100 * (plus_dm_smoothed / tr_smoothed)
-    minus_di = 100 * (minus_dm_smoothed / tr_smoothed)
-    
-    # Directional Index (DX)
-    dx = 100 * (abs(plus_di - minus_di) / (plus_di + minus_di))
-    
-    # Moving average of DX gives ADX
-    adx = dx.rolling(window=period).mean()
-    
-    return float(adx.iloc[-1]) if not pd.isna(adx.iloc[-1]) else 0.0
+    return _domain_adx(
+        data['High'].tolist(),
+        data['Low'].tolist(),
+        data['Close'].tolist(),
+        period=period,
+    )
 
 
 def analyze_daily_strength(
