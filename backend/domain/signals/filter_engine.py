@@ -119,16 +119,16 @@ def apply_candle_filter(
         return FilterResult(
             blocked=True,
             reason=(
-                f"Trigger Filter: Waiting for a bullish reversal candle "
-                f"(Engulfing/Hammer) to confirm entry. Currently: {candle_pattern}"
+                f"Trigger Filter: Waiting for a bullish confirming candle "
+                f"(bullish close / Engulfing / Hammer). Currently: {candle_pattern}"
             ),
         )
     if recommendation == BEARISH and candle_is_bullish is not False:
         return FilterResult(
             blocked=True,
             reason=(
-                f"Trigger Filter: Waiting for a bearish reversal candle "
-                f"(Shooting Star/Engulfing) to confirm entry. Currently: {candle_pattern}"
+                f"Trigger Filter: Waiting for a bearish confirming candle "
+                f"(bearish close / Shooting Star / Engulfing). Currently: {candle_pattern}"
             ),
         )
     return _PASS

@@ -5,7 +5,7 @@ from ..models import StrengthAnalysis, Signal
 from domain.indicators.rsi import calculate_rsi as _domain_rsi
 from domain.indicators.adx import calculate_adx as _domain_adx
 from domain.indicators.vwap import calculate_vwap as _domain_vwap, calculate_vwap_distance_pct
-from domain.constants import INDICATOR_RSI_PERIOD, INDICATOR_ADX_PERIOD, INDICATOR_VWAP_PERIOD
+from domain.constants import INDICATOR_RSI_PERIOD, INDICATOR_ADX_PERIOD, INDICATOR_VWAP_PERIOD, INDICATOR_RSI_BULLISH_THRESHOLD, INDICATOR_RSI_BEARISH_THRESHOLD
 
 
 def calculate_rsi(prices: pd.Series, period: int = INDICATOR_RSI_PERIOD) -> float:
@@ -80,8 +80,11 @@ def analyze_daily_strength(
     rsi_period = params.get('rsi_period', 14)
     rsi_oversold = params.get('rsi_oversold', 30)
     rsi_overbought = params.get('rsi_overbought', 70)
+    rsi_bullish = params.get('rsi_bullish_threshold', INDICATOR_RSI_BULLISH_THRESHOLD)   # 55
+    rsi_bearish = params.get('rsi_bearish_threshold', INDICATOR_RSI_BEARISH_THRESHOLD)   # 45
     volume_ma_period = params.get('volume_ma_period', 20)
     volume_surge_threshold = params.get('volume_surge_threshold', 1.5)
+    price_change_threshold = params.get('price_change_threshold', 0.5)  # was hardcoded 1%
     
     close_prices = daily_data['Close']
     volume = daily_data['Volume']
@@ -112,13 +115,19 @@ def analyze_daily_strength(
             bullish_signals += 1
             reasons.append(f"Price at discount to VWAP ({vwap_dist:.1f}%)")
     
-    # RSI analysis
+    # RSI analysis — two-tier: extreme levels + healthy momentum zone
     if rsi < rsi_oversold:
-        bullish_signals += 1
+        bullish_signals += 2  # strong weight for oversold bounce
         reasons.append(f"RSI oversold ({rsi:.1f})")
     elif rsi > rsi_overbought:
-        bearish_signals += 1
+        bearish_signals += 2  # strong weight for overbought
         reasons.append(f"RSI overbought ({rsi:.1f})")
+    elif rsi >= rsi_bullish:  # 55-70: healthy upward momentum
+        bullish_signals += 1
+        reasons.append(f"RSI bullish momentum ({rsi:.1f})")
+    elif rsi <= rsi_bearish:  # 30-45: bearish momentum
+        bearish_signals += 1
+        reasons.append(f"RSI bearish momentum ({rsi:.1f})")
     
     # Volume analysis
     volume_surge = volume_ratio >= volume_surge_threshold
@@ -130,13 +139,13 @@ def analyze_daily_strength(
             bearish_signals += 1
             reasons.append(f"Volume surge ({volume_ratio:.1f}x) on down day")
     
-    # Price action
-    if price_change > 1:
+    # Price action — configurable threshold (default 0.5%, was hardcoded 1%)
+    if price_change > price_change_threshold:
         bullish_signals += 1
-        reasons.append(f"Strong up day (+{price_change:.1f}%)")
-    elif price_change < -1:
+        reasons.append(f"Up day (+{price_change:.1f}%)")
+    elif price_change < -price_change_threshold:
         bearish_signals += 1
-        reasons.append(f"Strong down day ({price_change:.1f}%)")
+        reasons.append(f"Down day ({price_change:.1f}%)")
     
     # Determine overall signal
     if bullish_signals > bearish_signals:

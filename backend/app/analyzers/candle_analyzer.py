@@ -69,4 +69,15 @@ def detect_candle_patterns(df: pd.DataFrame) -> Dict[str, Any]:
             "is_bullish": False
         }
 
-    return {"pattern": CandlePattern.NONE, "description": "No significant reversal pattern", "is_bullish": None}
+    # No specific reversal pattern — but still classify directional close.
+    # True doji (body < 10% of range) = genuine indecision → None (blocks candle trigger).
+    # Any clear directional close = is_bullish True/False (trend-continuation bars should pass).
+    is_directional_bullish = c0 > o0
+    body_ratio = size0 / range0 if range0 > 0 else 0
+    if body_ratio < 0.1:  # doji / spinning top
+        return {"pattern": CandlePattern.NONE, "description": "Doji / indecision candle — no directional confirmation", "is_bullish": None}
+    return {
+        "pattern": CandlePattern.NONE,
+        "description": "Directional close — bullish bar" if is_directional_bullish else "Directional close — bearish bar",
+        "is_bullish": is_directional_bullish,
+    }
