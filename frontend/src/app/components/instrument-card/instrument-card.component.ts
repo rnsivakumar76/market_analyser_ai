@@ -641,7 +641,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .terminal-body.bearish { border-left: 3px solid #f38ba8; }
 
     /* SIGNAL REASONS STRIP (replaces verbose AI Summary) */
-    .signal-reasons-strip { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 16px; border-bottom: 1px solid #1f1f3a; background: rgba(17,17,27,0.4); }
+    .signal-reasons-strip { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 6px 8px; padding: 10px 16px; border-bottom: 1px solid #1f1f3a; background: rgba(17,17,27,0.4); }
     .syn-tag { font-size: 0.6rem; padding: 3px 9px; border-radius: 4px; background: #1a1a2a; border: 1px solid #313244; color: #9399b2; font-weight: 700; }
     .syn-tag.positive { background: rgba(166,227,161,0.1); color: #a6e3a1; border-color: rgba(166,227,161,0.3); }
     .syn-tag.negative { background: rgba(243,139,168,0.1); color: #f38ba8; border-color: rgba(243,139,168,0.3); }
