@@ -209,6 +209,36 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                 </div>
                 <div class="mmr-combined-read">{{ getMarketMomentumRead() }}</div>
+
+                <div class="mmr-plan">
+                  <div class="mmr-plan-header">
+                    <span>🧠 TACTICAL INTERPRETATION ({{ getTacticalContextLabel() }})</span>
+                    <span class="mmr-bias" [class]="getTacticalBiasClass()">{{ getTacticalBiasText() }}</span>
+                  </div>
+
+                  <ul class="mmr-evidence">
+                    @for (line of getTacticalEvidence(); track line) {
+                      <li>{{ line }}</li>
+                    }
+                  </ul>
+
+                  <div class="mmr-scenarios">
+                    <div class="mmr-scenario bull">
+                      <div class="sc-title">LONG CONTINUATION SCENARIO</div>
+                      <div class="sc-row"><span>TRIGGER</span><strong>{{ getBullTriggerText() }}</strong></div>
+                      <div class="sc-row"><span>TARGET</span><strong>{{ getBullTargetText() }}</strong></div>
+                      <div class="sc-row"><span>INVALIDATION</span><strong>{{ getBullInvalidationText() }}</strong></div>
+                    </div>
+                    <div class="mmr-scenario bear">
+                      <div class="sc-title">SHORT REVERSAL SCENARIO</div>
+                      <div class="sc-row"><span>TRIGGER</span><strong>{{ getBearTriggerText() }}</strong></div>
+                      <div class="sc-row"><span>TARGET</span><strong>{{ getBearTargetText() }}</strong></div>
+                      <div class="sc-row"><span>INVALIDATION</span><strong>{{ getBearInvalidationText() }}</strong></div>
+                    </div>
+                  </div>
+
+                  <div class="mmr-plan-note">{{ getTacticalExecutionNote() }}</div>
+                </div>
               </div>
 
               <!-- SECTION 2: PIVOT MATRIX & EXTENSIONS -->
@@ -1083,6 +1113,23 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .mmr-interp.bearish { color: #f38ba8; }
     .mmr-interp.neutral { color: #f9e2af; }
     .mmr-combined-read { font-size: 0.65rem; color: #a6adc8; line-height: 1.6; padding: 10px 12px; background: rgba(137,180,250,0.04); border-left: 3px solid #89b4fa; border-radius: 0 6px 6px 0; }
+    .mmr-plan { margin-top: 12px; background: rgba(17,17,27,0.55); border: 1px solid #1f1f3a; border-radius: 8px; padding: 12px; }
+    .mmr-plan-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 0.56rem; font-weight: 900; letter-spacing: 0.9px; color: #cdd6f4; }
+    .mmr-bias { padding: 3px 8px; border-radius: 10px; font-size: 0.5rem; font-weight: 900; }
+    .mmr-bias.bullish { color: #a6e3a1; background: rgba(166,227,161,0.12); border: 1px solid rgba(166,227,161,0.35); }
+    .mmr-bias.bearish { color: #f38ba8; background: rgba(243,139,168,0.12); border: 1px solid rgba(243,139,168,0.35); }
+    .mmr-bias.neutral { color: #f9e2af; background: rgba(249,226,175,0.12); border: 1px solid rgba(249,226,175,0.35); }
+    .mmr-evidence { margin: 0 0 10px; padding-left: 16px; color: #a6adc8; font-size: 0.6rem; line-height: 1.5; }
+    .mmr-evidence li { margin-bottom: 4px; }
+    .mmr-scenarios { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mmr-scenario { border-radius: 6px; padding: 10px; border: 1px solid #1f1f3a; background: #0b0b15; }
+    .mmr-scenario.bull { border-color: rgba(166,227,161,0.25); background: rgba(166,227,161,0.04); }
+    .mmr-scenario.bear { border-color: rgba(243,139,168,0.25); background: rgba(243,139,168,0.04); }
+    .sc-title { font-size: 0.48rem; letter-spacing: 1px; font-weight: 900; margin-bottom: 6px; color: #cdd6f4; }
+    .sc-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .sc-row span { font-size: 0.46rem; color: #6c7086; letter-spacing: 0.6px; font-weight: 800; }
+    .sc-row strong { font-size: 0.64rem; color: #cdd6f4; font-weight: 900; }
+    .mmr-plan-note { margin-top: 10px; font-size: 0.58rem; color: #9399b2; line-height: 1.45; border-top: 1px dashed #313244; padding-top: 8px; }
 
     /* TECH SECTION WRAPPERS */
     .tech-section { padding: 20px 24px; border-bottom: 1px solid #1f1f3a; }
@@ -2043,6 +2090,114 @@ export class InstrumentCardComponent implements OnChanges {
     if (adx > 25 && signal === 'bearish') return `Trending market (ADX ${adx.toFixed(0)}) supporting the bearish signal. RSI at ${rsi.toFixed(0)} — ${rsi < 50 ? 'downside momentum in play' : 'watch for RSI confirmation below 50'}.`;
     if (adx < 20) return `Low trend strength (ADX ${adx.toFixed(0)}) — market is ranging. Reduce position size and avoid breakout strategies until ADX rises above 25.`;
     return `Developing trend (ADX ${adx.toFixed(0)}), RSI ${rsi.toFixed(0)}. Monitor for confirmation before committing full position size.`;
+  }
+
+  getTacticalContextLabel(): string {
+    return this.analysis.strategy_mode === 'long_term' ? 'DAILY' : '1-HOUR';
+  }
+
+  getTacticalBiasClass(): 'bullish' | 'bearish' | 'neutral' {
+    return this.analysis.daily_strength.signal;
+  }
+
+  getTacticalBiasText(): string {
+    const signal = this.analysis.daily_strength.signal;
+    if (signal === 'bullish') return 'BULLISH MOMENTUM BIAS';
+    if (signal === 'bearish') return 'BEARISH MOMENTUM BIAS';
+    return 'NEUTRAL / WAIT FOR BREAK';
+  }
+
+  private extractStrengthReasons(limit: number = 2): string[] {
+    const desc = this.analysis.daily_strength.description || '';
+    const idx = desc.indexOf(':');
+    if (idx < 0) return [];
+    return desc
+      .slice(idx + 1)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean)
+      .slice(0, limit);
+  }
+
+  getTacticalEvidence(): string[] {
+    const a = this.analysis;
+    const out: string[] = [];
+    const adx = a.daily_strength.adx;
+    const rsi = a.daily_strength.rsi;
+    const vwapDist = a.daily_strength.vwap_dist_pct;
+
+    out.push(`Trend regime: ADX ${adx.toFixed(1)} (${this.getADXInterpretation()}).`);
+
+    if (rsi >= 70) out.push(`RSI ${rsi.toFixed(1)} is overbought — momentum can stay strong but pullback risk is elevated.`);
+    else if (rsi <= 30) out.push(`RSI ${rsi.toFixed(1)} is oversold — downside may be exhausted, watch for reversal candles.`);
+    else out.push(`RSI ${rsi.toFixed(1)} is in ${this.getRSIInterpretation().toLowerCase()} zone.`);
+
+    if (vwapDist !== null && vwapDist !== undefined) {
+      out.push(`Price vs VWAP: ${vwapDist >= 0 ? '+' : ''}${vwapDist.toFixed(2)}% (${this.getVWAPDistLabel().toLowerCase()}).`);
+    }
+
+    if (a.candle_patterns?.pattern && a.candle_patterns.pattern !== 'none') {
+      out.push(`Execution candle: ${a.candle_patterns.pattern.replace(/_/g, ' ')} (${a.candle_patterns.is_bullish ? 'bullish' : 'bearish'}).`);
+    }
+
+    for (const reason of this.extractStrengthReasons(2)) {
+      out.push(`Signal driver: ${reason}.`);
+    }
+
+    return out.slice(0, 5);
+  }
+
+  private formatPrice(v: number | null | undefined): string {
+    return (v !== null && v !== undefined && Number.isFinite(v)) ? `$${v.toFixed(2)}` : 'N/A';
+  }
+
+  getBullTriggerText(): string {
+    const up = this.analysis.trade_signal.signal_conflict?.trigger_price_up;
+    const r1 = this.analysis.technical_indicators?.pivot_points?.r1;
+    const trigger = up ?? r1 ?? this.analysis.current_price;
+    return `Daily close above ${this.formatPrice(trigger)}`;
+  }
+
+  getBullTargetText(): string {
+    const tp = this.analysis.volatility_risk?.take_profit;
+    const r2 = this.analysis.technical_indicators?.pivot_points?.r2;
+    return this.formatPrice(tp ?? r2 ?? null);
+  }
+
+  getBullInvalidationText(): string {
+    const stop = this.analysis.volatility_risk?.stop_loss;
+    const pivot = this.analysis.technical_indicators?.pivot_points?.pivot;
+    return `Close below ${this.formatPrice(stop ?? pivot ?? null)}`;
+  }
+
+  getBearTriggerText(): string {
+    const down = this.analysis.trade_signal.signal_conflict?.trigger_price_down;
+    const s1 = this.analysis.technical_indicators?.pivot_points?.s1;
+    const trigger = down ?? s1 ?? this.analysis.current_price;
+    return `Daily close below ${this.formatPrice(trigger)}`;
+  }
+
+  getBearTargetText(): string {
+    const s2 = this.analysis.technical_indicators?.pivot_points?.s2;
+    const stop = this.analysis.volatility_risk?.stop_loss;
+    return this.formatPrice(s2 ?? stop ?? null);
+  }
+
+  getBearInvalidationText(): string {
+    const r1 = this.analysis.technical_indicators?.pivot_points?.r1;
+    const tp = this.analysis.volatility_risk?.take_profit;
+    return `Close above ${this.formatPrice(r1 ?? tp ?? null)}`;
+  }
+
+  getTacticalExecutionNote(): string {
+    const rec = this.analysis.trade_signal.recommendation;
+    if (rec === 'bullish') {
+      return 'Execution plan: prioritize long continuation only after trigger confirmation; avoid fresh size if price is already stretched above VWAP.';
+    }
+    if (rec === 'bearish') {
+      return 'Execution plan: prioritize short continuation only after breakdown confirmation; avoid early shorts into strong support without close confirmation.';
+    }
+    return 'Execution plan: market is in a conflict/neutral state — treat both scenarios as conditional and commit size only on confirmed close beyond trigger levels.';
   }
 
   getAnalysisAge(): string {
