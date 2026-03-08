@@ -58,6 +58,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             <span class="syn-tag" [class]="getReasonImpactClass(reason)">{{ reason }}</span>
           }
         </div>
+        <div class="score-driver-note">{{ getScoreDriverSummary() }}</div>
 
         <!-- EXPERT BATTLE PLAN (always visible, above tabs) -->
         @if (analysis.expert_trade_plan) {
@@ -214,6 +215,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   <div class="mmr-plan-header">
                     <span>🧠 TACTICAL INTERPRETATION ({{ getTacticalContextLabel() }})</span>
                     <span class="mmr-bias" [class]="getTacticalBiasClass()">{{ getTacticalBiasText() }}</span>
+                  </div>
+                  <div class="mmr-dual-bias">
+                    <span>MACRO: {{ analysis.monthly_trend.direction | uppercase }}</span>
+                    <span>TACTICAL: {{ analysis.daily_strength.signal | uppercase }}</span>
                   </div>
 
                   <ul class="mmr-evidence">
@@ -678,6 +683,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .syn-tag.neutral { background: rgba(249,226,175,0.1); color: #f9e2af; border-color: rgba(249,226,175,0.3); }
     .syn-tag.warning { background: rgba(250,179,135,0.1); color: #fab387; border-color: rgba(250,179,135,0.3); }
     .syn-tag.info { background: rgba(137,180,250,0.1); color: #89b4fa; border-color: rgba(137,180,250,0.3); }
+    .score-driver-note { padding: 6px 16px 10px; font-size: 0.58rem; color: #9399b2; border-bottom: 1px solid #1f1f3a; background: rgba(137,180,250,0.03); line-height: 1.45; }
 
     /* EXPERT BATTLE PLAN — above tabs (always visible) */
     .expert-above-tabs { padding: 14px 20px 16px; background: rgba(245,158,11,0.08); border-top: 1px solid rgba(245,158,11,0.35); border-bottom: 1px solid rgba(245,158,11,0.2); border-left: 4px solid #f59e0b; box-shadow: inset 4px 0 14px rgba(245,158,11,0.06); }
@@ -1119,6 +1125,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .mmr-bias.bullish { color: #a6e3a1; background: rgba(166,227,161,0.12); border: 1px solid rgba(166,227,161,0.35); }
     .mmr-bias.bearish { color: #f38ba8; background: rgba(243,139,168,0.12); border: 1px solid rgba(243,139,168,0.35); }
     .mmr-bias.neutral { color: #f9e2af; background: rgba(249,226,175,0.12); border: 1px solid rgba(249,226,175,0.35); }
+    .mmr-dual-bias { display: flex; gap: 10px; flex-wrap: wrap; margin: 2px 0 8px; }
+    .mmr-dual-bias span { font-size: 0.5rem; color: #bac2de; background: #0b0b15; border: 1px solid #313244; border-radius: 10px; padding: 3px 8px; letter-spacing: 0.4px; font-weight: 800; }
     .mmr-evidence { margin: 0 0 10px; padding-left: 16px; color: #a6adc8; font-size: 0.6rem; line-height: 1.5; }
     .mmr-evidence li { margin-bottom: 4px; }
     .mmr-scenarios { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -2196,7 +2204,13 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   getTacticalExecutionNote(): string {
+    const tactical = this.analysis.daily_strength.signal;
     const rec = this.analysis.trade_signal.recommendation;
+
+    if (tactical === 'neutral') {
+      return 'Execution plan: tactical momentum is neutral. Treat both scenarios as conditional — long only on confirmed close above trigger, short only on confirmed close below trigger.';
+    }
+
     if (rec === 'bullish') {
       return 'Execution plan: prioritize long continuation only after trigger confirmation; avoid fresh size if price is already stretched above VWAP.';
     }
@@ -2204,6 +2218,20 @@ export class InstrumentCardComponent implements OnChanges {
       return 'Execution plan: prioritize short continuation only after breakdown confirmation; avoid early shorts into strong support without close confirmation.';
     }
     return 'Execution plan: market is in a conflict/neutral state — treat both scenarios as conditional and commit size only on confirmed close beyond trigger levels.';
+  }
+
+  getScoreDriverSummary(): string {
+    const macro = this.analysis.monthly_trend.direction;
+    const tactical = this.analysis.daily_strength.signal;
+    const score = this.analysis.trade_signal.score;
+
+    if (macro === 'bullish' && tactical === 'neutral') {
+      return `Score context: +${score} is mainly driven by macro trend + pullback structure; tactical momentum is still neutral, so wait for trigger confirmation.`;
+    }
+    if (macro === 'bearish' && tactical === 'neutral') {
+      return `Score context: ${score} is mainly driven by macro downtrend structure; tactical momentum is neutral, so avoid aggressive entries until break confirmation.`;
+    }
+    return `Score context: macro (${macro}) and tactical (${tactical}) are currently more aligned, which supports the displayed composite score (${score}).`;
   }
 
   getAnalysisAge(): string {
