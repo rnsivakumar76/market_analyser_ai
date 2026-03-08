@@ -251,6 +251,9 @@ def _detect_signal_conflict(
         strength_direction=strength.signal.value if strength else "neutral",
         trigger_up=trigger_up,
         trigger_down=trigger_down,
+        rsi=(float(strength.rsi) if strength else None),
+        price_change_percent=(float(strength.price_change_percent) if strength else None),
+        vwap_dist_pct=(float(strength.vwap_dist_pct) if strength and strength.vwap_dist_pct is not None else None),
     )
 
     if result.conflict_type == "none":
