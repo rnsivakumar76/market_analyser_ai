@@ -457,6 +457,24 @@ def analyze_instrument_lazy(
 # In-memory store for sent alerts
 SENT_ALERTS = set()
 
+
+def is_weekend_market_close() -> bool:
+    """Return True during the commodity/forex weekend-close window.
+
+    WTI, XAU, XAG markets close Friday ~22:00 UTC and reopen Sunday ~21:00 UTC.
+    BTC is 24/7 but weekend analysis adds little signal value.
+    Returning True suppresses alerts during this window; cache still serves the UI.
+    """
+    now = datetime.now(timezone.utc)
+    wd  = now.weekday()          # 5 = Saturday, 6 = Sunday, 0-4 = Mon-Fri
+    if wd == 5:                  # All day Saturday
+        return True
+    if wd == 4 and now.hour >= 22:  # Friday after 22:00 UTC (5pm ET)
+        return True
+    if wd == 6 and now.hour < 21:   # Sunday before 21:00 UTC (markets still closed)
+        return True
+    return False
+
 async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = None):
     from .config_loader import load_config, get_instruments, get_analysis_params, get_alert_config, get_strategy_config, get_newsapi_key
     from .models import StrategySettings, Signal, StrategyMode
@@ -692,19 +710,24 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 if analysis:
                     results.append(analysis)
                     data_map[sym] = hist_data
-                    # Alerts
-                    if analysis.trade_signal.trade_worthy:
-                        alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}_{mode.value}"
-                        if alert_key not in SENT_ALERTS:
-                            send_alerts(analysis, alert_config)
-                            SENT_ALERTS.add(alert_key)
-                    # Expert Battle Plan alert (SHORT_TERM mode only)
-                    if analysis.expert_trade_plan:
-                        or_broken = analysis.expert_trade_plan.get('or_broken', 'none')
-                        expert_key = f"expert_{user_id}_{sym}_{or_broken}_{date.today()}_{mode.value}"
-                        if expert_key not in SENT_ALERTS:
-                            send_expert_alert(analysis, alert_config)
-                            SENT_ALERTS.add(expert_key)
+                    # Alerts — suppressed during weekend commodity/forex close
+                    if not is_weekend_market_close():
+                        if analysis.trade_signal.trade_worthy:
+                            alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}_{mode.value}"
+                            if alert_key not in SENT_ALERTS:
+                                send_alerts(analysis, alert_config)
+                                SENT_ALERTS.add(alert_key)
+                        # Expert Battle Plan alert: only for actual ORB breaks (or_broken != 'none')
+                        # with high intent — send_expert_alert also guards internally, but we skip
+                        # adding noise keys to SENT_ALERTS for consolidating states.
+                        if analysis.expert_trade_plan:
+                            or_broken = analysis.expert_trade_plan.get('or_broken', 'none')
+                            is_high_intent = analysis.expert_trade_plan.get('is_high_intent', False)
+                            if or_broken != 'none' and is_high_intent:
+                                expert_key = f"expert_{user_id}_{sym}_{or_broken}_{date.today()}_{mode.value}"
+                                if expert_key not in SENT_ALERTS:
+                                    send_expert_alert(analysis, alert_config)
+                                    SENT_ALERTS.add(expert_key)
                 else:
                     logger.warning(f"Analysis produced no result for {sym}")
     except Exception as e:
