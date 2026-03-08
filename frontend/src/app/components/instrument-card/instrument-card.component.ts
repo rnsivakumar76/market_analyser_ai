@@ -2102,8 +2102,14 @@ export class InstrumentCardComponent implements OnChanges {
 
   getTacticalBiasText(): string {
     const signal = this.analysis.daily_strength.signal;
+    const rsi = this.analysis.daily_strength.rsi;
+    const trend = this.analysis.monthly_trend.direction;
+
     if (signal === 'bullish') return 'BULLISH MOMENTUM BIAS';
-    if (signal === 'bearish') return 'BEARISH MOMENTUM BIAS';
+    if (signal === 'bearish') {
+      if (trend === 'bullish' && rsi >= 70) return 'OVERBOUGHT PULLBACK RISK';
+      return 'BEARISH MOMENTUM BIAS';
+    }
     return 'NEUTRAL / WAIT FOR BREAK';
   }
 
