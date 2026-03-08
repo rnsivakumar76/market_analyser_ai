@@ -240,10 +240,18 @@ def analyze_instrument_lazy(
     pullback.description = f"[{pullback_label}] " + pullback.description
     
     strength = analyze_daily_strength(execution_data, params.get('daily', {}))
-    # Override price change to be TRUE DAILY change
-    # In Long Term mode, execution_data is 1d. In Short Term mode, macro_data is 1d.
+    # Override price change to be TRUE DAILY change.
+    # LONG_TERM: execution_data is already 1d.
+    # SHORT_TERM: prefer macro_data (1d), and fall back to a fresh 1d fetch if missing.
     daily_source = execution_data if mode == StrategyMode.LONG_TERM else macro_data
-    if not daily_source.empty and len(daily_source) >= 2:
+    if daily_source is None or daily_source.empty or len(daily_source) < 2:
+        try:
+            daily_source = fetch_historical_data(symbol, days=10, interval="1day")
+        except Exception as _e:
+            logger.warning(f"Failed to fetch fallback daily source for {symbol}: {_e}")
+            daily_source = None
+
+    if daily_source is not None and not daily_source.empty and len(daily_source) >= 2:
         daily_change = float(((daily_source['Close'].iloc[-1] - daily_source['Close'].iloc[-2]) / daily_source['Close'].iloc[-2]) * 100)
         strength.price_change_percent = float(round(daily_change, 2))
     strength.description = f"[{execution_label}] " + strength.description
@@ -648,11 +656,9 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         if expert_batch:
             logger.info(f"[INSTRUMENTS] Expert 15min batch: {list(expert_batch.keys())}")
 
-        # Fetch live prices for all instruments in ONE API call (LONG_TERM only — hourly candle is fresh in SHORT_TERM)
-        if mode == StrategyMode.LONG_TERM:
-            live_prices = shared_fetcher.fetch_batch_prices(sym_list)
-        else:
-            live_prices = {}
+        # Fetch live prices for all instruments in ONE API call for BOTH modes.
+        # This keeps displayed current_price consistent between short_term and long_term views.
+        live_prices = shared_fetcher.fetch_batch_prices(sym_list)
 
         # We'll allow the analyzer to use whatever history it has from previous runs or fall back
         macro_batch = {}

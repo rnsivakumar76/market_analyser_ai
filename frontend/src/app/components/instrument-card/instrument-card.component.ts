@@ -25,7 +25,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <div class="th-price-stack">
                 <span class="th-price">\${{ analysis.current_price.toFixed(2) }}</span>
                 <span class="th-change" [class]="getPriceChangeClass()">
-                  {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}%
+                  {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}% · 1D
                 </span>
               </div>
             </div>
