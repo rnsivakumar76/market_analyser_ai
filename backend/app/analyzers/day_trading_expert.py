@@ -129,8 +129,11 @@ def generate_expert_trade_plan(
         if is_bullish:
             sit += " ⚠ Pullback within larger uptrend — look for a long reversal at key support, not a new short."
     elif or_high and or_low and or_high != or_low:
-        sit = (f"SITUATION: INSIDE RANGE — Price is consolidating between OR Low ({or_low:.2f}) "
-               f"and OR High ({or_high:.2f}). No trade until a candle CLOSES outside the range.")
+        sit = (
+            f"SITUATION: INSIDE RANGE — Price is consolidating between OR Low ({or_low:.2f}) "
+            f"and OR High ({or_high:.2f}). Instruction: LONG only on a 15m close above OR High; "
+            f"SHORT only on a 15m close below OR Low. Inside the box = patience mode."
+        )
     else:
         sit = "SITUATION: WAITING FOR SETUP — Opening range not yet established (insufficient session data). Stand aside and observe price action."
     sections.append(sit)

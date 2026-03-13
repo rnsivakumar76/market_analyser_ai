@@ -339,6 +339,10 @@ def analyze_instrument_lazy(
         lookback_periods=20
     )
     
+    # Pullback warning is part of score context and must be included before
+    # final recommendation/action classification.
+    pullback_warning = analyze_pullback_warning(execution_data, trend.direction)
+
     trade_signal = generate_trade_signal(
         trend=trend, 
         pullback=pullback, 
@@ -350,45 +354,11 @@ def analyze_instrument_lazy(
         tech_indicators=tech_indicators,
         volatility=volatility,
         fundamentals=fundamentals,
-        relative_strength=rs_analysis
+        relative_strength=rs_analysis,
+        pullback_warning=pullback_warning,
+        news_sentiment_label=news_sentiment.label,
+        benchmark_symbol=bench_sym,
     )
-    
-    # NEW: Pullback Warning Logic
-    pullback_warning = analyze_pullback_warning(execution_data, trend.direction)
-    
-    # Boost/adjust score based on technical indicators
-    if tech_indicators.trend_breakout == 'bullish_breakout':
-        trade_signal.score = min(trade_signal.score + 15, 100)
-        trade_signal.reasons.append(f"Bullish Breakout ({tech_indicators.breakout_confidence*100:.0f}% confidence)")
-    elif tech_indicators.trend_breakout == 'bearish_breakout':
-        trade_signal.score = max(trade_signal.score - 15, -100)
-        trade_signal.reasons.append(f"Bearish Breakout ({tech_indicators.breakout_confidence*100:.0f}% confidence)")
-
-    # Adjust score based on pullback warning
-    if pullback_warning.is_warning:
-        # Penalize score if extended
-        if trend.direction == Signal.BULLISH:
-            trade_signal.score = max(trade_signal.score - 20, 0)
-            trade_signal.reasons.append(f"Caution: {pullback_warning.description}")
-        elif trend.direction == Signal.BEARISH:
-            trade_signal.score = min(trade_signal.score + 20, 0)
-            trade_signal.reasons.append(f"Caution: {pullback_warning.description}")
-
-    # Boost/adjust based on news sentiment
-    if news_sentiment.label == "Bullish":
-        trade_signal.score = min(trade_signal.score + 10, 100)
-        trade_signal.reasons.append(f"Positive News Sentiment (+10 boost)")
-    elif news_sentiment.label == "Bearish":
-        trade_signal.score = max(trade_signal.score - 10, -100)
-        trade_signal.reasons.append(f"Negative News Sentiment (-10 penalty)")
-
-    # Boost/adjust based on Relative Strength
-    if rs_analysis.label == "Leader":
-        trade_signal.score = min(trade_signal.score + 15, 100)
-        trade_signal.reasons.append(f"Market Leader: Strong Relative Strength vs {bench_sym} (+15 boost)")
-    elif rs_analysis.label == "Laggard":
-        trade_signal.score = max(trade_signal.score - 15, -100)
-        trade_signal.reasons.append(f"Market Laggard: Weak Relative Strength vs {bench_sym} (-15 penalty)")
 
     # Build expert plan now that trade_signal.recommendation is final and volatility.atr is available
     if _expert_or_data is not None:
@@ -547,7 +517,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             "atr_multiplier_tp": 3.0,
             "atr_multiplier_sl": 1.5,
             "portfolio_value": 10000.0,
-            "risk_per_trade_percent": 1.0
+            "risk_per_trade_percent": 1.0,
+            "aggressiveness_mode": "balanced",
         })
     
     # Performance Context: Intervals for scan
@@ -1077,6 +1048,7 @@ async def get_preferences(user_id: str = Depends(get_current_user)):
             "atr_multiplier_sl": 1.5,
             "portfolio_value": 10000.0,
             "risk_per_trade_percent": 1.0,
+            "aggressiveness_mode": "balanced",
         }
     }
 

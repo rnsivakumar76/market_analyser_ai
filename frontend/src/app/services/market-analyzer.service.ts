@@ -140,6 +140,9 @@ export interface TradeSignal {
   score: number;
   reasons: string[];
   trade_worthy: boolean;
+  execution_state: 'ready' | 'conditional' | 'stand_aside';
+  opportunity_grade: 'A' | 'B' | 'C' | 'D';
+  suggested_size_text: string;
   action_plan: string;
   action_plan_details: string;
   psychological_guard: string;
@@ -220,6 +223,7 @@ export interface StrategySettings {
   atr_multiplier_sl: number;
   portfolio_value: number;
   risk_per_trade_percent: number;
+  aggressiveness_mode: 'conservative' | 'balanced' | 'aggressive';
 }
 
 export interface CandleAnalysis {

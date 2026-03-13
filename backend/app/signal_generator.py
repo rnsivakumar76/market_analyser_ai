@@ -2,12 +2,127 @@ from typing import List, Optional
 from .models import (
     TrendAnalysis, PullbackAnalysis, StrengthAnalysis, 
     TradeSignal, Signal, CandleAnalysis, StrategySettings,
-    FundamentalsAnalysis, RelativeStrengthAnalysis, SignalConflict
+    FundamentalsAnalysis, RelativeStrengthAnalysis, SignalConflict,
+    PullbackWarningAnalysis
 )
 from domain.signals.scoring_engine import compute_composite_score, classify_recommendation
 from domain.signals.filter_engine import apply_all_hard_filters
 from domain.signals.conflict_detector import detect_signal_conflict as _domain_detect_conflict
-from domain.constants import SIGNAL_CONVICTION_THRESHOLD, FILTER_ADX_THRESHOLD
+from domain.constants import (
+    SIGNAL_CONVICTION_THRESHOLD,
+    FILTER_ADX_THRESHOLD,
+    SIGNAL_ADX_TRENDING,
+    SIGNAL_ADX_STRONG,
+)
+
+
+def _effective_conviction_threshold(base_threshold: int, adx_value: Optional[float]) -> int:
+    """Adaptive conviction threshold by trend regime.
+
+    Strong/trending markets allow slightly faster activation; weak markets demand
+    extra confirmation.
+    """
+    if adx_value is None:
+        return base_threshold
+    if adx_value >= SIGNAL_ADX_STRONG:
+        return max(55, base_threshold - 10)
+    if adx_value >= SIGNAL_ADX_TRENDING:
+        return max(60, base_threshold - 5)
+    if adx_value < 20:
+        return min(80, base_threshold + 5)
+    return base_threshold
+
+
+def _normalize_aggressiveness_mode(mode: Optional[str]) -> str:
+    normalized = (mode or "balanced").strip().lower()
+    if normalized not in {"conservative", "balanced", "aggressive"}:
+        return "balanced"
+    return normalized
+
+
+def _apply_aggressiveness_to_threshold(mode: str, threshold: int) -> int:
+    if mode == "conservative":
+        return min(94, threshold + 10)
+    if mode == "aggressive":
+        return max(45, threshold - 10)
+    return threshold
+
+
+def _derive_execution_profile(
+    recommendation: Signal,
+    trade_worthy: bool,
+    score: int,
+    reasons: List[str],
+    adx_value: Optional[float],
+    aggressiveness_mode: str,
+) -> tuple[str, str, str]:
+    blocked = any(
+        marker in reason
+        for reason in reasons
+        for marker in ("Filter:", "Beta Filter", "Trigger Filter", "Alpha Filter")
+    )
+    score_abs = abs(score)
+    macro_caution = any("Macro Caution" in reason for reason in reasons)
+
+    if aggressiveness_mode == "aggressive":
+        conditional_min_score = 12
+    elif aggressiveness_mode == "conservative":
+        conditional_min_score = 28
+    else:
+        conditional_min_score = 20
+
+    if trade_worthy and not blocked:
+        execution_state = "ready"
+    elif recommendation != Signal.NEUTRAL and score_abs >= conditional_min_score:
+        execution_state = "conditional"
+    else:
+        execution_state = "stand_aside"
+
+    if aggressiveness_mode == "aggressive":
+        ready_a_cutoff = 74
+        conditional_b_cutoff = 38
+    elif aggressiveness_mode == "conservative":
+        ready_a_cutoff = 95
+        conditional_b_cutoff = 62
+    else:
+        ready_a_cutoff = 85
+        conditional_b_cutoff = 50
+
+    if execution_state == "ready" and score_abs >= ready_a_cutoff:
+        opportunity_grade = "A"
+    elif execution_state == "ready":
+        opportunity_grade = "B"
+    elif execution_state == "conditional" and score_abs >= conditional_b_cutoff:
+        opportunity_grade = "B"
+    elif execution_state == "conditional":
+        opportunity_grade = "C"
+    else:
+        opportunity_grade = "D"
+
+    if execution_state == "stand_aside":
+        suggested_size_text = "0.0x (no entry)"
+    elif execution_state == "conditional":
+        if aggressiveness_mode == "aggressive":
+            suggested_size_text = "0.65x (aggressive starter on trigger close)"
+        elif aggressiveness_mode == "conservative":
+            suggested_size_text = "0.35x (conservative starter on trigger close)"
+        else:
+            suggested_size_text = "0.5x (starter size on trigger close)"
+    else:
+        if adx_value is not None and adx_value >= SIGNAL_ADX_STRONG and score_abs >= ready_a_cutoff:
+            suggested_size_text = "1.0x (full size)"
+        else:
+            if aggressiveness_mode == "aggressive":
+                suggested_size_text = "0.95x (high-conviction risk-on setup)"
+            elif aggressiveness_mode == "conservative":
+                suggested_size_text = "0.55x (capital-preservation full setup)"
+            else:
+                suggested_size_text = "0.75x (controlled full-risk setup)"
+
+    if macro_caution and execution_state != "stand_aside":
+        suggested_size_text = "0.5x (macro caution cap)"
+
+    return execution_state, opportunity_grade, suggested_size_text
 
 
 def generate_trade_signal(
@@ -22,6 +137,9 @@ def generate_trade_signal(
     volatility = None,
     fundamentals: FundamentalsAnalysis = None,
     relative_strength: RelativeStrengthAnalysis = None,
+    pullback_warning: PullbackWarningAnalysis = None,
+    news_sentiment_label: Optional[str] = None,
+    benchmark_symbol: str = "benchmark",
     **kwargs
 ) -> TradeSignal:
     """
@@ -37,6 +155,9 @@ def generate_trade_signal(
     # ── Domain layer: composite score ────────────────────────────────────────
     threshold = settings.conviction_threshold if settings else SIGNAL_CONVICTION_THRESHOLD
     adx_threshold = settings.adx_threshold if settings else FILTER_ADX_THRESHOLD
+    aggressiveness_mode = _normalize_aggressiveness_mode(
+        settings.aggressiveness_mode if settings else "balanced"
+    )
 
     components = compute_composite_score(
         trend_direction=trend.direction.value,
@@ -48,19 +169,59 @@ def generate_trade_signal(
     score = components.composite
     reasons = list(components.reasons)
 
-    recommendation_str, trade_worthy = classify_recommendation(score, threshold)
+    adx_value = strength.adx
+
+    # Contextual score refinements happen BEFORE final recommendation/classification.
+    if tech_indicators:
+        if tech_indicators.trend_breakout == "bullish_breakout":
+            score = min(score + 15, 100)
+            reasons.append(f"Bullish Breakout ({tech_indicators.breakout_confidence * 100:.0f}% confidence)")
+        elif tech_indicators.trend_breakout == "bearish_breakout":
+            score = max(score - 15, -100)
+            reasons.append(f"Bearish Breakout ({tech_indicators.breakout_confidence * 100:.0f}% confidence)")
+
+    if pullback_warning and pullback_warning.is_warning:
+        if trend.direction == Signal.BULLISH:
+            score = max(score - 20, 0)
+        elif trend.direction == Signal.BEARISH:
+            score = min(score + 20, 0)
+        reasons.append(f"Caution: {pullback_warning.description}")
+
+    label = (news_sentiment_label or "").strip().lower()
+    if label == "bullish":
+        score = min(score + 10, 100)
+        reasons.append("Positive News Sentiment (+10 boost)")
+    elif label == "bearish":
+        score = max(score - 10, -100)
+        reasons.append("Negative News Sentiment (-10 penalty)")
+
+    if relative_strength:
+        if relative_strength.label == "Leader":
+            score = min(score + 15, 100)
+            reasons.append(f"Market Leader: Strong Relative Strength vs {benchmark_symbol} (+15 boost)")
+        elif relative_strength.label == "Laggard":
+            score = max(score - 15, -100)
+            reasons.append(f"Market Laggard: Weak Relative Strength vs {benchmark_symbol} (-15 penalty)")
+
+    effective_threshold = _effective_conviction_threshold(threshold, adx_value)
+    effective_threshold = _apply_aggressiveness_to_threshold(aggressiveness_mode, effective_threshold)
+    if effective_threshold != threshold:
+        reasons.append(
+            f"Adaptive conviction threshold active: {effective_threshold} (base {threshold}, mode={aggressiveness_mode}, ADX={adx_value:.1f})"
+        )
+
+    recommendation_str, trade_worthy = classify_recommendation(score, effective_threshold)
     recommendation = Signal(recommendation_str)
 
     if not trade_worthy:
         if score >= 20:
-            reasons.append("Setup developing but not ideal yet")
+            reasons.append("Bullish setup developing - wait for trigger close confirmation")
         elif score <= -20:
-            reasons.append("Bearish setup developing")
+            reasons.append("Bearish setup developing - wait for trigger close confirmation")
         else:
-            reasons.append("No clear setup - wait for better opportunity")
+            reasons.append("No clear setup - keep capital protected until direction confirms")
 
     # ADX pass-through reason (when ADX is above threshold, add as a reason)
-    adx_value = strength.adx
     if adx_value is not None and adx_value > adx_threshold:
         reasons.append(f"Trend strength high (ADX={adx_value:.1f})")
 
@@ -92,6 +253,15 @@ def generate_trade_signal(
         if (recommendation == Signal.BULLISH and candle.is_bullish is True) or \
            (recommendation == Signal.BEARISH and candle.is_bullish is False):
             reasons.append(f"Price Action Trigger confirmed: {candle.description}")
+
+    execution_state, opportunity_grade, suggested_size_text = _derive_execution_profile(
+        recommendation=recommendation,
+        trade_worthy=trade_worthy,
+        score=score,
+        reasons=reasons,
+        adx_value=adx_value,
+        aggressiveness_mode=aggressiveness_mode,
+    )
 
     action_plan = "Stand Aside"
     action_plan_details = "Market conditions do not support a high-probability trade."
@@ -129,10 +299,14 @@ def generate_trade_signal(
                 
                 pyramiding_plan = f"Aggressive Addition: Add 50% to position size IF price holds above R1 (${pivots.r1}) AND RSI stays < 70."
             else:
-                action_plan = "Wait for Trigger / Pullback"
+                action_plan = "Conditional Long Setup"
                 s1_str = f"${pivots.s1:.2f}" if pivots.s1 else "N/A"
+                r1_str = f"${pivots.r1:.2f}" if pivots.r1 else "N/A"
                 fib_str = f"${fibs.ret_382:.2f}" if fibs.ret_382 else "N/A"
-                action_plan_details = f"Ideal entry is on a pullback near support (S1: {s1_str}) or the 38.2% Fib Retracement ({fib_str})."
+                action_plan_details = (
+                    f"Trigger: close above R1 ({r1_str}) for momentum entry, OR buy pullback near S1 ({s1_str}) / Fib 38.2% ({fib_str}) "
+                    f"with bullish confirmation candle."
+                )
                 scaling_plan = "Awaiting entry confirmation before finalizing exit stages."
                 pyramiding_plan = "Do not pyramid until initial position is firmly in profit."
         elif recommendation == Signal.BEARISH:
@@ -154,16 +328,23 @@ def generate_trade_signal(
                 
                 pyramiding_plan = f"Aggressive Addition: Add 50% to short position IF price holds below S1 (${pivots.s1}) AND RSI stays > 30."
             else:
-                action_plan = "Wait for Trigger / Bounce"
+                action_plan = "Conditional Short Setup"
                 r1_str = f"${pivots.r1:.2f}" if pivots.r1 else "N/A"
-                action_plan_details = f"Ideal entry is on a bounce near resistance (R1: {r1_str}) or 38.2% Fib Retracement."
+                s1_str = f"${pivots.s1:.2f}" if pivots.s1 else "N/A"
+                action_plan_details = (
+                    f"Trigger: close below S1 ({s1_str}) for breakdown entry, OR short a rejection bounce near R1 ({r1_str}) "
+                    f"with bearish confirmation candle."
+                )
                 scaling_plan = "Awaiting entry confirmation."
                 pyramiding_plan = "Do not pyramid until initial position is firmly in profit."
         else:
-            action_plan = "Wait and Observe"
+            action_plan = "Two-Sided Conditional Plan"
             r1_str = f"${pivots.r1:.2f}" if pivots.r1 else "N/A"
             s1_str = f"${pivots.s1:.2f}" if pivots.s1 else "N/A"
-            action_plan_details = f"Neutral bias. Key zones: R1 ({r1_str}) and S1 ({s1_str})."
+            action_plan_details = (
+                f"Long trigger: close above R1 ({r1_str}). Short trigger: close below S1 ({s1_str}). "
+                "Until then, keep size light and wait for structure confirmation."
+            )
             psychological_guard = "Patience is a position. Awaiting clear structural setup."
             pyramiding_plan = "N/A"
             scaling_plan = "N/A - Sideways Market"
@@ -173,16 +354,16 @@ def generate_trade_signal(
     
     # 1. State the trend and recommendation
     if recommendation == Signal.NEUTRAL:
-        summary_parts.append("The system advises staying sidelined right now due to mixed or conflicting signals.")
+        summary_parts.append("Directional edge is neutral right now. Use conditional triggers rather than forcing a discretionary entry.")
     elif recommendation == Signal.BULLISH and trade_worthy:
-        summary_parts.append("The system has generated a high-probability BUY signal, meaning multiple technical and fundamental factors show strong upward momentum.")
+        summary_parts.append("High-probability BUY setup is active. Conditions support executing a long plan now with disciplined risk.")
     elif recommendation == Signal.BEARISH and trade_worthy:
-        summary_parts.append("The system has generated a high-probability SELL signal, warning that the asset is in a concerning downtrend.")
+        summary_parts.append("High-probability SELL setup is active. Conditions support executing a short plan now with disciplined risk.")
     else:
         if recommendation == Signal.BULLISH:
-            summary_parts.append("The system leans slightly bullish, but conditions are not strong enough to risk capital yet.")
+            summary_parts.append("Bias is bullish but execution is conditional. Enter only after trigger confirmation; avoid chasing mid-range price action.")
         else:
-            summary_parts.append("The system leans bearish, but the setup is incomplete and too risky to short right now.")
+            summary_parts.append("Bias is bearish but execution is conditional. Enter only after breakdown/rejection confirmation; avoid premature shorts.")
 
     # 2. Add structural context
     trend_str = "an uptrend" if trend.direction == Signal.BULLISH else "a downtrend" if trend.direction == Signal.BEARISH else "sideways consolidation"
@@ -198,10 +379,16 @@ def generate_trade_signal(
         summary_parts.append("WARNING: Extreme volatility is expected soon due to major upcoming economic news or earnings. Do not trade unless prepared for violent swings.")
         
     # 4. Action Summary
-    if trade_worthy:
-        summary_parts.append(f"Conclusion: Mathematical alignment is strong enough to execute the '{action_plan}' framework.")
+    if execution_state == "ready":
+        summary_parts.append(
+            f"Conclusion: Execute '{action_plan}' with {suggested_size_text}. Opportunity grade: {opportunity_grade}."
+        )
+    elif execution_state == "conditional":
+        summary_parts.append(
+            f"Conclusion: Conditional setup only. Use trigger-based entry and starter risk ({suggested_size_text}). Opportunity grade: {opportunity_grade}."
+        )
     else:
-        summary_parts.append("Conclusion: Wait patiently for better mathematical alignment or a clearer setup before taking action.")
+        summary_parts.append("Conclusion: Stand aside until directional and trigger alignment improves.")
 
     executive_summary = " ".join(summary_parts)
 
@@ -218,6 +405,9 @@ def generate_trade_signal(
         score=score,
         reasons=reasons,
         trade_worthy=trade_worthy,
+        execution_state=execution_state,
+        opportunity_grade=opportunity_grade,
+        suggested_size_text=suggested_size_text,
         action_plan=action_plan,
         action_plan_details=action_plan_details,
         psychological_guard=psychological_guard,

@@ -52,6 +52,18 @@ import { MarketAnalyzerService, StrategySettings } from '../../services/market-a
               <p class="help-text">Minimum Trend Strength required. Markets below this are considered "Chop" and filtered out.</p>
             </div>
 
+            <div class="setting-item">
+              <label>Aggressiveness Profile</label>
+              <div class="input-row">
+                <select [(ngModel)]="settings().aggressiveness_mode" class="mode-select">
+                  <option value="conservative">Conservative (Capital Preservation)</option>
+                  <option value="balanced">Balanced (Swing Default)</option>
+                  <option value="aggressive">Aggressive (Opportunity Capture)</option>
+                </select>
+              </div>
+              <p class="help-text">Conservative favors selectivity and smaller risk. Balanced is swing-trading default. Aggressive activates earlier for faster opportunity capture with higher starter exposure.</p>
+            </div>
+
             <div class="risk-section">
               <h3>Risk Management (ATR Multipliers)</h3>
               <div class="setting-item inline">
@@ -236,6 +248,16 @@ import { MarketAnalyzerService, StrategySettings } from '../../services/market-a
 
     .unit { font-size: 0.8rem; color: #6c7086; }
 
+    .mode-select {
+      background: #181825;
+      border: 1px solid #45475a;
+      color: #cdd6f4;
+      padding: 6px 10px;
+      border-radius: 6px;
+      min-width: 180px;
+      outline: none;
+    }
+
     .modal-footer {
       padding: 16px 24px;
       border-top: 1px solid #313244;
@@ -302,14 +324,18 @@ export class StrategySettingsComponent implements OnInit {
     atr_multiplier_tp: 3.0,
     atr_multiplier_sl: 1.5,
     portfolio_value: 10000.0,
-    risk_per_trade_percent: 1.0
+    risk_per_trade_percent: 1.0,
+    aggressiveness_mode: 'balanced'
   });
 
   saving = signal(false);
 
   ngOnInit() {
     this.analyzerService.getSettings().subscribe({
-      next: (data) => this.settings.set(data),
+      next: (data) => this.settings.set({
+        ...data,
+        aggressiveness_mode: data.aggressiveness_mode ?? 'balanced'
+      }),
       error: (err) => console.error('Failed to load settings', err)
     });
   }

@@ -328,11 +328,11 @@ export class MultiTimeframeOverlayComponent {
       },
       {
         label: `INTERMEDIATE STATE (${isLongTerm ? 'WEEKLY' : '4-HOUR'})`,
-        direction: a.weekly_pullback.detected ? 'bullish' : (a.monthly_trend.direction === 'bullish' ? 'neutral' : a.monthly_trend.direction),
+        direction: a.weekly_pullback.detected ? 'neutral' : (a.monthly_trend.direction === 'bullish' ? 'neutral' : a.monthly_trend.direction),
         score: 0,
         phase: a.weekly_pullback.detected ? 'Pullback' : 'Extended',
         pullback: a.weekly_pullback.detected,
-        strength: a.weekly_pullback.detected ? 'bullish' : 'neutral'
+        strength: a.weekly_pullback.detected ? 'neutral' : 'neutral'
       },
       {
         label: `TACTICAL MOMENTUM (${isLongTerm ? 'DAILY' : '1-HOUR'})`,

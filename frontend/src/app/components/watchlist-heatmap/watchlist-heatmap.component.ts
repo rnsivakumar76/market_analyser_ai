@@ -28,7 +28,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
               <span class="cell-symbol">{{ instrument.symbol }}</span>
               <span class="cell-score">{{ instrument.trade_signal.score > 0 ? '+' : '' }}{{ instrument.trade_signal.score }}</span>
               <span class="cell-change" [class]="getChangeClass(instrument)">
-                {{ instrument.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ instrument.daily_strength.price_change_percent.toFixed(2) }}%
+                {{ instrument.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ instrument.daily_strength.price_change_percent.toFixed(2) }}% · 1D
               </span>
               <span class="cell-phase">{{ instrument.market_phase.phase }}</span>
             </div>
@@ -181,6 +181,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
     .cell-change.positive { color: #a6e3a1; }
     .cell-change.negative { color: #f38ba8; }
+    .cell-change.neutral { color: #f9e2af; }
 
     .cell-phase {
       font-size: 0.55rem;
@@ -250,11 +251,14 @@ export class WatchlistHeatmapComponent {
     }
 
     getChangeClass(instrument: InstrumentAnalysis): string {
-        return instrument.daily_strength.price_change_percent >= 0 ? 'positive' : 'negative';
+        const change = instrument.daily_strength.price_change_percent;
+        if (change > 0) return 'positive';
+        if (change < 0) return 'negative';
+        return 'neutral';
     }
 
     getCellTooltip(instrument: InstrumentAnalysis): string {
         const s = instrument.trade_signal;
-        return `${instrument.name}\nScore: ${s.score} | ${s.recommendation.toUpperCase()}\n${instrument.market_phase.phase} → $${instrument.current_price}`;
+        return `${instrument.name}\nScore: ${s.score} | ${s.recommendation.toUpperCase()}\n1D: ${instrument.daily_strength.price_change_percent > 0 ? '+' : ''}${instrument.daily_strength.price_change_percent.toFixed(2)}%\n${instrument.market_phase.phase} → $${instrument.current_price}`;
     }
 }

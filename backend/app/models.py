@@ -204,6 +204,9 @@ class TradeSignal(BaseModel):
     score: int  # -100 to +100
     reasons: List[str]
     trade_worthy: bool
+    execution_state: str = "stand_aside"  # "ready" | "conditional" | "stand_aside"
+    opportunity_grade: str = "D"          # A/B/C/D quality band
+    suggested_size_text: str = "0.0x (no entry)"
     action_plan: str = ""
     action_plan_details: str = ""
     psychological_guard: str = ""
@@ -406,5 +409,6 @@ class StrategySettings(BaseModel):
     atr_multiplier_sl: float
     portfolio_value: float
     risk_per_trade_percent: float
+    aggressiveness_mode: str = "balanced"  # "conservative" | "balanced" | "aggressive"
 
 

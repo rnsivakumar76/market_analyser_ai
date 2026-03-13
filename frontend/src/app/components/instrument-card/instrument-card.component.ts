@@ -44,6 +44,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             <div class="th-status-pill" [class]="getSignalClass()">
                <span class="th-s-val">{{ analysis.trade_signal.score }}</span>
                <span class="th-s-rec">{{ analysis.trade_signal.recommendation }}</span>
+               <span class="th-conflict-badge" [class]="'sev-' + getExecutionStateClass()">
+                 {{ getExecutionStateLabel() }} · {{ analysis.trade_signal.opportunity_grade }}
+               </span>
                @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
                  <span class="th-conflict-badge" [class]="'sev-' + analysis.trade_signal.signal_conflict!.severity">⚡ CONFLICT</span>
                }
@@ -89,6 +92,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <!-- CONFLICT DETAIL (inline, compact) -->
               @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
               <div class="conflict-inline" [class]="'ci-' + analysis.trade_signal.signal_conflict!.severity">
+                @if (analysis.trade_signal.signal_conflict!.headline) {
+                  <span class="ci-headline">{{ analysis.trade_signal.signal_conflict!.headline }}</span>
+                }
                 <span class="ci-text">{{ analysis.trade_signal.signal_conflict!.guidance }}</span>
                 @if (analysis.trade_signal.signal_conflict!.trigger_price_up) {
                   <span class="ci-trigger bullish">▲ \${{ analysis.trade_signal.signal_conflict!.trigger_price_up?.toFixed(2) }}</span>
@@ -684,6 +690,14 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .syn-tag.warning { background: rgba(250,179,135,0.1); color: #fab387; border-color: rgba(250,179,135,0.3); }
     .syn-tag.info { background: rgba(137,180,250,0.1); color: #89b4fa; border-color: rgba(137,180,250,0.3); }
     .score-driver-note { padding: 6px 16px 10px; font-size: 0.58rem; color: #9399b2; border-bottom: 1px solid #1f1f3a; background: rgba(137,180,250,0.03); line-height: 1.45; }
+    .conflict-inline { margin-bottom: 12px; padding: 10px 12px; border-radius: 6px; border: 1px solid #313244; background: rgba(17,17,27,0.5); display: flex; flex-direction: column; gap: 6px; }
+    .conflict-inline.ci-high { border-color: rgba(243,139,168,0.45); background: rgba(243,139,168,0.06); }
+    .conflict-inline.ci-medium { border-color: rgba(249,226,175,0.45); background: rgba(249,226,175,0.05); }
+    .ci-headline { font-size: 0.58rem; font-weight: 900; color: #cdd6f4; letter-spacing: 0.3px; }
+    .ci-text { font-size: 0.68rem; line-height: 1.5; color: #bac2de; }
+    .ci-trigger { font-size: 0.58rem; font-weight: 800; }
+    .ci-trigger.bullish { color: #a6e3a1; }
+    .ci-trigger.bearish { color: #f38ba8; }
 
     /* EXPERT BATTLE PLAN — above tabs (always visible) */
     .expert-above-tabs { padding: 14px 20px 16px; background: rgba(245,158,11,0.08); border-top: 1px solid rgba(245,158,11,0.35); border-bottom: 1px solid rgba(245,158,11,0.2); border-left: 4px solid #f59e0b; box-shadow: inset 4px 0 14px rgba(245,158,11,0.06); }
@@ -704,11 +718,15 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .th-price-stack { display: flex; gap: 6px; align-items: baseline; min-width: 0; flex-wrap: wrap; }
     .th-price { font-size: 1.1rem; font-weight: 900; color: #bac2de; }
     .th-change { font-size: 0.8rem; font-weight: 800; }
+    .th-change.positive { color: #a6e3a1; }
+    .th-change.negative { color: #f38ba8; }
+    .th-change.neutral { color: #f9e2af; }
     .th-badges { display: flex; gap: 6px; align-items: center; }
     .th-clock { font-size: 0.5rem; padding: 1px 4px; }
     .th-status-pill { padding: 4px 10px; border-radius: 4px; display: flex; align-items: center; gap: 8px; border: 1px solid; }
     .th-status-pill.bullish { border-color: #a6e3a1; color: #a6e3a1; background: rgba(166, 227, 161, 0.1); }
     .th-status-pill.bearish { border-color: #f38ba8; color: #f38ba8; background: rgba(243, 139, 168, 0.1); }
+    .th-status-pill.neutral { border-color: #f9e2af; color: #f9e2af; background: rgba(249, 226, 175, 0.1); }
     .btn-refresh-circle { background: #1a1a2a; border: 1px solid #313244; color: #6c7086; padding: 6px; border-radius: 50%; cursor: pointer; }
 
     /* 3-COLUMN COMMAND CENTER (BALANCED UX) */
@@ -1652,8 +1670,25 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   isWaitAction(): boolean {
+    const executionState = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
+    if (executionState === 'ready') return false;
+
     const action = this.analysis?.trade_signal?.action_plan?.toLowerCase() ?? '';
-    return action.includes('wait') || action.includes('observe') || action.includes('sideline') || action.includes('neutral');
+    return action.includes('wait') || action.includes('observe') || action.includes('sideline') || action.includes('neutral') || executionState === 'conditional' || executionState === 'stand_aside';
+  }
+
+  getExecutionStateLabel(): string {
+    const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
+    if (state === 'ready') return 'READY';
+    if (state === 'conditional') return 'CONDITIONAL';
+    return 'STAND ASIDE';
+  }
+
+  getExecutionStateClass(): string {
+    const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
+    if (state === 'ready') return 'none';
+    if (state === 'conditional') return 'medium';
+    return 'high';
   }
 
   getGeoImpactClass(impact: string): string {
@@ -1702,16 +1737,16 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   getSignalIcon(): string {
-    const rec = this.analysis.trade_signal.recommendation.toLowerCase();
-    if (rec.includes('buy') || rec.includes('long')) return '🚀';
-    if (rec.includes('sell') || rec.includes('short')) return '⚠️';
+    const rec = this.analysis.trade_signal.recommendation;
+    if (rec === 'bullish') return '🚀';
+    if (rec === 'bearish') return '⚠️';
     return '⚖️';
   }
 
   getScoreClass(): string {
     const score = this.analysis.trade_signal.score;
-    if (score >= 7) return 'positive';
-    if (score <= 4) return 'negative';
+    if (score > 2) return 'positive';
+    if (score < -2) return 'negative';
     return 'neutral';
   }
 
@@ -1758,7 +1793,10 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   getPriceChangeClass(): string {
-    return this.analysis.daily_strength.price_change_percent > 0 ? 'positive' : 'negative';
+    const change = this.analysis.daily_strength.price_change_percent;
+    if (change > 0) return 'positive';
+    if (change < 0) return 'negative';
+    return 'neutral';
   }
 
   getAlphaClass(): string {
@@ -2089,13 +2127,15 @@ export class InstrumentCardComponent implements OnChanges {
   getMarketMomentumRead(): string {
     const adx = this.analysis.daily_strength.adx;
     const rsi = this.analysis.daily_strength.rsi;
-    const signal = this.analysis.trade_signal.recommendation;
+    const tactical = this.analysis.daily_strength.signal;
+    const rec = this.analysis.trade_signal.recommendation;
 
     if (adx > 50 && rsi > 65) return `Strong trending market with elevated momentum. Trend-following entries are favored — avoid counter-trend trades.`;
     if (adx > 50 && rsi < 35) return `Strong trend but RSI is exhausted. A short-term bounce is likely. Wait for RSI to reset above 40 before entering in trend direction.`;
     if (adx > 50 && rsi > 70) return `Powerful trend but overbought conditions (RSI ${rsi.toFixed(0)}). Wait for a pullback to enter — chasing at this level risks a sharp reversal.`;
-    if (adx > 25 && signal === 'bullish') return `Trending market (ADX ${adx.toFixed(0)}) supporting the bullish signal. RSI at ${rsi.toFixed(0)} — momentum is ${rsi > 50 ? 'positive' : 'building'}. Entry on pullback preferred.`;
-    if (adx > 25 && signal === 'bearish') return `Trending market (ADX ${adx.toFixed(0)}) supporting the bearish signal. RSI at ${rsi.toFixed(0)} — ${rsi < 50 ? 'downside momentum in play' : 'watch for RSI confirmation below 50'}.`;
+    if (adx > 25 && tactical === 'bullish') return `Trending market (ADX ${adx.toFixed(0)}) with bullish tactical momentum. RSI at ${rsi.toFixed(0)} — momentum is ${rsi > 50 ? 'positive' : 'building'}. Entry on pullback preferred.`;
+    if (adx > 25 && tactical === 'bearish') return `Trending market (ADX ${adx.toFixed(0)}) with bearish tactical momentum. RSI at ${rsi.toFixed(0)} — ${rsi < 50 ? 'downside momentum in play' : 'watch for RSI confirmation below 50'}.`;
+    if (tactical !== rec) return `Tactical momentum (${tactical}) is diverging from composite recommendation (${rec}). Wait for trigger confirmation before full-size commitment.`;
     if (adx < 20) return `Low trend strength (ADX ${adx.toFixed(0)}) — market is ranging. Reduce position size and avoid breakout strategies until ADX rises above 25.`;
     return `Developing trend (ADX ${adx.toFixed(0)}), RSI ${rsi.toFixed(0)}. Monitor for confirmation before committing full position size.`;
   }
@@ -2211,6 +2251,16 @@ export class InstrumentCardComponent implements OnChanges {
       return 'Execution plan: tactical momentum is neutral. Treat both scenarios as conditional — long only on confirmed close above trigger, short only on confirmed close below trigger.';
     }
 
+    if (tactical !== rec) {
+      if (rec === 'bullish') {
+        return 'Execution plan: macro/composite bias remains bullish, but tactical momentum is pulling back. Prefer reduced size and only add on confirmed bullish reclaim above trigger.';
+      }
+      if (rec === 'bearish') {
+        return 'Execution plan: macro/composite bias remains bearish, but tactical bounce is active. Prefer reduced size and only add on confirmed breakdown below trigger.';
+      }
+      return 'Execution plan: directional conflict remains active — keep both scenarios conditional and commit size only after confirmed trigger break.';
+    }
+
     if (rec === 'bullish') {
       return 'Execution plan: prioritize long continuation only after trigger confirmation; avoid fresh size if price is already stretched above VWAP.';
     }
@@ -2224,14 +2274,18 @@ export class InstrumentCardComponent implements OnChanges {
     const macro = this.analysis.monthly_trend.direction;
     const tactical = this.analysis.daily_strength.signal;
     const score = this.analysis.trade_signal.score;
+    const exec = this.analysis.trade_signal.execution_state;
+    const grade = this.analysis.trade_signal.opportunity_grade;
+
+    const tail = `Execution state: ${exec.toUpperCase()} · Grade ${grade} · Size: ${this.analysis.trade_signal.suggested_size_text}.`;
 
     if (macro === 'bullish' && tactical === 'neutral') {
-      return `Score context: +${score} is mainly driven by macro trend + pullback structure; tactical momentum is still neutral, so wait for trigger confirmation.`;
+      return `Score context: +${score} is mainly driven by macro trend + pullback structure; tactical momentum is still neutral, so wait for trigger confirmation. ${tail}`;
     }
     if (macro === 'bearish' && tactical === 'neutral') {
-      return `Score context: ${score} is mainly driven by macro downtrend structure; tactical momentum is neutral, so avoid aggressive entries until break confirmation.`;
+      return `Score context: ${score} is mainly driven by macro downtrend structure; tactical momentum is neutral, so avoid aggressive entries until break confirmation. ${tail}`;
     }
-    return `Score context: macro (${macro}) and tactical (${tactical}) are currently more aligned, which supports the displayed composite score (${score}).`;
+    return `Score context: macro (${macro}) and tactical (${tactical}) are currently more aligned, which supports the displayed composite score (${score}). ${tail}`;
   }
 
   getAnalysisAge(): string {

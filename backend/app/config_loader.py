@@ -112,14 +112,23 @@ def get_newsapi_key(config: Dict[str, Any]) -> str:
 
 def get_strategy_config(config: Dict[str, Any]) -> Dict[str, Any]:
     """Extract strategy settings from config."""
-    return config.get('strategy', {
+    defaults = {
         "conviction_threshold": 70,
         "adx_threshold": 25,
         "atr_multiplier_tp": 3.0,
         "atr_multiplier_sl": 1.5,
         "portfolio_value": 10000.0,
-        "risk_per_trade_percent": 1.0
-    })
+        "risk_per_trade_percent": 1.0,
+        "aggressiveness_mode": "balanced",
+    }
+
+    strategy = config.get('strategy', {})
+    if not isinstance(strategy, dict):
+        return defaults
+
+    merged = dict(defaults)
+    merged.update(strategy)
+    return merged
 
 
 def save_strategy_config(strategy: Dict[str, Any], user_id: str = DEFAULT_USER_ID, config_path: str = None) -> None:

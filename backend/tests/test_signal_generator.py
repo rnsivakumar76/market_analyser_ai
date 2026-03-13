@@ -50,7 +50,7 @@ def _candle(is_bullish=True) -> CandleAnalysis:
     )
 
 
-def _settings(conviction=70, adx_threshold=25) -> StrategySettings:
+def _settings(conviction=70, adx_threshold=25, mode="balanced") -> StrategySettings:
     return StrategySettings(
         conviction_threshold=conviction,
         adx_threshold=adx_threshold,
@@ -58,6 +58,7 @@ def _settings(conviction=70, adx_threshold=25) -> StrategySettings:
         atr_multiplier_sl=1.5,
         portfolio_value=10000.0,
         risk_per_trade_percent=1.0,
+        aggressiveness_mode=mode,
     )
 
 
@@ -205,6 +206,41 @@ class TestScoreCalculation:
         # TRENDING regime (ADX=35): trend=50 + no_pb=round(20*5/30)=3 + strength=30 = 83
         assert sig.score == 83
 
+    def test_contextual_boosts_applied_before_final_classification(self):
+        sig = generate_trade_signal(
+            trend=_trend(Signal.BULLISH),
+            pullback=_pullback(detected=False, near_support=False),
+            strength=_strength(Signal.BULLISH, adx=35.0),
+            candle=_candle(is_bullish=True),
+            benchmark_direction=Signal.BULLISH,
+            settings=_settings(conviction=70, adx_threshold=25),
+            current_price=100.0,
+            tech_indicators=TechnicalAnalysis(
+                pivot_points=PivotPoints(
+                    pivot=100.0, r1=105.0, r2=110.0, r3=115.0,
+                    s1=95.0, s2=90.0, s3=85.0
+                ),
+                fibonacci=FibonacciLevels(
+                    trend="bullish", swing_high=110.0, swing_low=85.0,
+                    ret_382=95.4, ret_500=97.5, ret_618=99.6,
+                    ext_1272=118.0, ext_1618=125.5
+                ),
+                least_resistance_line="up",
+                trend_breakout="bullish_breakout",
+                breakout_confidence=0.8,
+                description="test"
+            ),
+            fundamentals=_fundamentals(has_events=False),
+            relative_strength=_rs(is_outperforming=True, label="Leader"),
+            news_sentiment_label="bullish"
+        )
+
+        # Base score would be 83; contextual boosts should push to capped 100 before final classification.
+        assert sig.score == 100
+        assert sig.recommendation == Signal.BULLISH
+        assert sig.trade_worthy is True
+        assert any("Bullish Breakout" in r for r in sig.reasons)
+
 
 # ---------------------------------------------------------------------------
 # 2. Hard Filter 1 — ADX threshold
@@ -298,10 +334,10 @@ class TestHardFilterCandle:
 
 class TestHardFilterFundamentals:
 
-    def test_high_impact_event_blocks_trade(self):
+    def test_high_impact_event_penalizes_score_and_warns(self):
         sig = full_bullish_signal(fundamentals=_fundamentals(has_events=True))
-        assert sig.trade_worthy is False
-        assert any("Macro Shield" in r for r in sig.reasons)
+        assert sig.score == 80  # 100 base (capped) then -20 macro penalty
+        assert any("Macro Caution" in r for r in sig.reasons)
 
     def test_no_event_does_not_block(self):
         sig = full_bullish_signal(fundamentals=_fundamentals(has_events=False))
@@ -351,20 +387,19 @@ class TestExecutiveSummary:
 
     def test_bullish_trade_worthy_summary(self):
         sig = full_bullish_signal()
-        assert "BUY signal" in sig.executive_summary
+        assert "BUY setup is active" in sig.executive_summary
         assert "uptrend" in sig.executive_summary
 
     def test_bullish_not_trade_worthy_summary(self):
         sig = full_bullish_signal(
             strength=_strength(Signal.BULLISH, adx=15.0)
         )
-        assert "leans slightly bullish" in sig.executive_summary
-        assert "not strong enough" in sig.executive_summary
-        assert "Wait patiently" in sig.executive_summary
+        assert "execution is conditional" in sig.executive_summary
+        assert "trigger" in sig.executive_summary
 
     def test_bearish_trade_worthy_summary(self):
         sig = full_bearish_signal()
-        assert "SELL signal" in sig.executive_summary
+        assert "SELL setup is active" in sig.executive_summary
         assert "downtrend" in sig.executive_summary
 
     def test_neutral_summary(self):
@@ -375,7 +410,7 @@ class TestExecutiveSummary:
             candle=_candle(None),
             settings=_settings(),
         )
-        assert "sidelined" in sig.executive_summary
+        assert "neutral" in sig.executive_summary.lower()
 
     def test_fundamental_event_warning_in_summary(self):
         sig = full_bullish_signal(fundamentals=_fundamentals(has_events=True))
@@ -411,7 +446,7 @@ class TestActionPlan:
 
     def test_not_trade_worthy_bullish_has_wait(self):
         sig = full_bullish_signal(strength=_strength(Signal.BULLISH, adx=10.0))
-        assert "Wait" in sig.action_plan
+        assert "Conditional" in sig.action_plan
 
     def test_neutral_has_observe(self):
         sig = generate_trade_signal(
@@ -458,6 +493,100 @@ class TestSignalConflict:
         )
         if sig.recommendation == Signal.NEUTRAL:
             assert sig.signal_conflict.conflict_type == "adx_direction_mismatch"
+
+
+# ---------------------------------------------------------------------------
+# 11. Execution profile fields
+# ---------------------------------------------------------------------------
+
+class TestExecutionProfile:
+
+    def test_ready_state_and_grade_for_trade_worthy_signal(self):
+        sig = full_bullish_signal()
+        assert sig.execution_state == "ready"
+        assert sig.opportunity_grade in {"A", "B"}
+        assert "x (" in sig.suggested_size_text
+
+    def test_conditional_state_for_non_trade_worthy_directional_bias(self):
+        sig = full_bullish_signal(strength=_strength(Signal.BULLISH, adx=10.0))
+        assert sig.recommendation == Signal.BULLISH
+        assert sig.trade_worthy is False
+        assert sig.execution_state == "conditional"
+        assert sig.opportunity_grade in {"B", "C"}
+
+    def test_stand_aside_for_neutral_signal(self):
+        sig = generate_trade_signal(
+            trend=_trend(Signal.NEUTRAL),
+            pullback=_pullback(False, False),
+            strength=_strength(Signal.NEUTRAL, adx=10.0),
+            candle=_candle(None),
+            settings=_settings(),
+        )
+        assert sig.recommendation == Signal.NEUTRAL
+        assert sig.execution_state == "stand_aside"
+        assert sig.opportunity_grade == "D"
+
+
+# ---------------------------------------------------------------------------
+# 12. Aggressiveness mode behavior
+# ---------------------------------------------------------------------------
+
+class TestAggressivenessMode:
+
+    def test_aggressive_mode_can_activate_trade_that_balanced_keeps_conditional(self):
+        common_kwargs = dict(
+            trend=_trend(Signal.BULLISH),
+            pullback=_pullback(detected=False, near_support=False),
+            strength=_strength(Signal.NEUTRAL, adx=30.0),
+            candle=_candle(is_bullish=True),
+            benchmark_direction=Signal.BULLISH,
+            tech_indicators=_tech(),
+            fundamentals=_fundamentals(False),
+            relative_strength=None,
+            news_sentiment_label="bullish",
+        )
+
+        sig_balanced = generate_trade_signal(
+            settings=_settings(conviction=70, adx_threshold=25, mode="balanced"),
+            **common_kwargs,
+        )
+        sig_aggressive = generate_trade_signal(
+            settings=_settings(conviction=70, adx_threshold=25, mode="aggressive"),
+            **common_kwargs,
+        )
+
+        assert sig_balanced.score == sig_aggressive.score == 63
+        assert sig_balanced.trade_worthy is False
+        assert sig_balanced.execution_state == "conditional"
+        assert sig_aggressive.trade_worthy is True
+        assert sig_aggressive.execution_state == "ready"
+
+    def test_conservative_mode_uses_smaller_sizing_than_aggressive_for_conditional(self):
+        common_kwargs = dict(
+            trend=_trend(Signal.BULLISH),
+            pullback=_pullback(detected=False, near_support=False),
+            strength=_strength(Signal.BULLISH, adx=15.0),
+            candle=_candle(is_bullish=True),
+            benchmark_direction=Signal.BULLISH,
+            tech_indicators=_tech(),
+            fundamentals=_fundamentals(False),
+            relative_strength=None,
+            news_sentiment_label=None,
+        )
+
+        sig_conservative = generate_trade_signal(
+            settings=_settings(conviction=70, adx_threshold=25, mode="conservative"),
+            **common_kwargs,
+        )
+        sig_aggressive = generate_trade_signal(
+            settings=_settings(conviction=70, adx_threshold=25, mode="aggressive"),
+            **common_kwargs,
+        )
+
+        assert sig_conservative.execution_state == "conditional"
+        assert sig_aggressive.execution_state == "conditional"
+        assert "0.35x" in sig_conservative.suggested_size_text
+        assert "0.65x" in sig_aggressive.suggested_size_text
 
 
 # ---------------------------------------------------------------------------
