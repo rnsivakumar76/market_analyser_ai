@@ -147,7 +147,8 @@ def analyze_instrument_lazy(
         get_backtest_results, detect_candle_patterns, analyze_technical_indicators,
         analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength,
         analyze_intermarket_context, analyze_session_context,
-        detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan
+        detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan,
+        analyze_blowoff_top,
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode, IntermarketContext
@@ -303,6 +304,12 @@ def analyze_instrument_lazy(
 
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value, entry_price=ideal_entry)
     fundamentals = analyze_fundamentals(symbol)
+    blowoff_top = analyze_blowoff_top(
+        symbol=symbol,
+        df=execution_data,
+        technical_indicators=tech_indicators,
+        volatility=volatility,
+    )
     
     # NEW: Relative Strength Analysis (Alpha vs Beta)
     # Commodities (WTI/XAU/XAG) → compare against DXY (DXY falls = gold/oil outperforms).
@@ -355,6 +362,8 @@ def analyze_instrument_lazy(
         volatility=volatility,
         fundamentals=fundamentals,
         relative_strength=rs_analysis,
+        blowoff_top=blowoff_top,
+        strategy_mode=mode.value,
         pullback_warning=pullback_warning,
         news_sentiment_label=news_sentiment.label,
         benchmark_symbol=bench_sym,
@@ -430,6 +439,7 @@ def analyze_instrument_lazy(
         liquidity_map=liquidity_map,
         block_flow=block_flow,
         geopolitical_risk=geopolitical_risk,
+        blowoff_top=blowoff_top,
     ), execution_data
 
 # In-memory store for sent alerts

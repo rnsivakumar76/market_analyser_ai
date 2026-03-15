@@ -3,7 +3,7 @@ from .models import (
     TrendAnalysis, PullbackAnalysis, StrengthAnalysis, 
     TradeSignal, Signal, CandleAnalysis, StrategySettings,
     FundamentalsAnalysis, RelativeStrengthAnalysis, SignalConflict,
-    PullbackWarningAnalysis
+    PullbackWarningAnalysis, BlowOffTopAnalysis
 )
 from domain.signals.scoring_engine import compute_composite_score, classify_recommendation
 from domain.signals.filter_engine import apply_all_hard_filters
@@ -46,6 +46,13 @@ def _apply_aggressiveness_to_threshold(mode: str, threshold: int) -> int:
     if mode == "aggressive":
         return max(45, threshold - 10)
     return threshold
+
+
+def _normalize_strategy_mode(mode: Optional[str]) -> str:
+    normalized = (mode or "long_term").strip().lower()
+    if normalized not in {"long_term", "short_term"}:
+        return "long_term"
+    return normalized
 
 
 def _derive_execution_profile(
@@ -137,6 +144,8 @@ def generate_trade_signal(
     volatility = None,
     fundamentals: FundamentalsAnalysis = None,
     relative_strength: RelativeStrengthAnalysis = None,
+    blowoff_top: BlowOffTopAnalysis = None,
+    strategy_mode: str = "long_term",
     pullback_warning: PullbackWarningAnalysis = None,
     news_sentiment_label: Optional[str] = None,
     benchmark_symbol: str = "benchmark",
@@ -158,6 +167,8 @@ def generate_trade_signal(
     aggressiveness_mode = _normalize_aggressiveness_mode(
         settings.aggressiveness_mode if settings else "balanced"
     )
+    strategy_mode = _normalize_strategy_mode(strategy_mode)
+    enforce_blowoff_guardrail = strategy_mode == "long_term"
 
     components = compute_composite_score(
         trend_direction=trend.direction.value,
@@ -203,6 +214,18 @@ def generate_trade_signal(
             score = max(score - 15, -100)
             reasons.append(f"Market Laggard: Weak Relative Strength vs {benchmark_symbol} (-15 penalty)")
 
+    if blowoff_top and blowoff_top.applicable:
+        if blowoff_top.signals.structure_break:
+            if enforce_blowoff_guardrail:
+                score = max(score - 10, -100)
+            reasons.append("Oil Blow-Off breakdown confirmed (+bearish follow-through edge)")
+        elif blowoff_top.detected and blowoff_top.entry_state == "armed" and score < 0:
+            if enforce_blowoff_guardrail:
+                score = min(score + 12, 0)
+                reasons.append("Oil Blow-Off detected without structure break — avoid premature short, wait for breakdown trigger")
+            else:
+                reasons.append("Blow-Off Watch: setup armed; track breakdown trigger for potential larger downside wave")
+
     effective_threshold = _effective_conviction_threshold(threshold, adx_value)
     effective_threshold = _apply_aggressiveness_to_threshold(aggressiveness_mode, effective_threshold)
     if effective_threshold != threshold:
@@ -212,6 +235,19 @@ def generate_trade_signal(
 
     recommendation_str, trade_worthy = classify_recommendation(score, effective_threshold)
     recommendation = Signal(recommendation_str)
+
+    if (
+        blowoff_top
+        and blowoff_top.applicable
+        and blowoff_top.detected
+        and recommendation == Signal.BEARISH
+        and not blowoff_top.signals.structure_break
+        and blowoff_top.entry_state in {"armed", "wait"}
+        and enforce_blowoff_guardrail
+    ):
+        if trade_worthy:
+            trade_worthy = False
+        reasons.append("Blow-Off Guardrail: bearish bias allowed, but execution stays conditional until structure break confirms")
 
     if not trade_worthy:
         if score >= 20:
