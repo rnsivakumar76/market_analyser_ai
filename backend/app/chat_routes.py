@@ -89,50 +89,60 @@ def _fallback_answer(question: str, ctx: Dict[str, Any], strategy_mode: str) -> 
     reasons = trade_signal.get("reasons") or []
     reason_text = ", ".join(reasons[:3]) if reasons else "no strong tagged drivers yet"
 
-    lines = [
-        f"Based on your current context, bias is {rec.upper()} (score {score if score is not None else 'N/A'}) in {strategy_mode} mode.",
-    ]
-
-    if blowoff.get("applicable"):
-        blowoff_signals = blowoff.get("signals") or {}
-        structure_break = blowoff_signals.get("structureBreak")
-        if structure_break is None:
-            structure_break = blowoff_signals.get("structure_break", False)
-        lines.append(
-            "Blow-off watch: "
-            f"phase={blowoff.get('phase', 'normal')}, "
-            f"state={blowoff.get('entryState') or blowoff.get('entry_state', 'wait')}, "
-            f"structure_break={structure_break}."
-        )
-
     q = question.lower()
+    lines: List[str] = []
     vol = ctx.get("volatility") or {}
     phase = (ctx.get("marketPhase") or ctx.get("market_phase") or {}).get("phase", "unknown")
     pullback = ctx.get("pullbackWarning") or {}
     pullback_level = pullback.get("pullback_level")
+    execution_state = trade_signal.get("execution_state")
+    size_hint = trade_signal.get("suggested_size_text")
+
+    if "plan" in q or "monday" in q or "today" in q:
+        lines.append(f"Plan stance: {rec.upper()} (score {score if score is not None else 'N/A'}) in {strategy_mode} mode.")
+        lines.append(f"Setup phase: {phase}. Top drivers: {reason_text}.")
+        if execution_state:
+            lines.append(f"Execution state: {execution_state}.")
+        if size_hint:
+            lines.append(f"Sizing hint: {size_hint}.")
+        if pullback_level:
+            lines.append(f"Key area: monitor pullback zone around {pullback_level} for hold/rejection behavior.")
+        if blowoff.get("applicable"):
+            lines.append(
+                f"Blow-off watch: phase={blowoff.get('phase', 'normal')}, "
+                f"state={blowoff.get('entryState') or blowoff.get('entry_state', 'wait')}."
+            )
+        return "\n".join(lines)
 
     if "why" in q or "trade-worthy" in q or "trade worthy" in q or "setup" in q:
+        lines.append(f"Bias: {rec.upper()} (score {score if score is not None else 'N/A'}).")
         lines.append(f"Why now: the score is being driven mainly by {reason_text}.")
         lines.append(f"Market phase is {phase}, so treat this as confirmation-first rather than prediction-first.")
         if pullback_level:
             lines.append(f"Watch pullback area around {pullback_level} and look for rejection/hold before adding risk.")
     elif "risk" in q or "stop" in q or "invalidation" in q or "size" in q:
+        lines.append(f"Bias: {rec.upper()} (score {score if score is not None else 'N/A'}).")
         lines.append(f"Primary risk lens: ATR={vol.get('atr', 'N/A')} and volatility regime={vol.get('volatility_regime_label', 'N/A')}.")
         lines.append("If volatility expands, reduce size first; only widen stop if setup quality improves.")
+        if size_hint:
+            lines.append(f"Current sizing hint: {size_hint}.")
         if pullback_level:
             lines.append(f"Practical invalidation reference: loss of structure around the pullback zone near {pullback_level}.")
     elif "trigger" in q or "confirm" in q or "break" in q:
+        lines.append(f"Entry trigger view: {rec.upper()} bias (score {score if score is not None else 'N/A'}).")
         lines.append("Confirmation checklist: structure hold, momentum follow-through, and no immediate rejection after trigger.")
+        if rec == "neutral":
+            lines.append("No entry while neutral; wait for a confirmed break + follow-through candle before considering size.")
         if blowoff.get("applicable"):
             lines.append(
                 f"Blow-off context: phase={blowoff.get('phase', 'normal')}, "
                 f"state={blowoff.get('entryState') or blowoff.get('entry_state', 'wait')} — wait for structure validation."
             )
     else:
+        lines.append(f"Bias: {rec.upper()} (score {score if score is not None else 'N/A'}).")
         lines.append(f"Main drivers in the current snapshot: {reason_text}.")
         lines.append("If you want, ask me for one of these: entry trigger, invalidation level, or position sizing plan.")
 
-    lines.append("Educational guidance only — not financial advice.")
     return "\n".join(lines)
 
 
@@ -156,7 +166,9 @@ def _invoke_bedrock(
         "You are NEXUS Copilot, a trading analysis assistant. "
         "Use ONLY provided analysis context. Be concise, practical, and risk-aware. "
         "Never promise outcomes, never use certainty language, and never give financial guarantees. "
-        "If data is missing, say what is missing."
+        "If data is missing, say what is missing. "
+        "Answer the exact question directly with instrument-specific details. "
+        "Do not add generic disclaimer lines unless the user explicitly asks for policy/safety framing."
     )
 
     safe_history = [
