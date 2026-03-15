@@ -116,7 +116,7 @@
 
   @if (instruments().length > 0) {
   <app-ai-copilot [instruments]="instruments()" [performance]="weeklyPerformance()"
-    [correlationData]="correlationData()">
+    [correlationData]="correlationData()" [strategyMode]="strategyMode()">
   </app-ai-copilot>
   }
 

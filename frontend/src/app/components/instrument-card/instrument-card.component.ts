@@ -375,32 +375,32 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                 </div>
 
-                @if (analysis.blowoff_top?.applicable) {
+                @if (analysis.blowoff_top?.applicable && analysis.blowoff_top; as blowoff) {
                 <div class="corr-matrix-row">
                   <div class="cm-label">🛢️ OIL BLOW-OFF TOP WATCH</div>
                   <div class="cm-cells">
-                    <div class="cm-cell" [class]="analysis.blowoff_top.detected ? 'corr-positive' : 'corr-neutral'">
-                      <span>Score</span><strong>{{ analysis.blowoff_top.blowoff_score }}/100</strong>
+                    <div class="cm-cell" [class]="blowoff.detected ? 'corr-positive' : 'corr-neutral'">
+                      <span>Score</span><strong>{{ blowoff.blowoff_score }}/100</strong>
                     </div>
-                    <div class="cm-cell" [class]="analysis.blowoff_top.phase === 'confirmed_breakdown' ? 'corr-negative' : 'corr-neutral'">
-                      <span>Phase</span><strong>{{ analysis.blowoff_top.phase }}</strong>
+                    <div class="cm-cell" [class]="blowoff.phase === 'confirmed_breakdown' ? 'corr-negative' : 'corr-neutral'">
+                      <span>Phase</span><strong>{{ blowoff.phase }}</strong>
                     </div>
-                    <div class="cm-cell" [class]="analysis.blowoff_top.entry_state === 'triggered' ? 'corr-negative' : analysis.blowoff_top.entry_state === 'armed' ? 'corr-positive' : 'corr-neutral'">
-                      <span>Entry State</span><strong>{{ analysis.blowoff_top.entry_state | uppercase }}</strong>
+                    <div class="cm-cell" [class]="blowoff.entry_state === 'triggered' ? 'corr-negative' : blowoff.entry_state === 'armed' ? 'corr-positive' : 'corr-neutral'">
+                      <span>Entry State</span><strong>{{ blowoff.entry_state | uppercase }}</strong>
                     </div>
                   </div>
-                  <div class="cm-interpretation">{{ analysis.blowoff_top.narrative }}</div>
+                  <div class="cm-interpretation">{{ blowoff.narrative }}</div>
                   <div class="cm-interpretation">
-                    Signals: Vertical={{ analysis.blowoff_top.signals.vertical_move ? 'Y' : 'N' }} ·
-                    Range={{ analysis.blowoff_top.signals.range_expansion ? 'Y' : 'N' }} ·
-                    RSI Div={{ analysis.blowoff_top.signals.rsi_bearish_divergence ? 'Y' : 'N' }} ·
-                    Failed BO={{ analysis.blowoff_top.signals.failed_breakout ? 'Y' : 'N' }} ·
-                    Structure={{ analysis.blowoff_top.signals.structure_break ? 'Y' : 'N' }}
+                    Signals: Vertical={{ blowoff.signals.vertical_move ? 'Y' : 'N' }} ·
+                    Range={{ blowoff.signals.range_expansion ? 'Y' : 'N' }} ·
+                    RSI Div={{ blowoff.signals.rsi_bearish_divergence ? 'Y' : 'N' }} ·
+                    Failed BO={{ blowoff.signals.failed_breakout ? 'Y' : 'N' }} ·
+                    Structure={{ blowoff.signals.structure_break ? 'Y' : 'N' }}
                   </div>
-                  @if (analysis.blowoff_top.trigger_level != null || analysis.blowoff_top.invalidation_level != null) {
+                  @if (blowoff.trigger_level != null || blowoff.invalidation_level != null) {
                   <div class="cm-interpretation">
-                    Trigger: {{ analysis.blowoff_top.trigger_level != null ? ('$' + analysis.blowoff_top.trigger_level.toFixed(2)) : 'N/A' }} ·
-                    Invalidation: {{ analysis.blowoff_top.invalidation_level != null ? ('$' + analysis.blowoff_top.invalidation_level.toFixed(2)) : 'N/A' }}
+                    Trigger: {{ blowoff.trigger_level != null ? ('$' + blowoff.trigger_level.toFixed(2)) : 'N/A' }} ·
+                    Invalidation: {{ blowoff.invalidation_level != null ? ('$' + blowoff.invalidation_level.toFixed(2)) : 'N/A' }}
                   </div>
                   }
                 </div>

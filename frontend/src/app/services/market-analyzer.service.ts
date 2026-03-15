@@ -487,6 +487,41 @@ export interface UserPreferences {
   strategy: StrategySettings;
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatUsage {
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number;
+}
+
+export interface ChatSafety {
+  adviceType: 'educational';
+  containsFinancialGuarantee: boolean;
+}
+
+export interface ChatRequest {
+  sessionId: string;
+  intent: 'signal_explainer' | 'risk_coach' | 'setup_monitor' | 'general';
+  symbol?: string;
+  question: string;
+  strategyMode: StrategyMode;
+  analysisContext: Record<string, unknown>;
+  history: ChatMessage[];
+}
+
+export interface ChatResponse {
+  answer: string;
+  modelUsed: string;
+  escalated: boolean;
+  citations: string[];
+  usage: ChatUsage;
+  safety: ChatSafety;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -579,5 +614,9 @@ export class MarketAnalyzerService {
 
   getHistoricalSentiment(days: number = 7): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/geopolitical/historical-sentiment?days=${days}`);
+  }
+
+  chatWithCopilot(payload: ChatRequest): Observable<ChatResponse> {
+    return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, payload).pipe(timeout(25000));
   }
 }
