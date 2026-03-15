@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from enum import Enum
 from datetime import date
@@ -264,6 +264,28 @@ class GeopoliticalRisk(BaseModel):
     action_bias: str
 
 
+class BlowOffTopSignals(BaseModel):
+    vertical_move: bool = False
+    range_expansion: bool = False
+    rsi_bearish_divergence: bool = False
+    failed_breakout: bool = False
+    structure_break: bool = False
+
+
+class BlowOffTopAnalysis(BaseModel):
+    applicable: bool = False
+    detected: bool = False
+    blowoff_score: int = 0
+    phase: str = "normal"  # "normal" | "acceleration" | "blowoff" | "confirmed_breakdown"
+    entry_state: str = "wait"  # "wait" | "armed" | "triggered"
+    trigger_level: Optional[float] = None
+    invalidation_level: Optional[float] = None
+    recent_peak: Optional[float] = None
+    structural_low: Optional[float] = None
+    signals: BlowOffTopSignals = Field(default_factory=BlowOffTopSignals)
+    narrative: str = ""
+
+
 class VolumeProfileBucket(BaseModel):
     price_low: float
     price_high: float
@@ -358,6 +380,7 @@ class InstrumentAnalysis(BaseModel):
     liquidity_map: Optional[LiquidityMap] = None
     block_flow: Optional[BlockFlowDetection] = None
     geopolitical_risk: Optional[GeopoliticalRisk] = None
+    blowoff_top: Optional[BlowOffTopAnalysis] = None
 
 
 class PerformanceSummary(BaseModel):

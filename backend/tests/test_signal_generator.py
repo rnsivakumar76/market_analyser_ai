@@ -10,7 +10,7 @@ from app.models import (
     Signal, TrendAnalysis, PullbackAnalysis, StrengthAnalysis,
     CandleAnalysis, StrategySettings, FundamentalsAnalysis,
     RelativeStrengthAnalysis, TechnicalAnalysis, PivotPoints,
-    FibonacciLevels, VolatilityAnalysis
+    FibonacciLevels, VolatilityAnalysis, BlowOffTopAnalysis, BlowOffTopSignals
 )
 from app.signal_generator import generate_trade_signal
 
@@ -101,6 +101,28 @@ def _volatility(current_price=100.0) -> VolatilityAnalysis:
         atr=2.0, stop_loss=96.0, take_profit=112.0,
         take_profit_level1=104.0, take_profit_level2=108.0,
         risk_reward_ratio=3.0, description="test"
+    )
+
+
+def _blowoff(structure_break: bool, detected: bool = True, state: str = "armed") -> BlowOffTopAnalysis:
+    return BlowOffTopAnalysis(
+        applicable=True,
+        detected=detected,
+        blowoff_score=75 if detected else 35,
+        phase="confirmed_breakdown" if structure_break else "blowoff",
+        entry_state="triggered" if structure_break else state,
+        trigger_level=95.0,
+        invalidation_level=110.0,
+        recent_peak=110.0,
+        structural_low=95.0,
+        signals=BlowOffTopSignals(
+            vertical_move=True,
+            range_expansion=True,
+            rsi_bearish_divergence=True,
+            failed_breakout=True,
+            structure_break=structure_break,
+        ),
+        narrative="test",
     )
 
 
@@ -525,6 +547,41 @@ class TestExecutionProfile:
         assert sig.recommendation == Signal.NEUTRAL
         assert sig.execution_state == "stand_aside"
         assert sig.opportunity_grade == "D"
+
+
+class TestBlowOffGuardrail:
+
+    def test_bearish_ready_signal_becomes_conditional_when_no_structure_break(self):
+        sig = full_bearish_signal(
+            blowoff_top=_blowoff(structure_break=False, detected=True, state="armed")
+        )
+
+        assert sig.recommendation == Signal.BEARISH
+        assert sig.trade_worthy is False
+        assert sig.execution_state == "conditional"
+        assert any("Blow-Off Guardrail" in r for r in sig.reasons)
+
+    def test_bearish_ready_signal_remains_ready_when_structure_break_confirmed(self):
+        sig = full_bearish_signal(
+            blowoff_top=_blowoff(structure_break=True, detected=True)
+        )
+
+        assert sig.recommendation == Signal.BEARISH
+        assert sig.trade_worthy is True
+        assert sig.execution_state == "ready"
+        assert any("breakdown confirmed" in r.lower() for r in sig.reasons)
+
+    def test_short_term_mode_keeps_signal_ready_and_adds_info_reason(self):
+        sig = full_bearish_signal(
+            blowoff_top=_blowoff(structure_break=False, detected=True, state="armed"),
+            strategy_mode="short_term",
+        )
+
+        assert sig.recommendation == Signal.BEARISH
+        assert sig.trade_worthy is True
+        assert sig.execution_state == "ready"
+        assert any("Blow-Off Watch" in r for r in sig.reasons)
+        assert not any("Blow-Off Guardrail" in r for r in sig.reasons)
 
 
 # ---------------------------------------------------------------------------

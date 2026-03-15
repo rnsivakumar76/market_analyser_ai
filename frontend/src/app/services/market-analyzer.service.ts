@@ -280,6 +280,28 @@ export interface GeopoliticalRisk {
   action_bias: string;
 }
 
+export interface BlowOffTopSignals {
+  vertical_move: boolean;
+  range_expansion: boolean;
+  rsi_bearish_divergence: boolean;
+  failed_breakout: boolean;
+  structure_break: boolean;
+}
+
+export interface BlowOffTopAnalysis {
+  applicable: boolean;
+  detected: boolean;
+  blowoff_score: number;
+  phase: 'normal' | 'acceleration' | 'blowoff' | 'confirmed_breakdown';
+  entry_state: 'wait' | 'armed' | 'triggered';
+  trigger_level?: number;
+  invalidation_level?: number;
+  recent_peak?: number;
+  structural_low?: number;
+  signals: BlowOffTopSignals;
+  narrative: string;
+}
+
 export interface ChartData {
   time: string;
   open: number;
@@ -347,6 +369,7 @@ export interface InstrumentAnalysis {
   liquidity_map?: LiquidityMap;
   block_flow?: BlockFlowDetection;
   geopolitical_risk?: GeopoliticalRisk;
+  blowoff_top?: BlowOffTopAnalysis;
 }
 
 export interface VolumeProfileBucket {
