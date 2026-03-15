@@ -114,12 +114,6 @@
     }
   </div>
 
-  @if (instruments().length > 0) {
-  <app-ai-copilot [instruments]="instruments()" [performance]="weeklyPerformance()"
-    [correlationData]="correlationData()" [strategyMode]="strategyMode()">
-  </app-ai-copilot>
-  }
-
   @if (error()) {
   <div class="error-banner">
     <span>{{ error() }}</span>
@@ -386,8 +380,13 @@
     <div class="performance-panel context-intelligence-panel" [class.mobile-context-active]="mobileTab() === 'context'">
       <div class="perf-panel-header">
         <h3 class="perf-panel-title">CONTEXT INTELLIGENCE</h3>
+        <div class="perf-panel-tabs">
+          <button class="perf-tab" [class.active]="contextPanelTab() === 'context'" (click)="contextPanelTab.set('context')">Context</button>
+          <button class="perf-tab" [class.active]="contextPanelTab() === 'chat'" (click)="contextPanelTab.set('chat')">Chat</button>
+        </div>
       </div>
 
+      @if (contextPanelTab() === 'context') {
       <!-- ECONOMIC EVENTS -->
       @if (selectedInstrument(); as inst) {
       <div class="ctx-card ctx-economic">
@@ -451,6 +450,11 @@
         </div>
         }
       </div>
+      }
+      }
+
+      @if (contextPanelTab() === 'chat') {
+      <app-ai-copilot [selectedInstrument]="selectedInstrument()" [strategyMode]="strategyMode()"></app-ai-copilot>
       }
 
       <!-- WEEKLY PNL: hidden -->

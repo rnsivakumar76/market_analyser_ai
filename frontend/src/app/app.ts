@@ -52,6 +52,7 @@ export class App implements OnInit, OnDestroy {
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
   mobileTab = signal<'watchlist' | 'analysis' | 'context'>('watchlist');
+  contextPanelTab = signal<'context' | 'chat'>('context');
   sidebarTab = signal<'heatmap' | 'orb'>('heatmap');
 
   // Auto-refresh properties

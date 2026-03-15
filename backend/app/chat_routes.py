@@ -87,12 +87,10 @@ def _fallback_answer(question: str, ctx: Dict[str, Any], strategy_mode: str) -> 
     rec = trade_signal.get("recommendation", "neutral")
     score = trade_signal.get("score")
     reasons = trade_signal.get("reasons") or []
-    reason_text = "; ".join(reasons[:3]) if reasons else "No explicit reason tags were provided."
+    reason_text = ", ".join(reasons[:3]) if reasons else "no strong tagged drivers yet"
 
     lines = [
-        "Copilot fallback mode is active (Bedrock unavailable), so this response is generated from your live analysis context only.",
-        f"Current bias is {rec.upper()} with score {score if score is not None else 'N/A'} in {strategy_mode} mode.",
-        f"Top drivers: {reason_text}",
+        f"Based on your current context, bias is {rec.upper()} (score {score if score is not None else 'N/A'}) in {strategy_mode} mode.",
     ]
 
     if blowoff.get("applicable"):
@@ -107,15 +105,35 @@ def _fallback_answer(question: str, ctx: Dict[str, Any], strategy_mode: str) -> 
             f"structure_break={structure_break}."
         )
 
-    if "risk" in question.lower() or "stop" in question.lower():
-        vol = ctx.get("volatility") or {}
-        lines.append(
-            f"Risk context: ATR={vol.get('atr', 'N/A')}, regime={vol.get('volatility_regime_label', 'N/A')}. "
-            "Use tighter size when volatility expands and wait for trigger confirmation over prediction."
-        )
+    q = question.lower()
+    vol = ctx.get("volatility") or {}
+    phase = (ctx.get("marketPhase") or ctx.get("market_phase") or {}).get("phase", "unknown")
+    pullback = ctx.get("pullbackWarning") or {}
+    pullback_level = pullback.get("pullback_level")
 
-    lines.append("Educational guidance only, not financial advice.")
-    return " ".join(lines)
+    if "why" in q or "trade-worthy" in q or "trade worthy" in q or "setup" in q:
+        lines.append(f"Why now: the score is being driven mainly by {reason_text}.")
+        lines.append(f"Market phase is {phase}, so treat this as confirmation-first rather than prediction-first.")
+        if pullback_level:
+            lines.append(f"Watch pullback area around {pullback_level} and look for rejection/hold before adding risk.")
+    elif "risk" in q or "stop" in q or "invalidation" in q or "size" in q:
+        lines.append(f"Primary risk lens: ATR={vol.get('atr', 'N/A')} and volatility regime={vol.get('volatility_regime_label', 'N/A')}.")
+        lines.append("If volatility expands, reduce size first; only widen stop if setup quality improves.")
+        if pullback_level:
+            lines.append(f"Practical invalidation reference: loss of structure around the pullback zone near {pullback_level}.")
+    elif "trigger" in q or "confirm" in q or "break" in q:
+        lines.append("Confirmation checklist: structure hold, momentum follow-through, and no immediate rejection after trigger.")
+        if blowoff.get("applicable"):
+            lines.append(
+                f"Blow-off context: phase={blowoff.get('phase', 'normal')}, "
+                f"state={blowoff.get('entryState') or blowoff.get('entry_state', 'wait')} — wait for structure validation."
+            )
+    else:
+        lines.append(f"Main drivers in the current snapshot: {reason_text}.")
+        lines.append("If you want, ask me for one of these: entry trigger, invalidation level, or position sizing plan.")
+
+    lines.append("Educational guidance only — not financial advice.")
+    return "\n".join(lines)
 
 
 def _invoke_bedrock(

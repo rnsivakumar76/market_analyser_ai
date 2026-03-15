@@ -1496,6 +1496,31 @@ app-ai-copilot     { display: block; }
   border-bottom: 1px solid #1f1f3a;
 }
 
+.perf-panel-tabs {
+  margin-top: 8px;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.perf-tab {
+  border: 1px solid #313244;
+  background: #11111b;
+  color: #9399b2;
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+
+  &.active {
+    color: #11111b;
+    border-color: #89b4fa;
+    background: linear-gradient(135deg, #89b4fa, #cba6f7);
+  }
+}
+
 .perf-panel-title {
   font-size: 0.55rem;
   font-weight: 900;
