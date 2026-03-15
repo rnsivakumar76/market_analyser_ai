@@ -791,7 +791,7 @@
 }
 
 /* --- Hide the standalone timer strip and AI copilot bars --- */
-app-ai-copilot     { display: none; }
+app-ai-copilot     { display: block; }
 .bottom-bar        { display: none !important; }
 
 /* --- Data Status Strip (top-right, below header) --- */
