@@ -11,11 +11,6 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
   imports: [CommonModule, InstrumentChartComponent, MultiTimeframeOverlayComponent, TradeJournalComponent],
   template: `
     <div class="instrument-terminal">
-      <!-- 1. MTF TOP BANNER -->
-      <div class="terminal-banner">
-        <app-multi-timeframe-overlay [analysis]="analysis"></app-multi-timeframe-overlay>
-      </div>
-
       <div class="terminal-body" [class]="getCardClass()">
         <!-- 2. SMART HUD HEADER (COMPACT) -->
         <header class="terminal-header">
@@ -55,30 +50,17 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           </div>
         </header>
 
-        <!-- 2.5 SIGNAL REASONS STRIP (compact) -->
-        <div class="signal-reasons-strip">
-          @for (reason of analysis.trade_signal.reasons; track reason) {
+        <!-- TOP-3 SIGNAL REASONS (compact) -->
+        <div class="signal-reasons-strip signal-reasons-compact">
+          @for (reason of getTopReasons(); track reason) {
             <span class="syn-tag" [class]="getReasonImpactClass(reason)">{{ reason }}</span>
           }
+          @if (getRemainingReasonCount() > 0) {
+            <span class="syn-tag syn-more">+{{ getRemainingReasonCount() }} more</span>
+          }
         </div>
-        <div class="score-driver-note">{{ getScoreDriverSummary() }}</div>
 
-        <!-- EXPERT BATTLE PLAN (always visible, above tabs) -->
-        @if (analysis.expert_trade_plan) {
-        <div class="expert-above-tabs" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
-          <div class="eat-header-row">
-            <span class="eat-title">🎖️ EXPERT BATTLE PLAN</span>
-            <span class="eat-rvol" [class.rvol-hot]="analysis.expert_trade_plan.rvol >= 1.8">
-              RVOL {{ analysis.expert_trade_plan.rvol }}x
-              @if (analysis.expert_trade_plan.is_high_intent) { 🔥 }
-            </span>
-            <span class="plan-age" [class.plan-age--stale]="isPlanStale()">🕐 {{ getAnalysisAge() }}</span>
-          </div>
-          <p class="eat-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
-        </div>
-        }
-
-        <!-- EXECUTION CHECK CARD -->
+        <!-- EXECUTION CHECK CARD — DECISION HERO (Zone B) -->
         <div class="exec-check-card">
           <div class="ec-header">
             <span class="ec-title">⚡ EXECUTION CHECK</span>
@@ -115,14 +97,53 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           <div class="ec-microcopy">Bullish count is context, not trigger — trade only when all gates pass.</div>
         </div>
 
-        <!-- ANALYSIS TABS NAVIGATION -->
-        <div class="analysis-tabs">
-          <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">SIGNAL</button>
-          <button class="atab" [class.active]="activeAnalysisTab === 'risk'" (click)="activeAnalysisTab = 'risk'">RISK</button>
-          <button class="atab" [class.active]="activeAnalysisTab === 'performance'" (click)="activeAnalysisTab = 'performance'">PERFORMANCE</button>
+        <!-- EXPERT BATTLE PLAN (Zone D — above drawers) -->
+        @if (analysis.expert_trade_plan) {
+        <div class="expert-above-tabs" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
+          <div class="eat-header-row">
+            <span class="eat-title">🎖️ EXPERT BATTLE PLAN</span>
+            <span class="eat-rvol" [class.rvol-hot]="analysis.expert_trade_plan.rvol >= 1.8">
+              RVOL {{ analysis.expert_trade_plan.rvol }}x
+              @if (analysis.expert_trade_plan.is_high_intent) { 🔥 }
+            </span>
+            <span class="plan-age" [class.plan-age--stale]="isPlanStale()">🕐 {{ getAnalysisAge() }}</span>
+          </div>
+          <p class="eat-text">{{ analysis.expert_trade_plan.battle_plan }}</p>
         </div>
+        }
 
-          @if (activeAnalysisTab === 'technical') {
+        <!-- ZONE E: ACCORDION DRAWERS (replace tabs) -->
+        <div class="accordion-drawers">
+
+        <!-- ① SIGNAL & ACTION DRAWER -->
+        <div class="acc-drawer">
+          <div class="acc-header" (click)="toggleDrawer('signal')">
+            <span class="acc-icon">⚡</span>
+            <span class="acc-title">SIGNAL & ACTION</span>
+            <span class="acc-badge" [class]="isWaitAction() ? 'acc-badge-wait' : 'acc-badge-' + analysis.trade_signal.recommendation">{{ analysis.trade_signal.action_plan }}</span>
+            <span class="acc-arrow" [class.open]="drawerOpen['signal']">▶</span>
+          </div>
+          @if (drawerOpen['signal']) {
+          <div class="acc-body">
+          <!-- MTF Context Row (replaces removed top banner) -->
+          <div class="drawer-mtf-row">
+            <div class="dmtf-item" [class]="'dmtf-' + analysis.monthly_trend.direction">
+              <div class="dmtf-tf">MACRO</div>
+              <div class="dmtf-dir">{{ analysis.monthly_trend.direction | uppercase }}</div>
+            </div>
+            <div class="dmtf-item" [class]="'dmtf-' + (analysis.weekly_pullback?.detected ? (analysis.weekly_pullback?.near_support ? 'neutral' : 'bearish') : 'bullish')">
+              <div class="dmtf-tf">STRUCTURE</div>
+              <div class="dmtf-dir">{{ analysis.weekly_pullback?.detected ? (analysis.weekly_pullback?.near_support ? 'PULLBACK/SUP' : 'PULLBACK') : 'INTACT' }}</div>
+            </div>
+            <div class="dmtf-item" [class]="'dmtf-' + analysis.daily_strength.signal">
+              <div class="dmtf-tf">TACTICAL</div>
+              <div class="dmtf-dir">{{ analysis.daily_strength.signal | uppercase }}</div>
+            </div>
+            <div class="dmtf-item" [class]="'dmtf-' + analysis.trade_signal.recommendation">
+              <div class="dmtf-tf">SIGNAL</div>
+              <div class="dmtf-dir">{{ analysis.trade_signal.recommendation | uppercase }}</div>
+            </div>
+          </div>
           <section class="t-tile intel-tile tab-content-tile">
             <div class="intel-column-stack">
 
@@ -152,14 +173,15 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                    <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
                 </div>
 
-                <div class="levels-stack" [class.levels-inactive]="isWaitAction()">
-                  @if (isWaitAction()) {
-                    <div class="levels-pending">⏸ Levels pending signal confirmation — wait for alignment before entering</div>
-                  }
+                @if (getExecPassCount() >= 3) {
+                <div class="levels-stack">
                   <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
                   <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
                   <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
                 </div>
+                } @else {
+                  <div class="levels-dormant">⏸ Trade levels appear once {{ 3 - getExecPassCount() }} more execution gate{{ (3 - getExecPassCount()) !== 1 ? 's' : '' }} pass ({{ getExecPassCount() }}/5 currently)</div>
+                }
 
                 <div class="rr-visual-diagram">
                   <div class="rrd-header">VISUAL R/R DIAGRAM</div>
@@ -374,9 +396,20 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
             </div>
           </section>
+          </div>
           }
+        </div><!-- end signal drawer -->
 
-          @if (activeAnalysisTab === 'risk') {
+        <!-- ② RISK FACTORS DRAWER -->
+        <div class="acc-drawer">
+          <div class="acc-header" (click)="toggleDrawer('risk')">
+            <span class="acc-icon">🛡️</span>
+            <span class="acc-title">RISK FACTORS</span>
+            <span class="acc-badge acc-badge-risk">{{ getRiskDrawerBadge() }}</span>
+            <span class="acc-arrow" [class.open]="drawerOpen['risk']">▶</span>
+          </div>
+          @if (drawerOpen['risk']) {
+          <div class="acc-body">
           <section class="t-tile status-tile tab-content-tile">
             <div class="risk-dual-panel">
               <div class="risk-panel-card">
@@ -658,9 +691,20 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             }
 
           </section>
+          </div>
           }
+        </div><!-- end risk drawer -->
 
-          @if (activeAnalysisTab === 'performance') {
+        <!-- ③ PERFORMANCE DRAWER -->
+        <div class="acc-drawer">
+          <div class="acc-header" (click)="toggleDrawer('performance')">
+            <span class="acc-icon">📈</span>
+            <span class="acc-title">PERFORMANCE</span>
+            <span class="acc-badge acc-badge-ok">Win {{ analysis.backtest_results.win_rate.toFixed(0) }}%</span>
+            <span class="acc-arrow" [class.open]="drawerOpen['performance']">▶</span>
+          </div>
+          @if (drawerOpen['performance']) {
+          <div class="acc-body">
           <section class="t-tile perf-tab-tile tab-content-tile">
             <div class="perf-content">
               <div class="probability-box-v2">
@@ -699,7 +743,11 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               </div>
             </div>
           </section>
+          </div>
           }
+        </div><!-- end performance drawer -->
+
+        </div><!-- end accordion-drawers -->
 
       </div>
 
@@ -1007,13 +1055,45 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .intel-expander-v2 { text-align: center; }
     .exp-btn-v2 { width: 100%; padding: 12px; background: #1a1a2a; border: 1px dashed #313244; color: #6c7086; border-radius: 8px; font-weight: 900; font-size: 0.75rem; cursor: pointer; }
 
-    /* ANALYSIS TABS */
-    .analysis-tabs { display: flex; background: #0b0b15; border-bottom: 2px solid #1f1f3a; overflow-x: auto; flex-shrink: 0; }
-    .analysis-tabs::-webkit-scrollbar { height: 0; }
-    .atab { flex: 1; padding: 13px 8px; background: transparent; border: none; border-bottom: 3px solid transparent; color: #45475a; font-size: 0.6rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; white-space: nowrap; min-width: 72px; }
-    .atab:hover { color: #9399b2; background: rgba(137, 180, 250, 0.04); }
-    .atab.active { color: #89b4fa; border-bottom-color: #89b4fa; background: rgba(137, 180, 250, 0.05); }
+    /* ANALYSIS TABS (kept for backward compat, now hidden) */
+    .analysis-tabs { display: none; }
+    .atab { display: none; }
     .tab-content-tile { border-right: none; width: 100%; box-sizing: border-box; }
+
+    /* ACCORDION DRAWERS (Zone E) */
+    .accordion-drawers { display: flex; flex-direction: column; border-top: 1px solid #1f1f3a; }
+    .acc-drawer { border-bottom: 1px solid #1f1f3a; }
+    .acc-header { display: flex; align-items: center; gap: 10px; padding: 11px 16px; cursor: pointer; transition: background 0.15s; background: #0d0d1a; user-select: none; }
+    .acc-header:hover { background: rgba(255,255,255,0.025); }
+    .acc-icon { font-size: 0.75rem; flex-shrink: 0; }
+    .acc-title { font-size: 0.55rem; font-weight: 900; letter-spacing: 1.2px; color: #cdd6f4; text-transform: uppercase; flex: 1; }
+    .acc-badge { font-size: 0.45rem; font-weight: 900; padding: 2px 7px; border-radius: 10px; white-space: nowrap; letter-spacing: 0.3px; }
+    .acc-badge-wait { background: rgba(108,112,134,0.15); color: #9399b2; border: 1px solid rgba(108,112,134,0.25); }
+    .acc-badge-bullish { background: rgba(166,227,161,0.12); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .acc-badge-bearish { background: rgba(243,139,168,0.12); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .acc-badge-neutral { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.25); }
+    .acc-badge-risk { background: rgba(249,226,175,0.1); color: #f9e2af; border: 1px solid rgba(249,226,175,0.25); }
+    .acc-badge-ok { background: rgba(166,227,161,0.1); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.25); }
+    .acc-arrow { font-size: 0.55rem; color: #45475a; transition: transform 0.2s; flex-shrink: 0; }
+    .acc-arrow.open { transform: rotate(90deg); }
+    .acc-body { background: #0b0b15; }
+
+    /* MTF Context Row inside Signal drawer */
+    .drawer-mtf-row { display: flex; gap: 6px; padding: 10px 16px 6px; border-bottom: 1px solid #1f1f3a; overflow-x: auto; }
+    .drawer-mtf-row::-webkit-scrollbar { height: 0; }
+    .dmtf-item { flex: 1; min-width: 56px; background: #11111b; border-radius: 5px; padding: 6px 8px; text-align: center; border: 1px solid #1f1f3a; }
+    .dmtf-tf { font-size: 0.38rem; color: #45475a; font-weight: 900; letter-spacing: 0.5px; margin-bottom: 2px; }
+    .dmtf-dir { font-size: 0.55rem; font-weight: 950; }
+    .dmtf-bullish .dmtf-dir { color: #a6e3a1; }
+    .dmtf-bearish .dmtf-dir { color: #f38ba8; }
+    .dmtf-neutral .dmtf-dir, .dmtf-neutral .dmtf-dir { color: #9399b2; }
+
+    /* Conditional levels — dormant state */
+    .levels-dormant { padding: 10px 16px; font-size: 0.68rem; color: #45475a; font-style: italic; background: rgba(243,139,168,0.03); border: 1px dashed rgba(243,139,168,0.15); border-radius: 6px; margin: 10px 0; }
+
+    /* Compact reason strip (top-3 only) */
+    .signal-reasons-compact { flex-wrap: wrap; gap: 5px; padding: 6px 16px; }
+    .syn-more { background: rgba(108,112,134,0.12); color: #6c7086; border: 1px solid rgba(108,112,134,0.2); cursor: pointer; font-size: 0.55rem; }
     .geo-tab-tile { padding: 30px; }
     .geo-deep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #1f1f3a; }
     .expert-metrics { display: flex; gap: 8px; margin-top: 12px; }
@@ -1686,6 +1766,15 @@ export class InstrumentCardComponent implements OnChanges {
   alertToastVisible = false;
   activeLevelAlerts = new Set<string>();
   showMoreIntel = false;
+  drawerOpen: Record<string, boolean> = { signal: false, risk: false, performance: false };
+  toggleDrawer(name: string): void { this.drawerOpen[name] = !this.drawerOpen[name]; }
+  getTopReasons(): string[] { return (this.analysis.trade_signal.reasons ?? []).slice(0, 3); }
+  getRemainingReasonCount(): number { return Math.max(0, (this.analysis.trade_signal.reasons ?? []).length - 3); }
+  getRiskDrawerBadge(): string {
+    const warns = [this.getVolatilityCheck(), this.getVolumeCheck(), this.getSupportResistanceCheck(), this.getVolatilityRegimeCheck()]
+      .filter(c => c === 'warn' || c === 'fail').length;
+    return warns > 0 ? `${warns} warning${warns > 1 ? 's' : ''}` : 'all clear';
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['analysis'] && !changes['analysis'].firstChange) {
