@@ -78,6 +78,43 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         </div>
         }
 
+        <!-- EXECUTION CHECK CARD -->
+        <div class="exec-check-card">
+          <div class="ec-header">
+            <span class="ec-title">⚡ EXECUTION CHECK</span>
+            <span class="ec-score">{{ getExecPassCount() }}/5 GATES PASSED</span>
+          </div>
+          <div class="ec-rows">
+            <div class="ec-row">
+              <span class="ec-gate-label">BIAS</span>
+              <span class="ec-gate-src">Multi-Timeframe Alignment</span>
+              <span [class]="getExecChipClass(getExecBiasStatus())">{{ getExecBiasStatus() }}</span>
+            </div>
+            <div class="ec-row">
+              <span class="ec-gate-label">LOCATION</span>
+              <span class="ec-gate-src">Liquidity / Levels / VWAP</span>
+              <span [class]="getExecChipClass(getExecLocationStatus())">{{ getExecLocationStatus() }}</span>
+            </div>
+            <div class="ec-row">
+              <span class="ec-gate-label">TRIGGER</span>
+              <span class="ec-gate-src">Pullback &amp; Trap / Tactical</span>
+              <span [class]="getExecChipClass(getExecTriggerStatus())">{{ getExecTriggerStatus() }}</span>
+            </div>
+            <div class="ec-row">
+              <span class="ec-gate-label">CONFIRM</span>
+              <span class="ec-gate-src">Technical Heat / Volume</span>
+              <span [class]="getExecChipClass(getExecConfirmationStatus())">{{ getExecConfirmationStatus() }}</span>
+            </div>
+            <div class="ec-row">
+              <span class="ec-gate-label">RISK</span>
+              <span class="ec-gate-src">Stop + R:R ≥1.8 + Sizing</span>
+              <span [class]="getExecChipClass(getExecRiskStatus())">{{ getExecRiskStatus() }}</span>
+            </div>
+          </div>
+          <div class="ec-decision" [class]="getExecDecision().cssClass">{{ getExecDecision().label }}</div>
+          <div class="ec-microcopy">Bullish count is context, not trigger — trade only when all gates pass.</div>
+        </div>
+
         <!-- ANALYSIS TABS NAVIGATION -->
         <div class="analysis-tabs">
           <button class="atab" [class.active]="activeAnalysisTab === 'technical'" (click)="activeAnalysisTab = 'technical'">SIGNAL</button>
@@ -739,6 +776,25 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .eat-rvol { font-size: 0.58rem; font-weight: 900; color: #6c7086; letter-spacing: 0.5px; }
     .eat-rvol.rvol-hot { color: #fab387; }
     .eat-text { font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; margin: 0; font-weight: 500; white-space: pre-line; }
+
+    /* EXECUTION CHECK CARD */
+    .exec-check-card { background: rgba(10,10,22,0.9); border: 1px solid rgba(137,180,250,0.18); border-left: 4px solid #89b4fa; padding: 12px 16px 10px; }
+    .ec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .ec-title { font-size: 0.58rem; font-weight: 950; letter-spacing: 1.5px; color: #89b4fa; text-transform: uppercase; }
+    .ec-score { font-size: 0.52rem; font-weight: 900; color: #585b70; letter-spacing: 1px; }
+    .ec-rows { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+    .ec-row { display: grid; grid-template-columns: 68px 1fr auto; align-items: center; gap: 8px; padding: 5px 8px; background: rgba(255,255,255,0.02); border-radius: 4px; border: 1px solid rgba(255,255,255,0.04); }
+    .ec-gate-label { font-size: 0.5rem; font-weight: 950; color: #cdd6f4; letter-spacing: 1px; text-transform: uppercase; }
+    .ec-gate-src { font-size: 0.47rem; color: #45475a; font-weight: 600; }
+    .ec-chip { font-size: 0.47rem; font-weight: 900; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
+    .ec-yes { background: rgba(166,227,161,0.15); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .ec-weak { background: rgba(249,226,175,0.12); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+    .ec-no { background: rgba(243,139,168,0.12); color: #f38ba8; border: 1px solid rgba(243,139,168,0.3); }
+    .ec-decision { text-align: center; font-size: 0.62rem; font-weight: 950; letter-spacing: 2px; padding: 7px 12px; border-radius: 5px; margin-bottom: 6px; text-transform: uppercase; }
+    .exec-go { background: rgba(166,227,161,0.15); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.3); }
+    .exec-tactical { background: rgba(249,226,175,0.12); color: #f9e2af; border: 1px solid rgba(249,226,175,0.3); }
+    .exec-wait { background: rgba(108,112,134,0.15); color: #9399b2; border: 1px solid rgba(108,112,134,0.25); }
+    .ec-microcopy { font-size: 0.45rem; color: #45475a; text-align: center; font-style: italic; padding-top: 2px; }
 
     /* HUD UPGRADE (ZERO WASTE) */
     .terminal-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 16px; background: #0b0b15; border-bottom: 1px solid #1f1f3a; }
@@ -2545,6 +2601,87 @@ export class InstrumentCardComponent implements OnChanges {
     if (cls === 'go') return `🟢 GO — All conditions met. Score ${score}. Execute at entry zone.`;
     if (cls === 'caution') return `⚠️ CAUTION — Mixed signals. Reduce size 50%. Score ${score}.`;
     return `🔴 NO-GO — Conditions not met. Wait for alignment. Score ${score}.`;
+  }
+
+  // ── Execution Check Card ─────────────────────────────────────────────────────
+  getExecBiasStatus(): 'YES' | 'NO' | 'COUNTERTREND' {
+    const macro = this.analysis.monthly_trend?.direction;
+    const tactical = this.analysis.daily_strength?.signal;
+    const conflict = this.analysis.trade_signal?.signal_conflict;
+    if (conflict?.conflict_type && conflict.conflict_type !== 'none' && conflict.severity === 'high') return 'NO';
+    if (macro === tactical && (macro === 'bullish' || macro === 'bearish')) return 'YES';
+    if (macro !== tactical && (macro === 'bullish' || macro === 'bearish') && (tactical === 'bullish' || tactical === 'bearish')) return 'COUNTERTREND';
+    return 'NO';
+  }
+
+  getExecLocationStatus(): 'YES' | 'NO' {
+    const price = this.analysis.current_price;
+    if (this.analysis.liquidity_map) {
+      const allLevels = [
+        ...this.analysis.liquidity_map.resistance_levels,
+        ...this.analysis.liquidity_map.support_levels
+      ];
+      if (allLevels.some(l => l.distance_pct <= 0.8)) return 'YES';
+    }
+    if (this.analysis.technical_indicators?.pivot_points) {
+      const pp = this.analysis.technical_indicators.pivot_points;
+      const levels = [pp.s1, pp.s2, pp.r1, pp.r2, pp.pivot].filter(Boolean);
+      if (levels.some(l => Math.abs((l - price) / price * 100) <= 0.8)) return 'YES';
+    }
+    if (this.analysis.daily_strength?.vwap_dist_pct != null) {
+      if (Math.abs(this.analysis.daily_strength.vwap_dist_pct) <= 0.5) return 'YES';
+    }
+    return 'NO';
+  }
+
+  getExecTriggerStatus(): 'YES' | 'NO' {
+    if (this.isWaitAction()) return 'NO';
+    const conflict = this.analysis.trade_signal?.signal_conflict;
+    if (conflict?.conflict_type && conflict.conflict_type !== 'none' && conflict.severity === 'high') return 'NO';
+    const exec = this.analysis.trade_signal?.execution_state;
+    return exec === 'ready' ? 'YES' : 'NO';
+  }
+
+  getExecConfirmationStatus(): 'YES' | 'WEAK' | 'NO' {
+    const adx = this.analysis.daily_strength?.adx ?? 0;
+    const rsi = this.analysis.daily_strength?.rsi ?? 50;
+    const rec = this.analysis.trade_signal?.recommendation;
+    if (adx >= 30) {
+      if (rec === 'bullish' && rsi > 45 && rsi < 72) return 'YES';
+      if (rec === 'bearish' && rsi < 55 && rsi > 28) return 'YES';
+    }
+    if (adx >= 20) return 'WEAK';
+    return 'NO';
+  }
+
+  getExecRiskStatus(): 'YES' | 'NO' {
+    const vr = this.analysis.volatility_risk;
+    if (!vr?.stop_loss || !vr?.take_profit) return 'NO';
+    const rr = parseFloat(this.getRRRatio());
+    return rr >= 1.8 ? 'YES' : 'NO';
+  }
+
+  getExecPassCount(): number {
+    let count = 0;
+    if (this.getExecBiasStatus() === 'YES') count++;
+    if (this.getExecLocationStatus() === 'YES') count++;
+    if (this.getExecTriggerStatus() === 'YES') count++;
+    if (this.getExecConfirmationStatus() !== 'NO') count++;
+    if (this.getExecRiskStatus() === 'YES') count++;
+    return count;
+  }
+
+  getExecDecision(): { label: string; cssClass: string } {
+    const pass = this.getExecPassCount();
+    if (pass === 5) return { label: 'EXECUTE · FULL SIZE', cssClass: 'ec-decision exec-go' };
+    if (pass === 4) return { label: 'TACTICAL ONLY · 0.5× SIZE', cssClass: 'ec-decision exec-tactical' };
+    return { label: 'WAIT', cssClass: 'ec-decision exec-wait' };
+  }
+
+  getExecChipClass(status: string): string {
+    if (status === 'YES') return 'ec-chip ec-yes';
+    if (status === 'WEAK' || status === 'COUNTERTREND') return 'ec-chip ec-weak';
+    return 'ec-chip ec-no';
   }
 
 
