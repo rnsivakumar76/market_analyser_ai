@@ -16,8 +16,11 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
           <span class="legend-item neutral">● Neutral</span>
         </div>
       </div>
+
+      @if (getReadyInstruments().length > 0) {
+      <div class="wl-group-header wl-ready">⚡ SETUP READY <span class="wl-group-count">{{ getReadyInstruments().length }}</span></div>
       <div class="heatmap-grid">
-        @for (instrument of instruments; track instrument.symbol) {
+        @for (instrument of getReadyInstruments(); track instrument.symbol) {
           <div class="heat-cell"
                [class]="getCellClass(instrument)"
                [class.selected]="selectedSymbol === instrument.symbol"
@@ -32,6 +35,36 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
               </span>
               <span class="cell-phase">{{ instrument.market_phase.phase }}</span>
             </div>
+            <div class="cell-gate-badge" [class]="'gates-' + getGateCount(instrument)">{{ getGateCount(instrument) }}/5</div>
+            @if (instrument.trade_signal.trade_worthy) {
+              <div class="worthy-glow"></div>
+            }
+            @if (instrument.pullback_warning?.is_warning) {
+              <div class="cell-warning">⚠️</div>
+            }
+          </div>
+        }
+      </div>
+      }
+
+      <div class="wl-group-header wl-monitoring">👁 MONITORING <span class="wl-group-count">{{ getMonitoringInstruments().length }}</span></div>
+      <div class="heatmap-grid">
+        @for (instrument of getMonitoringInstruments(); track instrument.symbol) {
+          <div class="heat-cell"
+               [class]="getCellClass(instrument)"
+               [class.selected]="selectedSymbol === instrument.symbol"
+               [class.trade-worthy]="instrument.trade_signal.trade_worthy"
+               [title]="getCellTooltip(instrument)"
+               (click)="select.emit(instrument)">
+            <div class="cell-content">
+              <span class="cell-symbol">{{ instrument.symbol }}</span>
+              <span class="cell-score">{{ instrument.trade_signal.score > 0 ? '+' : '' }}{{ instrument.trade_signal.score }}</span>
+              <span class="cell-change" [class]="getChangeClass(instrument)">
+                {{ instrument.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ instrument.daily_strength.price_change_percent.toFixed(2) }}% · 1D
+              </span>
+              <span class="cell-phase">{{ instrument.market_phase.phase }}</span>
+            </div>
+            <div class="cell-gate-badge" [class]="'gates-' + getGateCount(instrument)">{{ getGateCount(instrument) }}/5</div>
             @if (instrument.trade_signal.trade_worthy) {
               <div class="worthy-glow"></div>
             }
@@ -224,6 +257,41 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       justify-content: center;
     }
 
+    .wl-group-header {
+      font-size: 0.48rem;
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      padding: 6px 4px 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .wl-ready { color: #a6e3a1; }
+    .wl-monitoring { color: #45475a; }
+    .wl-group-count {
+      background: rgba(108,112,134,0.15);
+      color: #6c7086;
+      border-radius: 8px;
+      padding: 1px 6px;
+      font-size: 0.48rem;
+    }
+
+    .cell-gate-badge {
+      position: absolute;
+      bottom: 5px;
+      right: 6px;
+      font-size: 0.48rem;
+      font-weight: 900;
+      padding: 1px 5px;
+      border-radius: 8px;
+      letter-spacing: 0.3px;
+    }
+    .gates-5 { background: rgba(166,227,161,0.2); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.35); }
+    .gates-4 { background: rgba(166,227,161,0.12); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.25); }
+    .gates-3 { background: rgba(249,226,175,0.12); color: #f9e2af; border: 1px solid rgba(249,226,175,0.25); }
+    .gates-2, .gates-1, .gates-0 { background: rgba(108,112,134,0.1); color: #45475a; border: 1px solid rgba(108,112,134,0.2); }
+
     @keyframes glow-pulse {
       0%, 100% { opacity: 0.5; }
       50% { opacity: 1; }
@@ -234,6 +302,24 @@ export class WatchlistHeatmapComponent {
     @Input({ required: true }) instruments!: InstrumentAnalysis[];
     @Input() selectedSymbol: string | null = null;
     @Output() select = new EventEmitter<InstrumentAnalysis>();
+
+    getGateCount(inst: InstrumentAnalysis): number {
+        let count = 0;
+        if (inst.monthly_trend.direction === inst.trade_signal.recommendation) count++;
+        if (inst.daily_strength.adx >= 25) count++;
+        if (inst.daily_strength.volume_ratio >= 1.0) count++;
+        if ((inst.pullback_warning?.warning_score ?? 0) <= 2) count++;
+        if (!inst.trade_signal.signal_conflict?.conflict_type || inst.trade_signal.signal_conflict.conflict_type === 'none') count++;
+        return count;
+    }
+
+    getReadyInstruments(): InstrumentAnalysis[] {
+        return this.instruments.filter(i => this.getGateCount(i) >= 3);
+    }
+
+    getMonitoringInstruments(): InstrumentAnalysis[] {
+        return this.instruments.filter(i => this.getGateCount(i) < 3);
+    }
 
     getCellClass(instrument: InstrumentAnalysis): string {
         const direction = instrument.trade_signal.recommendation;
