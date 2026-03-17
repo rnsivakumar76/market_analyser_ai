@@ -125,24 +125,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           </div>
           @if (drawerOpen['signal']) {
           <div class="acc-body">
-          <!-- MTF Context Row (replaces removed top banner) -->
-          <div class="drawer-mtf-row">
-            <div class="dmtf-item" [class]="'dmtf-' + analysis.monthly_trend.direction">
-              <div class="dmtf-tf">MACRO</div>
-              <div class="dmtf-dir">{{ analysis.monthly_trend.direction | uppercase }}</div>
-            </div>
-            <div class="dmtf-item" [class]="'dmtf-' + (analysis.weekly_pullback?.detected ? (analysis.weekly_pullback?.near_support ? 'neutral' : 'bearish') : 'bullish')">
-              <div class="dmtf-tf">STRUCTURE</div>
-              <div class="dmtf-dir">{{ analysis.weekly_pullback?.detected ? (analysis.weekly_pullback?.near_support ? 'PULLBACK/SUP' : 'PULLBACK') : 'INTACT' }}</div>
-            </div>
-            <div class="dmtf-item" [class]="'dmtf-' + analysis.daily_strength.signal">
-              <div class="dmtf-tf">TACTICAL</div>
-              <div class="dmtf-dir">{{ analysis.daily_strength.signal | uppercase }}</div>
-            </div>
-            <div class="dmtf-item" [class]="'dmtf-' + analysis.trade_signal.recommendation">
-              <div class="dmtf-tf">SIGNAL</div>
-              <div class="dmtf-dir">{{ analysis.trade_signal.recommendation | uppercase }}</div>
-            </div>
+          <!-- MTF Alignment (full component) -->
+          <div class="drawer-mtf-full">
+            <app-multi-timeframe-overlay [analysis]="analysis"></app-multi-timeframe-overlay>
           </div>
           <section class="t-tile intel-tile tab-content-tile">
             <div class="intel-column-stack">
@@ -1078,12 +1063,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .acc-arrow.open { transform: rotate(90deg); }
     .acc-body { background: #0b0b15; }
 
-    /* MTF Context Row inside Signal drawer */
-    .drawer-mtf-row { display: flex; gap: 6px; padding: 10px 16px 6px; border-bottom: 1px solid #1f1f3a; overflow-x: auto; }
-    .drawer-mtf-row::-webkit-scrollbar { height: 0; }
-    .dmtf-item { flex: 1; min-width: 56px; background: #11111b; border-radius: 5px; padding: 6px 8px; text-align: center; border: 1px solid #1f1f3a; }
-    .dmtf-tf { font-size: 0.38rem; color: #45475a; font-weight: 900; letter-spacing: 0.5px; margin-bottom: 2px; }
-    .dmtf-dir { font-size: 0.55rem; font-weight: 950; }
+    /* MTF Full Component inside Signal drawer */
+    .drawer-mtf-full { padding: 10px 14px 6px; border-bottom: 1px solid #1f1f3a; }
     .dmtf-bullish .dmtf-dir { color: #a6e3a1; }
     .dmtf-bearish .dmtf-dir { color: #f38ba8; }
     .dmtf-neutral .dmtf-dir, .dmtf-neutral .dmtf-dir { color: #9399b2; }
