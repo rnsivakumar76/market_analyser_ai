@@ -210,7 +210,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 </div>
 
                 <div class="scaling-zone">
-                    <div class="sz-header">⚖️ FIXED SCALING ENTRIES (50 / 30 / 20)</div>
+                    <div class="sz-header">📊 PROFIT TARGETS (T1 / T2 / T3)</div>
                     <div class="sz-grid">
                         @for (step of getScalingStrategy(); track step.stage) {
                           <div class="sz-item" [class.sz-item--hit]="isTargetHit(step.target)" [class.sz-item--next]="isNextTarget(step.target)">
@@ -240,12 +240,12 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                 <div class="mmr-grid">
                   <div class="mmr-item">
                     <span class="mmr-lbl">ADX</span>
-                    <strong class="mmr-val">{{ analysis.daily_strength.adx.toFixed(0) }}</strong>
+                    <strong class="mmr-val">{{ analysis.daily_strength.adx.toFixed(1) }}</strong>
                     <span class="mmr-interp" [class]="getADXClass()">{{ getADXInterpretation() }}</span>
                   </div>
                   <div class="mmr-item">
                     <span class="mmr-lbl">RSI</span>
-                    <strong class="mmr-val">{{ analysis.daily_strength.rsi.toFixed(0) }}</strong>
+                    <strong class="mmr-val">{{ analysis.daily_strength.rsi.toFixed(1) }}</strong>
                     <span class="mmr-interp" [class]="getRSIClass()">{{ getRSIInterpretation() }}</span>
                   </div>
                   <div class="mmr-item">
@@ -255,7 +255,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                   <div class="mmr-item">
                     <span class="mmr-lbl">VWAP DIST</span>
-                    <strong class="mmr-val" [class]="getVWAPClass()">{{ analysis.daily_strength.vwap_dist_pct != null ? (analysis.daily_strength.vwap_dist_pct.toFixed(2) + '%') : 'N/A' }}</strong>
+                    <strong class="mmr-val" [class]="getVWAPClass()">{{ getVwapDistDisplay() }}</strong>
                     <span class="mmr-interp" [class]="getVWAPClass()">{{ getVWAPDistLabel() }}</span>
                   </div>
                 </div>
@@ -454,7 +454,12 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   </div>
                   @if (blowoff.trigger_level != null || blowoff.invalidation_level != null) {
                   <div class="cm-interpretation">
-                    Trigger: {{ blowoff.trigger_level != null ? ('$' + blowoff.trigger_level.toFixed(2)) : 'N/A' }} ·
+                    @if (blowoff.trigger_level != null) {
+                      Trigger: \${{ blowoff.trigger_level.toFixed(2) }}
+                      <span class="blowoff-trigger-ctx" [class]="blowoff.trigger_level < analysis.current_price ? 'bearish' : 'bullish'">
+                        {{ blowoff.trigger_level < analysis.current_price ? '(breakdown trigger — fires if price falls below this level)' : '(breakout trigger — fires if price closes above this level)' }}
+                      </span> ·
+                    }
                     Invalidation: {{ blowoff.invalidation_level != null ? ('$' + blowoff.invalidation_level.toFixed(2)) : 'N/A' }}
                   </div>
                   }
@@ -525,7 +530,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <div class="tile-header">🌐 MACRO REGIME</div>
               <div class="macro-mini">
                 <div class="mm-item"><span>Phase</span><strong [class]="getPhaseClass()">{{ analysis.market_phase.phase | uppercase }}</strong></div>
-                <div class="mm-item"><span>Score</span><strong>{{ analysis.market_phase.score }}</strong></div>
+                <div class="mm-item"><span>Slope Index</span><strong>{{ analysis.market_phase.score > 0 ? '+' : '' }}{{ analysis.market_phase.score }}</strong></div>
               </div>
               <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
             </div>
@@ -2023,8 +2028,9 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   getPullbackAction(): string {
-    if (!this.analysis.pullback_warning?.is_warning) return 'HOLD POSITION';
-    return 'WAIT FOR ENTRY';
+    if (this.analysis.pullback_warning?.is_warning) return 'WAIT FOR ENTRY';
+    const triggered = this.getExecTriggerStatus() === 'YES';
+    return triggered ? 'HOLD POSITION' : 'MONITOR';
   }
 
   // ── Technical Heat Analysis Methods ───────────────────────────────────────────
@@ -2074,26 +2080,34 @@ export class InstrumentCardComponent implements OnChanges {
 
   // ── Enhanced Risk Intelligence Methods ───────────────────────────────────────────
   getVolatilityLevel(): string {
-    const atr = this.analysis.volatility_risk?.atr;
-    if (!atr) return 'UNKNOWN';
-    if (atr > this.analysis.current_price * 0.05) return 'HIGH';
-    if (atr > this.analysis.current_price * 0.03) return 'MODERATE';
+    const rank = this.analysis.volatility_risk?.atr_percentile_rank;
+    if (rank == null) return 'UNKNOWN';
+    if (rank > 80) return 'EXTREME';
+    if (rank > 60) return 'ELEVATED';
+    if (rank > 25) return 'NORMAL';
     return 'LOW';
   }
 
   getVolatilityCheck(): string {
-    const level = this.getVolatilityLevel().toLowerCase();
-    return level === 'high' ? 'fail' : level === 'moderate' ? 'warn' : 'pass';
+    const level = this.getVolatilityLevel();
+    return level === 'EXTREME' ? 'fail' : (level === 'ELEVATED' ? 'warn' : 'pass');
   }
 
   getVolatilityCorrelation(): string {
     const level = this.getVolatilityLevel();
-    return `Volatility ${level.toLowerCase()} affects position sizing and risk management`;
+    if (level === 'EXTREME') return 'Extreme volatility (ATR 80th+ %ile) — widen stops and reduce position size 30–50%.';
+    if (level === 'ELEVATED') return 'Elevated volatility — apply wider stops. Monitor for slippage on entries.';
+    if (level === 'NORMAL') return 'Normal volatility conditions. Standard position sizing applies.';
+    return 'Low volatility — tight ranges expected. Use tighter stops and smaller targets.';
   }
 
   getVolumeStatus(): string {
-    // This would need volume data from the analysis
-    return 'ANALYZING'; // Placeholder
+    const vol = this.analysis.daily_strength?.volume_ratio;
+    if (vol == null) return 'ANALYZING';
+    if (vol >= 2.0) return 'STRONG';
+    if (vol >= 1.0) return 'AVERAGE';
+    if (vol >= 0.5) return 'BELOW AVG';
+    return 'LOW';
   }
 
   getLevelStatus(): string {
@@ -2132,8 +2146,14 @@ export class InstrumentCardComponent implements OnChanges {
     return 'pass';
   }
 
+  getVwapDistDisplay(): string {
+    const v = this.analysis.daily_strength.vwap_dist_pct ?? this.analysis.session_vwap?.distance_pct;
+    if (v == null) return 'N/A';
+    return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+  }
+
   getVWAPDistLabel(): string {
-    const dist = this.analysis.daily_strength.vwap_dist_pct;
+    const dist = this.analysis.daily_strength.vwap_dist_pct ?? this.analysis.session_vwap?.distance_pct;
     if (dist === undefined || dist === null) return 'N/A';
     if (dist > 1.5) return 'Extended Above';
     if (dist < -1.5) return 'Extended Below';
@@ -2240,7 +2260,7 @@ export class InstrumentCardComponent implements OnChanges {
     }
     if (price > s1) {
       if (signal === 'bullish') {
-        return `Price below Pivot ($${pivot.toFixed(2)}) — wait for reclaim before going long. A Pivot break above would target R1 ($${r1.toFixed(2)}). S1 ($${s1.toFixed(2)}) is your downside risk.`;
+        return `Price below Pivot ($${pivot.toFixed(2)}) with bullish bias. S1 ($${s1.toFixed(2)}) is key support — a bounce here is a valid long entry with confirmation. Reclaiming Pivot adds full conviction; stop below S1.`;
       }
       return `Bearish bias below Pivot ($${pivot.toFixed(2)}). S1 ($${s1.toFixed(2)}) is current support. A break below S1 opens S2 ($${s2.toFixed(2)}) as next target.`;
     }
@@ -2389,9 +2409,10 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   getBearTargetText(): string {
+    const s3 = this.analysis.technical_indicators?.pivot_points?.s3;
     const s2 = this.analysis.technical_indicators?.pivot_points?.s2;
     const stop = this.analysis.volatility_risk?.stop_loss;
-    return this.formatPrice(s2 ?? stop ?? null);
+    return this.formatPrice(s3 ?? s2 ?? stop ?? null);
   }
 
   getBearInvalidationText(): string {
@@ -2610,9 +2631,10 @@ export class InstrumentCardComponent implements OnChanges {
 
   getMomentumCorrelation(): string {
     const adx = this.analysis.daily_strength.adx;
-    if (adx >= 35) return 'Ultra-Strong Trend: Momentum is locked - do not fight this move.';
+    if (adx >= 50) return 'Ultra-Strong Trend: Momentum is locked — do not fight this move.';
+    if (adx >= 35) return 'Strong Trend: Directional move is confirmed — trade with the trend, not against it.';
     if (adx >= 25) return 'Established Momentum: Trend is healthy and gaining traction.';
-    if (adx >= 15) return 'Weak Momentum: Price is ranging - expect chop and fakeouts.';
+    if (adx >= 15) return 'Weak Momentum: Price is ranging — expect chop and fakeouts.';
     return 'Dead State: Trendless market. Low probability area.';
   }
 

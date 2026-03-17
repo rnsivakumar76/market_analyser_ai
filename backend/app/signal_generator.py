@@ -339,10 +339,18 @@ def generate_trade_signal(
                 s1_str = f"${pivots.s1:.2f}" if pivots.s1 else "N/A"
                 r1_str = f"${pivots.r1:.2f}" if pivots.r1 else "N/A"
                 fib_str = f"${fibs.ret_382:.2f}" if fibs.ret_382 else "N/A"
-                action_plan_details = (
-                    f"Trigger: close above R1 ({r1_str}) for momentum entry, OR buy pullback near S1 ({s1_str}) / Fib 38.2% ({fib_str}) "
-                    f"with bullish confirmation candle."
-                )
+                # Fib 38.2% and S1 are often at different prices — present them as separate entries
+                if fibs.ret_382 and pivots.s1 and abs(fibs.ret_382 - pivots.s1) / pivots.s1 > 0.005:
+                    action_plan_details = (
+                        f"Trigger A (momentum): close above R1 ({r1_str}) with confirmation. "
+                        f"Trigger B (pullback to S1): buy bounce near {s1_str} with bullish candle. "
+                        f"Trigger C (Fib pullback): buy near Fib 38.2% ({fib_str}) — note this is a separate level from S1."
+                    )
+                else:
+                    action_plan_details = (
+                        f"Trigger A (momentum): close above R1 ({r1_str}) for momentum entry. "
+                        f"Trigger B (pullback): buy bounce near S1 ({s1_str}) / Fib 38.2% ({fib_str}) with bullish confirmation candle."
+                    )
                 scaling_plan = "Awaiting entry confirmation before finalizing exit stages."
                 pyramiding_plan = "Do not pyramid until initial position is firmly in profit."
         elif recommendation == Signal.BEARISH:
@@ -377,10 +385,20 @@ def generate_trade_signal(
             action_plan = "Two-Sided Conditional Plan"
             r1_str = f"${pivots.r1:.2f}" if pivots.r1 else "N/A"
             s1_str = f"${pivots.s1:.2f}" if pivots.s1 else "N/A"
-            action_plan_details = (
-                f"Long trigger: close above R1 ({r1_str}). Short trigger: close below S1 ({s1_str}). "
-                "Until then, keep size light and wait for structure confirmation."
-            )
+            # Guard: only use pivot triggers when they straddle current price
+            r1_valid = pivots.r1 and current_price and pivots.r1 > current_price
+            s1_valid = pivots.s1 and current_price and pivots.s1 < current_price
+            if r1_valid and s1_valid:
+                action_plan_details = (
+                    f"Long trigger: close above R1 ({r1_str}). Short trigger: close below S1 ({s1_str}). "
+                    "Until then, keep size light and wait for structure confirmation."
+                )
+            else:
+                pivot_str = f"${pivots.pivot:.2f}" if pivots.pivot else "N/A"
+                action_plan_details = (
+                    f"Price is near key pivot zone ({pivot_str}). Wait for a confirmed directional break "
+                    "before committing to a side. Keep size minimal until structure confirms."
+                )
             psychological_guard = "Patience is a position. Awaiting clear structural setup."
             pyramiding_plan = "N/A"
             scaling_plan = "N/A - Sideways Market"

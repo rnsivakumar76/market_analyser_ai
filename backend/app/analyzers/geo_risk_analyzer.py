@@ -162,9 +162,13 @@ def _indicator_checks(
         status, desc = 'neutral', (
             f"Volume {volume_ratio:.1f}x avg — above-normal interest, watching for surge"
         )
+    elif volume_ratio >= 0.8:
+        status, desc = 'neutral', (
+            f"Volume {volume_ratio:.1f}x avg — normal participation, geo risk not yet moving the needle"
+        )
     else:
         status, desc = 'diverging', (
-            f"Volume {volume_ratio:.1f}x avg — low conviction, geo risk not driving flows yet"
+            f"Volume {volume_ratio:.1f}x avg — below-average conviction, geo risk not driving flows"
         )
     checks.append(GeoIndicatorCheck(name='Volume Ratio', value=round(volume_ratio, 2),
                                     status=status, description=desc))

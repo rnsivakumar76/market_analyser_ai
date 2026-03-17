@@ -336,11 +336,11 @@ export class MultiTimeframeOverlayComponent {
       },
       {
         label: `TACTICAL MOMENTUM (${isLongTerm ? 'DAILY' : '1-HOUR'})`,
-        direction: a.daily_strength.signal,
+        direction: (['bullish', 'bearish', 'neutral'].includes(a.daily_strength.signal) ? a.daily_strength.signal : 'neutral'),
         score: 0,
-        phase: a.candle_patterns.pattern !== 'none' ? a.candle_patterns.pattern : 'Execution',
+        phase: (a.candle_patterns.pattern && a.candle_patterns.pattern !== 'none') ? a.candle_patterns.pattern.replace(/_/g, ' ') : 'Execution',
         pullback: false,
-        strength: a.daily_strength.signal
+        strength: (['bullish', 'bearish', 'neutral'].includes(a.daily_strength.signal) ? a.daily_strength.signal : 'neutral')
       }
     ];
   }
