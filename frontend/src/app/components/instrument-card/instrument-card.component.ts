@@ -405,7 +405,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                      <div class="ch-correlation">{{ getTrendCorrelation() }}</div>
                   </div>
                   <div class="ch-item" [class]="getMomentumCheck()">
-                     <div class="ch-left-data"><span class="ch-i">Momentum (ADX)</span><span class="ch-v">{{ analysis.daily_strength.adx.toFixed(0) }}</span></div>
+                     <div class="ch-left-data"><span class="ch-i">Momentum (ADX)</span><span class="ch-v">{{ analysis.daily_strength.adx.toFixed(1) }}</span></div>
                      <div class="ch-correlation">{{ getMomentumCorrelation() }}</div>
                   </div>
                   <div class="ch-item" [class]="getVolatilityCheck()">
