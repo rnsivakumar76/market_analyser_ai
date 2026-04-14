@@ -230,7 +230,7 @@ def generate_trade_signal(
     effective_threshold = _apply_aggressiveness_to_threshold(aggressiveness_mode, effective_threshold)
     if effective_threshold != threshold:
         reasons.append(
-            f"Adaptive conviction threshold active: {effective_threshold} (base {threshold}, mode={aggressiveness_mode}, ADX={adx_value:.1f})"
+            f"Adaptive conviction threshold active: {effective_threshold} (base {threshold}, mode={aggressiveness_mode}, ADXY={adx_value:.1f})"
         )
 
     recommendation_str, trade_worthy = classify_recommendation(score, effective_threshold)
@@ -259,7 +259,7 @@ def generate_trade_signal(
 
     # ADX pass-through reason (when ADX is above threshold, add as a reason)
     if adx_value is not None and adx_value > adx_threshold:
-        reasons.append(f"Trend strength high (ADX={adx_value:.1f})")
+        reasons.append(f"Trend strength high (ADXY={adx_value:.1f})")
 
     # ── Domain layer: all hard filters ───────────────────────────────────────
     is_outperforming = relative_strength.is_outperforming if relative_strength else None
@@ -282,7 +282,7 @@ def generate_trade_signal(
     # ADX hard-filter blocked case: when adx_value is low and it DID block, add a fallback reason
     if not trade_worthy and adx_value is not None and adx_value <= adx_threshold:
         if not any("ADX" in r for r in reasons):
-            reasons.append(f"Filter: Trend strength (ADX={adx_value:.1f}) too low. Threshold: {adx_threshold}")
+            reasons.append(f"Filter: Trend strength (ADXY={adx_value:.1f}) too low. Threshold: {adx_threshold}")
 
     # Candle confirmation reason (when candle was fine, add it)
     if candle.is_bullish is not None and not any("Trigger Filter" in r for r in reasons):

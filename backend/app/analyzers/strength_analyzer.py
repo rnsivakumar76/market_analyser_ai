@@ -5,7 +5,7 @@ from ..models import StrengthAnalysis, Signal
 from domain.indicators.rsi import calculate_rsi as _domain_rsi
 from domain.indicators.adx import calculate_adx as _domain_adx
 from domain.indicators.vwap import calculate_vwap as _domain_vwap, calculate_vwap_distance_pct
-from domain.constants import INDICATOR_RSI_PERIOD, INDICATOR_ADX_PERIOD, INDICATOR_VWAP_PERIOD, INDICATOR_RSI_BULLISH_THRESHOLD, INDICATOR_RSI_BEARISH_THRESHOLD
+from domain.constants import INDICATOR_RSI_PERIOD, INDICATOR_ADXY_PERIOD, INDICATOR_VWAP_PERIOD, INDICATOR_RSI_BULLISH_THRESHOLD, INDICATOR_RSI_BEARISH_THRESHOLD
 
 
 def calculate_rsi(prices: pd.Series, period: int = INDICATOR_RSI_PERIOD) -> float:
@@ -52,10 +52,10 @@ def calculate_vwap(data: pd.DataFrame, period: int = INDICATOR_VWAP_PERIOD) -> t
     return vwap, dist_pct
 
 
-def calculate_adx(data: pd.DataFrame, period: int = INDICATOR_ADX_PERIOD) -> float:
+def calculate_adx(data: pd.DataFrame, period: int = INDICATOR_ADXY_PERIOD) -> float:
     """
-    Calculate Average Directional Index (ADX). Delegates to domain layer.
-    ADX > 25 = Strong trend,  ADX < 20 = Weak trend / Sideways
+    Calculate Average Directional Index (ADXY). Delegates to domain layer.
+    ADXY > 25 = Strong trend,  ADXY < 20 = Weak trend / Sideways
     """
     return _domain_adx(
         data['High'].tolist(),

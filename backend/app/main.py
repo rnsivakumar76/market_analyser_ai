@@ -44,7 +44,7 @@ def _fetch_via_yfinance(ticker: str, days: int = 30):
 
     TwelveData free-tier consistently rejects DXY and TNX symbols.
     yfinance requires no API key and provides:
-      - DX=F  → US Dollar Index (continuous futures, closely tracks spot DXY)
+      - DXY  → US Dollar Index (spot index)
       - ^TNX  → CBOE 10-Year Treasury Yield (value = yield × 10, e.g. 42.5 = 4.25%)
     """
     try:
@@ -327,7 +327,7 @@ def analyze_instrument_lazy(
         if dxy_df is not None and not dxy_df.empty:
             bench_data = dxy_df
         else:
-            bench_data = fetch_historical_data("DX=F", days=60, interval="1day")
+            bench_data = fetch_historical_data("DXY", days=60, interval="1day")
     elif _is_crypto_rs:
         bench_sym = "BTC"
         bench_data = benchmark_data_df if benchmark_data_df is not None else fetch_historical_data(
@@ -562,7 +562,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         # the TwelveData batch above.  If yfinance is unavailable or returns empty
         # data, intermarket analysis degrades gracefully to None.
         with ThreadPoolExecutor(max_workers=2) as _yfin_pool:
-            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DX=F",  60)
+            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DXY",  60)
             _f_us10y = _yfin_pool.submit(_fetch_via_yfinance, "^TNX",  60)
             _dxy_df   = _f_dxy.result()
             _us10y_df = _f_us10y.result()
@@ -720,6 +720,51 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                                     SENT_ALERTS.add(expert_key)
                 else:
                     logger.warning(f"Analysis produced no result for {sym}")
+                    # Create fallback analysis for failed instruments so they still appear in monitoring
+                    from .models import InstrumentAnalysis, Signal, TradeSignal
+                    
+                    # Find the original instrument config
+                    original_inst = next((inst for inst in instruments if inst['symbol'].upper() == sym), None)
+                    if original_inst:
+                        fallback_analysis = InstrumentAnalysis(
+                            symbol=sym,
+                            name=original_inst.get('name', sym),
+                            current_price=0.0,
+                            analysis_date=date.today(),
+                            last_updated=datetime.now(timezone.utc).isoformat(),
+                            monthly_trend=None,  # Will show as "No data"
+                            weekly_pullback=None,
+                            daily_strength=None,
+                            market_phase=None,
+                            volatility_risk=None,
+                            fundamentals=None,
+                            backtest_results=None,
+                            candle_patterns=None,
+                            benchmark_direction=Signal.NEUTRAL,
+                            trade_signal=TradeSignal(
+                                score=0,
+                                recommendation='neutral',
+                                confidence=0.0,
+                                reasons=['Analysis failed - data unavailable'],
+                                trade_worthy=False,
+                                signal_conflict=None
+                            ),
+                            technical_indicators=None,
+                            news_sentiment=None,
+                            relative_strength=None,
+                            expert_trade_plan=None,
+                            strategy_mode=mode,
+                            intermarket_context=None,
+                            session_context=None,
+                            volume_profile=None,
+                            session_vwap=None,
+                            liquidity_map=None,
+                            block_flow=None,
+                            geopolitical_risk=None,
+                            blowoff_top=None,
+                        )
+                        results.append(fallback_analysis)
+                        logger.info(f"Created fallback analysis for failed instrument {sym}")
     except Exception as e:
         logger.error(f"Parallel analysis loop failed: {e}")
         # Continue with whatever results we have (possibly empty)

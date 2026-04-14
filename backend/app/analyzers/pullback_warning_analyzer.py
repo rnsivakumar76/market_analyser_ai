@@ -61,13 +61,19 @@ def analyze_pullback_warning(df: pd.DataFrame, trend_direction: Signal) -> Pullb
     if trend_direction == Signal.BULLISH:
         prev_data = df.iloc[-lookback-1:-1]
         recent_high_idx = prev_data['High'].idxmax()
-        if high.iloc[-1] > high.loc[recent_high_idx] and rsi.iloc[-1] < rsi.loc[recent_high_idx]:
+        # Use .item() to get scalar values and avoid Series ambiguity
+        recent_high_price = high.loc[recent_high_idx].item() if hasattr(high.loc[recent_high_idx], 'item') else high.loc[recent_high_idx]
+        recent_high_rsi = rsi.loc[recent_high_idx].item() if hasattr(rsi.loc[recent_high_idx], 'item') else rsi.loc[recent_high_idx]
+        if high.iloc[-1] > recent_high_price and rsi.iloc[-1] < recent_high_rsi:
             score += WARNING_RSI_DIVERGENCE_WEIGHT
             reasons.append("Bearish RSI Divergence: Price making new highs but RSI showing exhaustion")
     elif trend_direction == Signal.BEARISH:
         prev_data = df.iloc[-lookback-1:-1]
         recent_low_idx = prev_data['Low'].idxmin()
-        if low.iloc[-1] < low.loc[recent_low_idx] and rsi.iloc[-1] > rsi.loc[recent_low_idx]:
+        # Use .item() to get scalar values and avoid Series ambiguity
+        recent_low_price = low.loc[recent_low_idx].item() if hasattr(low.loc[recent_low_idx], 'item') else low.loc[recent_low_idx]
+        recent_low_rsi = rsi.loc[recent_low_idx].item() if hasattr(rsi.loc[recent_low_idx], 'item') else rsi.loc[recent_low_idx]
+        if low.iloc[-1] < recent_low_price and rsi.iloc[-1] > recent_low_rsi:
             score += WARNING_RSI_DIVERGENCE_WEIGHT
             reasons.append("Bullish RSI Divergence: Price making new lows but RSI showing exhaustion")
 

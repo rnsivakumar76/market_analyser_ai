@@ -31,9 +31,9 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
               <span class="cell-symbol">{{ instrument.symbol }}</span>
               <span class="cell-score">{{ instrument.trade_signal.score > 0 ? '+' : '' }}{{ instrument.trade_signal.score }}</span>
               <span class="cell-change" [class]="getChangeClass(instrument)">
-                {{ instrument.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ instrument.daily_strength.price_change_percent.toFixed(2) }}% · 1D
+                {{ instrument.daily_strength?.price_change_percent > 0 ? '+' : '' }}{{ (instrument.daily_strength?.price_change_percent ?? 0).toFixed(2) }}% · 1D
               </span>
-              <span class="cell-phase">{{ instrument.market_phase.phase }}</span>
+              <span class="cell-phase">{{ instrument.market_phase?.phase || 'No Data' }}</span>
             </div>
             <div class="cell-gate-badge" [class]="'gates-' + getGateCount(instrument)">{{ getGateCount(instrument) }}/5</div>
             @if (instrument.trade_signal.trade_worthy) {
@@ -60,9 +60,9 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
               <span class="cell-symbol">{{ instrument.symbol }}</span>
               <span class="cell-score">{{ instrument.trade_signal.score > 0 ? '+' : '' }}{{ instrument.trade_signal.score }}</span>
               <span class="cell-change" [class]="getChangeClass(instrument)">
-                {{ instrument.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ instrument.daily_strength.price_change_percent.toFixed(2) }}% · 1D
+                {{ instrument.daily_strength?.price_change_percent > 0 ? '+' : '' }}{{ (instrument.daily_strength?.price_change_percent ?? 0).toFixed(2) }}% · 1D
               </span>
-              <span class="cell-phase">{{ instrument.market_phase.phase }}</span>
+              <span class="cell-phase">{{ instrument.market_phase?.phase || 'No Data' }}</span>
             </div>
             <div class="cell-gate-badge" [class]="'gates-' + getGateCount(instrument)">{{ getGateCount(instrument) }}/5</div>
             @if (instrument.trade_signal.trade_worthy) {
@@ -305,9 +305,10 @@ export class WatchlistHeatmapComponent {
 
     getGateCount(inst: InstrumentAnalysis): number {
         let count = 0;
-        if (inst.monthly_trend.direction === inst.trade_signal.recommendation) count++;
-        if (inst.daily_strength.adx >= 25) count++;
-        if (inst.daily_strength.volume_ratio >= 1.0) count++;
+        // Handle failed analyses where some fields might be null
+        if (inst.monthly_trend && inst.trade_signal && inst.monthly_trend.direction === inst.trade_signal.recommendation) count++;
+        if (inst.daily_strength && inst.daily_strength.adx >= 25) count++;
+        if (inst.daily_strength && inst.daily_strength.volume_ratio >= 1.0) count++;
         if ((inst.pullback_warning?.warning_score ?? 0) <= 2) count++;
         if (!inst.trade_signal.signal_conflict?.conflict_type || inst.trade_signal.signal_conflict.conflict_type === 'none') count++;
         return count;
@@ -337,7 +338,7 @@ export class WatchlistHeatmapComponent {
     }
 
     getChangeClass(instrument: InstrumentAnalysis): string {
-        const change = instrument.daily_strength.price_change_percent;
+        const change = instrument.daily_strength?.price_change_percent ?? 0;
         if (change > 0) return 'positive';
         if (change < 0) return 'negative';
         return 'neutral';
@@ -345,6 +346,8 @@ export class WatchlistHeatmapComponent {
 
     getCellTooltip(instrument: InstrumentAnalysis): string {
         const s = instrument.trade_signal;
-        return `${instrument.name}\nScore: ${s.score} | ${s.recommendation.toUpperCase()}\n1D: ${instrument.daily_strength.price_change_percent > 0 ? '+' : ''}${instrument.daily_strength.price_change_percent.toFixed(2)}%\n${instrument.market_phase.phase} → $${instrument.current_price}`;
+        const priceChange = instrument.daily_strength?.price_change_percent ?? 0;
+        const phase = instrument.market_phase?.phase || 'No Data';
+        return `${instrument.name}\nScore: ${s.score} | ${s.recommendation.toUpperCase()}\n1D: ${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%\n${phase} -> $${instrument.current_price}`;
     }
 }
