@@ -30,6 +30,7 @@ export class App implements OnInit, OnDestroy {
   public authService = inject(AuthService);
   public themeService = inject(ThemeService);
   private analysisSub?: Subscription;
+  private signalPollSub?: Subscription;
 
   instruments = signal<InstrumentAnalysis[]>([]);
   loading = signal(false);
@@ -123,6 +124,7 @@ export class App implements OnInit, OnDestroy {
     this.countdownSubscription?.unsubscribe();
     this.analysisSub?.unsubscribe();
     this.ageTickerSub?.unsubscribe();
+    this.signalPollSub?.unsubscribe();
   }
 
   private startAutoRefresh() {
@@ -591,7 +593,7 @@ export class App implements OnInit, OnDestroy {
       error: () => {}  // silent — signals are optional
     });
     // Refresh signals every 15 min to stay in sync with the backend scan cycle
-    interval(15 * 60 * 1000).subscribe(() => {
+    this.signalPollSub = interval(15 * 60 * 1000).subscribe(() => {
       this.analyzerService.getSignals(undefined, 50).subscribe({
         next: (resp) => this.signals.set(resp.signals || []),
         error: () => {}
