@@ -275,3 +275,94 @@
         opacity: 1;
     }
 }
+
+// Architecture diagram styling
+.arch-diagram {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 0.85rem;
+}
+
+.arch-title {
+    font-weight: 700;
+    color: #818cf8;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.arch-source-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.arch-source {
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #cbd5e1;
+    font-size: 0.8rem;
+}
+
+.arch-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.arch-item {
+    padding: 6px 10px;
+    background: rgba(99, 102, 241, 0.05);
+    border-left: 3px solid #6366f1;
+    border-radius: 4px;
+    color: #e2e8f0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.arch-arrow {
+    text-align: center;
+    color: #64748b;
+    font-size: 1.2rem;
+    font-weight: 300;
+}
+
+.arch-ui-box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.arch-ui-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+}
+
+.arch-ui-item {
+    min-width: 140px;
+    font-weight: 600;
+    color: #a5b4fc;
+    font-size: 0.8rem;
+}
+
+.arch-ui-uses {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}

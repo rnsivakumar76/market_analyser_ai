@@ -131,6 +131,138 @@ export class UserManualComponent {
       `
     },
     {
+      id: 'architecture',
+      title: 'Analysis Architecture Map',
+      icon: '🗺️',
+      content: `
+        <div class="arch-diagram">
+          <div class="arch-title">DATA SOURCES</div>
+          <div class="arch-source-box">
+            <div class="arch-source">TwelveData API</div>
+            <div class="arch-source">yfinance (Free)</div>
+            <div class="arch-source">NewsAPI</div>
+            <div class="arch-source">EIA API</div>
+            <div class="arch-source">Economic Calendar</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">CORE TREND ANALYSIS (4 analyzers)</div>
+          <div class="arch-box">
+            <div class="arch-item">trend_analyzer.py → Monthly Trend (20MA/50MA crossovers)</div>
+            <div class="arch-item">pullback_analyzer.py → Weekly Pullbacks (Fib retracements)</div>
+            <div class="arch-item">phase_analyzer.py → Market Phase (Accumulation/Markup/Distribution/Markdown)</div>
+            <div class="arch-item">strength_analyzer.py → Daily Strength (ADX, RSI, Volume Ratio)</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">VOLATILITY & RISK (3 analyzers)</div>
+          <div class="arch-box">
+            <div class="arch-item">volatility_analyzer.py → ATR, Volatility Regime, ATR Percentile Rank</div>
+            <div class="arch-item">position_sizer.py → Position Sizing (ATR-based)</div>
+            <div class="arch-item">pullback_warning_analyzer.py → Exhaustion Detection (0-8 score)</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">TECHNICAL INDICATORS (2 analyzers)</div>
+          <div class="arch-box">
+            <div class="arch-item">technical_analyzer.py → MACD, Bollinger, Pivots, Fibonacci</div>
+            <div class="arch-item">candle_analyzer.py → Candlestick Patterns (Engulfing, Hammer, Doji)</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">INSTITUTIONAL ALPHA (5 analyzers)</div>
+          <div class="arch-box">
+            <div class="arch-item">volume_profile_analyzer.py → POC, VAH, VAL (50 buckets LT, 20 ST)</div>
+            <div class="arch-item">session_vwap_analyzer.py → Session VWAP (Asia/London/NY)</div>
+            <div class="arch-item">liquidity_map_analyzer.py → Swing Highs/Lows, Round Numbers</div>
+            <div class="arch-item">block_flow_analyzer.py → Large Volume Bars (2.5× avg, >0.4 ATR body)</div>
+            <div class="arch-item">blowoff_top_analyzer.py → Parabolic Move Detection</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">MACRO & CONTEXT (6 analyzers)</div>
+          <div class="arch-box">
+            <div class="arch-item">intermarket_analyzer.py → DXY, US10Y, Gold Implication</div>
+            <div class="arch-item">session_context → Trading Session Context</div>
+            <div class="arch-item">fundamentals_analyzer.py → Economic Calendar, Pre-Event Triggers</div>
+            <div class="arch-item">news_analyzer.py → News Sentiment Analysis</div>
+            <div class="arch-item">geo_risk_analyzer.py → Geopolitical Risk Assessment</div>
+            <div class="arch-item">oil_market_analyzer.py → WTI: OVX, EIA Inventory, OPEC Calendar</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">RELATIVE STRENGTH & CORRELATION (2 analyzers)</div>
+          <div class="arch-box">
+            <div class="arch-item">relative_strength_analyzer.py → Alpha vs Benchmark (SPX/BTC/DXY)</div>
+            <div class="arch-item">correlation_analyzer.py → Correlation Matrix (DXY/SPX/BTC)</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">PERFORMANCE & BACKTEST (2 analyzers)</div>
+          <div class="arch-box">
+            <div class="arch-item">backtest_engine.py → Sharpe, Expectancy, Max Drawdown, MAE, Win Rate</div>
+            <div class="arch-item">performance_analyzer.py → Weekly Performance Summary</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">SIGNAL GENERATION (2 analyzers)</div>
+          <div class="arch-box">
+            <div class="arch-item">intraday_signal_generator.py → 15m/1H/4H Signals (EMA/MACD crossovers)</div>
+            <div class="arch-item">day_trading_expert.py → ORB Detection, RVOL, Expert Trade Plan</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">PSYCHOLOGICAL GUARD (1 analyzer)</div>
+          <div class="arch-box">
+            <div class="arch-item">psychological_analyzer.py → Psychological State Guardrail</div>
+          </div>
+
+          <div class="arch-arrow">↓</div>
+
+          <div class="arch-title">UI COMPONENTS (Where data appears)</div>
+          <div class="arch-ui-box">
+            <div class="arch-ui-row">
+              <div class="arch-ui-item">Summary Card</div>
+              <div class="arch-ui-uses">→ Monthly Trend, Market Phase, Daily Strength, Trade Signal</div>
+            </div>
+            <div class="arch-ui-row">
+              <div class="arch-ui-item">Technical Tab</div>
+              <div class="arch-ui-uses">→ MACD, Bollinger, Pivots, Candle Patterns, Volume Profile, Session VWAP</div>
+            </div>
+            <div class="arch-ui-row">
+              <div class="arch-ui-item">Risk Tab</div>
+              <div class="arch-ui-uses">→ Volatility, Pullback Warning, Liquidity Map, Block Flow, Correlations, Backtest</div>
+            </div>
+            <div class="arch-ui-row">
+              <div class="arch-ui-item">Context Tab</div>
+              <div class="arch-ui-uses">→ Intermarket, Fundamentals, News, Geopolitical, Oil Context</div>
+            </div>
+            <div class="arch-ui-row">
+              <div class="arch-ui-item">Execution Check</div>
+              <div class="arch-ui-uses">→ Relative Strength, Signal Conflict, Expert Trade Plan</div>
+            </div>
+            <div class="arch-ui-row">
+              <div class="arch-ui-item">Watchlist Heatmap</div>
+              <div class="arch-ui-uses">→ Gate Count (5 checks), Trade Signal, Market Phase, Daily Change</div>
+            </div>
+            <div class="arch-ui-row">
+              <div class="arch-ui-item">Live Signals Feed</div>
+              <div class="arch-ui-uses">→ Intraday Signals (15m/1H/4H), TP/SL Hits, Win Rate</div>
+            </div>
+          </div>
+        </div>
+      `
+    },
+    {
       id: 'terminology',
       title: 'Trading Terminology Guide',
       icon: '📚',
