@@ -156,6 +156,41 @@ export interface IntermarketContext {
   description: string;
 }
 
+export interface OVXRegime {
+  current_value: number;
+  regime: string;
+  regime_label: string;
+  trading_implication: string;
+  size_multiplier: number;
+}
+
+export interface EIAInventoryReport {
+  report_date: string;
+  change_mbbl: number | null;
+  prior_change_mbbl: number | null;
+  direction: string;
+  description: string;
+  next_report_date: string | null;
+  days_to_next: number | null;
+}
+
+export interface OpecWindow {
+  next_meeting_date: string;
+  days_until: number;
+  is_active_window: boolean;
+  caution_message: string;
+}
+
+export interface OilMarketContext {
+  ovx: OVXRegime | null;
+  eia_inventory: EIAInventoryReport | null;
+  opec_window: OpecWindow | null;
+  overall_regime: string;
+  regime_summary: string;
+  size_guidance: number;
+  warnings: string[];
+}
+
 export interface TradeSignal {
   recommendation: 'bullish' | 'bearish' | 'neutral';
   score: number;
@@ -391,6 +426,7 @@ export interface InstrumentAnalysis {
   block_flow?: BlockFlowDetection;
   geopolitical_risk?: GeopoliticalRisk;
   blowoff_top?: BlowOffTopAnalysis;
+  oil_market_context?: OilMarketContext;
 }
 
 export interface VolumeProfileBucket {
