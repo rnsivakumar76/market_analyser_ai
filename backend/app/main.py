@@ -1374,7 +1374,7 @@ async def migrate_journal_to_dynamodb(user_id: str = Depends(get_current_user)):
 # ──────────────────────────────────────────────────────────────────────────────
 
 @app.get("/api/signals")
-async def get_signals(symbol: Optional[str] = None, limit: int = 50, current_user: dict = Depends(get_current_user)):
+async def get_signals(symbol: Optional[str] = None, limit: int = 50, user_id: str = Depends(get_current_user)):
     """Return latest intraday signals. Optionally filter by symbol."""
     from .signal_store import get_recent_signals, get_signals_for_symbol
     if symbol:
@@ -1385,7 +1385,7 @@ async def get_signals(symbol: Optional[str] = None, limit: int = 50, current_use
 
 
 @app.post("/api/signals/scan")
-async def scan_signals(current_user: dict = Depends(get_current_user)):
+async def scan_signals(user_id: str = Depends(get_current_user)):
     """
     Trigger an intraday signal scan across all configured instruments.
     Fetches 4H + 1H + 15m bars, runs EMA/MACD crossover detection,
@@ -1395,14 +1395,10 @@ async def scan_signals(current_user: dict = Depends(get_current_user)):
     from .analyzers.intraday_signal_generator import detect_intraday_signals
     from .signal_store import save_signal, expire_old_signals
 
-    user_id = current_user.get("user_id", "system")
-    params  = nexus_db.get_settings(user_id) or {}
-    instruments = params.get("instruments", [
-        {"symbol": "WTI",  "name": "Crude Oil WTI"},
-        {"symbol": "XAU",  "name": "Gold"},
-        {"symbol": "BTC",  "name": "Bitcoin"},
-        {"symbol": "XAG",  "name": "Silver"},
-    ])
+    from .config_loader import load_config, get_instruments
+    config = load_config(user_id=user_id)
+    raw_instruments = get_instruments(config)
+    instruments = [{"symbol": i["symbol"], "name": i.get("name", i["symbol"])} for i in raw_instruments]
 
     # Expire stale signals first
     expire_old_signals()
@@ -1458,9 +1454,16 @@ def _notify_intraday_signal(sig: "IntradaySignal"):
         import requests as _req
         emoji = "🟢" if sig.signal_type == "LONG" else "🔴"
         conf_stars = "⭐" * (1 + (sig.confidence - 50) // 15)
+        quality = ""
+        if "RSI_DIV" in sig.trigger and "WARN" not in sig.trigger:
+            quality += "  ✨ RSI Divergence confirmed"
+        if "RSI_DIV_WARN" in sig.trigger:
+            quality += "  ⚠️ RSI Divergence opposes"
+        if "PIN_BAR" in sig.trigger:
+            quality += "  📌 Pin bar"
         text = (
             f"{emoji} *{sig.signal_type} SIGNAL — {sig.symbol} {sig.timeframe}*\n"
-            f"📌 Trigger: `{sig.trigger}`  {conf_stars} ({sig.confidence}%)\n"
+            f"📌 Trigger: `{sig.trigger.split('+')[0]}`  {conf_stars} ({sig.confidence}%){quality}\n"
             f"🎯 Entry:  `{sig.entry_price}`\n"
             f"🛑 SL:     `{sig.stop_loss}`\n"
             f"✅ TP1:    `{sig.take_profit_1}`   TP2: `{sig.take_profit_2}`\n"

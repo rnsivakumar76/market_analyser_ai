@@ -92,7 +92,18 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
               </div>
             </div>
             <div class="sig-center">
-              <span class="sig-trigger">{{ sig.trigger }}</span>
+              <div class="sig-trigger-row">
+                <span class="sig-trigger">{{ sig.trigger.split('+')[0] }}</span>
+                @if (sig.trigger.includes('RSI_DIV') && !sig.trigger.includes('WARN')) {
+                  <span class="sig-badge badge-div">✨DIV</span>
+                }
+                @if (sig.trigger.includes('PIN_BAR')) {
+                  <span class="sig-badge badge-pin">📌PIN</span>
+                }
+                @if (sig.trigger.includes('RSI_DIV_WARN')) {
+                  <span class="sig-badge badge-warn">⚠️DIV</span>
+                }
+              </div>
               <div class="sig-levels">
                 <span class="sig-entry">E: {{ sig.entry_price }}</span>
                 <span class="sig-sl bearish">SL: {{ sig.stop_loss }}</span>
@@ -349,7 +360,12 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .sig-sym { font-size: 0.80rem; font-weight: 900; color: #e2e8f0; }
     .sig-tf  { font-size: 0.68rem; color: #64748b; font-weight: 700; }
     .sig-center { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .sig-trigger-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
     .sig-trigger { font-size: 0.68rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.5px; }
+    .sig-badge { font-size: 0.60rem; font-weight: 800; padding: 0px 4px; border-radius: 6px; white-space: nowrap; }
+    .badge-div  { background: rgba(134,239,172,0.15); color: #86efac; border: 1px solid rgba(134,239,172,0.3); }
+    .badge-pin  { background: rgba(96,165,250,0.15);  color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+    .badge-warn { background: rgba(253,211,77,0.15);  color: #fcd34d; border: 1px solid rgba(253,211,77,0.3); }
     .sig-levels { display: flex; gap: 8px; flex-wrap: wrap; }
     .sig-entry, .sig-sl, .sig-tp { font-size: 0.70rem; font-weight: 700; }
     .sig-entry { color: #94a3b8; }

@@ -35,8 +35,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 async def get_current_user(request: Request):
-    # 1. Bypass check for system scheduler
-    if request.headers.get("x-internal-trigger") == "scheduler":
+    # 1. Bypass check for system scheduler / signal scanner (EventBridge)
+    internal_trigger = request.headers.get("x-internal-trigger", "")
+    if internal_trigger in ("scheduler", "signal-scanner"):
         return "global_default"
 
     # 2. Standard JWT check

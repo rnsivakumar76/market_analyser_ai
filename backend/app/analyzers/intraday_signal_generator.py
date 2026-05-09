@@ -138,6 +138,105 @@ def _macd_crossover(closes: np.ndarray) -> str:
 
 
 # ---------------------------------------------------------------------------
+# RSI divergence
+# ---------------------------------------------------------------------------
+
+RSI_PERIOD = 14
+_DIVERGENCE_LOOKBACK = 20   # bars to scan for swing pivots
+
+
+def _calc_rsi(closes: np.ndarray, period: int = RSI_PERIOD) -> np.ndarray:
+    """Return full RSI series (same length as closes, NaN for first `period` bars)."""
+    deltas = np.diff(closes)
+    gains  = np.where(deltas > 0, deltas, 0.0)
+    losses = np.where(deltas < 0, -deltas, 0.0)
+
+    avg_gain = np.full(len(closes), np.nan)
+    avg_loss = np.full(len(closes), np.nan)
+
+    # Wilder smoothing seed
+    if len(gains) >= period:
+        avg_gain[period] = gains[:period].mean()
+        avg_loss[period] = losses[:period].mean()
+        for i in range(period + 1, len(closes)):
+            avg_gain[i] = (avg_gain[i - 1] * (period - 1) + gains[i - 1]) / period
+            avg_loss[i] = (avg_loss[i - 1] * (period - 1) + losses[i - 1]) / period
+
+    rsi = np.full(len(closes), np.nan)
+    with np.errstate(invalid='ignore', divide='ignore'):
+        rs = np.where(avg_loss != 0, avg_gain / avg_loss, np.inf)
+        rsi = np.where(~np.isnan(avg_gain), 100.0 - 100.0 / (1.0 + rs), np.nan)
+    return rsi
+
+
+def _rsi_divergence(closes: np.ndarray, highs: np.ndarray, lows: np.ndarray) -> str:
+    """
+    Detect regular RSI divergence over the last `_DIVERGENCE_LOOKBACK` bars.
+
+    Bullish divergence: price makes a LOWER LOW while RSI makes a HIGHER LOW
+    Bearish divergence: price makes a HIGHER HIGH while RSI makes a LOWER HIGH
+
+    Returns 'bullish' | 'bearish' | 'none'
+    """
+    if len(closes) < RSI_PERIOD + _DIVERGENCE_LOOKBACK + 2:
+        return "none"
+
+    rsi = _calc_rsi(closes)
+    # Work on the last N+2 bars (skip current live bar → index -2)
+    window = _DIVERGENCE_LOOKBACK
+    p_close = closes[-window - 2:-2]
+    p_low   = lows[-window - 2:-2]
+    p_high  = highs[-window - 2:-2]
+    p_rsi   = rsi[-window - 2:-2]
+
+    if np.isnan(p_rsi).any() or len(p_rsi) < 4:
+        return "none"
+
+    # Bullish divergence: last low vs prior low
+    last_low_idx  = int(np.argmin(p_low[-window // 2:]))  + window // 2
+    prior_low_idx = int(np.argmin(p_low[:window // 2]))
+    if (p_low[last_low_idx] < p_low[prior_low_idx] and
+            p_rsi[last_low_idx] > p_rsi[prior_low_idx]):
+        return "bullish"
+
+    # Bearish divergence: last high vs prior high
+    last_high_idx  = int(np.argmax(p_high[-window // 2:])) + window // 2
+    prior_high_idx = int(np.argmax(p_high[:window // 2]))
+    if (p_high[last_high_idx] > p_high[prior_high_idx] and
+            p_rsi[last_high_idx] < p_rsi[prior_high_idx]):
+        return "bearish"
+
+    return "none"
+
+
+# ---------------------------------------------------------------------------
+# Pin bar detection
+# ---------------------------------------------------------------------------
+
+def _pin_bar(opens: np.ndarray, highs: np.ndarray, lows: np.ndarray, closes: np.ndarray) -> str:
+    """
+    Detect pin bar (hammer / shooting star) on the last CLOSED bar.
+    Criterion: wick >= 2× body AND wick >= 60% of total range.
+    Returns 'bullish' | 'bearish' | 'none'
+    """
+    if len(closes) < 3:
+        return "none"
+    o, h, l, c = opens[-2], highs[-2], lows[-2], closes[-2]
+    body = abs(c - o)
+    total_range = h - l
+    if total_range == 0:
+        return "none"
+    upper_wick = h - max(o, c)
+    lower_wick = min(o, c) - l
+
+    if lower_wick >= 2 * max(body, 0.0001) and lower_wick / total_range >= 0.60:
+        return "bullish"   # hammer
+    if upper_wick >= 2 * max(body, 0.0001) and upper_wick / total_range >= 0.60:
+        return "bearish"   # shooting star
+    return "none"
+
+
+# ---------------------------------------------------------------------------
 # Per-timeframe signal detection
 # ---------------------------------------------------------------------------
 
@@ -160,6 +259,7 @@ def _scan_timeframe(
     closes = bars["Close"].values.astype(float)
     highs  = bars["High"].values.astype(float)
     lows   = bars["Low"].values.astype(float)
+    opens  = bars["Open"].values.astype(float) if "Open" in bars.columns else closes
 
     # MTF bias filter
     if timeframe == "15m":
@@ -178,10 +278,10 @@ def _scan_timeframe(
     ema_dir  = _ema_crossover(closes)
     macd_dir = _macd_crossover(closes)
 
-    # Determine final direction
+    # Determine base direction and trigger
     if ema_dir != "none" and macd_dir != "none" and ema_dir == macd_dir:
-        direction = ema_dir
-        trigger   = "EMA_MACD_CONFLUENCE"
+        direction  = ema_dir
+        trigger    = "EMA_MACD_CONFLUENCE"
         confidence = 80
     elif ema_dir != "none":
         direction  = ema_dir
@@ -197,6 +297,29 @@ def _scan_timeframe(
     # Apply MTF direction filter
     if required_dir and direction != required_dir:
         return None
+
+    # ── Quality boosters ────────────────────────────────────────────────────
+    quality_tags: list = []
+
+    # RSI divergence confirmation (+15 confidence)
+    div = _rsi_divergence(closes, highs, lows)
+    if div == direction:
+        confidence = min(confidence + 15, 95)
+        quality_tags.append("RSI_DIV")
+    elif div != "none" and div != direction:
+        # Divergence opposes our signal direction — downgrade confidence
+        confidence = max(confidence - 20, 20)
+        quality_tags.append("RSI_DIV_WARN")
+
+    # Pin bar on 15m entry (only meaningful at execution timeframe)
+    if timeframe == "15m":
+        pin = _pin_bar(opens, highs, lows, closes)
+        if pin == direction:
+            confidence = min(confidence + 10, 95)
+            quality_tags.append("PIN_BAR")
+
+    if quality_tags:
+        trigger = trigger + "+" + "+".join(quality_tags)
 
     atr_val = _calc_atr(highs, lows, closes)
     entry   = round(float(closes[-2]), 5)   # last closed bar price
