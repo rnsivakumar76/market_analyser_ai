@@ -347,7 +347,7 @@
       </div>
 
       @if (sidebarTab() === 'heatmap') {
-        <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
+        <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null" [signals]="signals()"
           (select)="selectedInstrument.set($event)">
         </app-watchlist-heatmap>
       }

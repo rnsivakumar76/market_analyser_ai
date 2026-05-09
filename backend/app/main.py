@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from starlette.middleware.sessions import SessionMiddleware
 from mangum import Mangum
 from datetime import datetime, date, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 import os
 import traceback
@@ -1368,6 +1368,113 @@ async def migrate_journal_to_dynamodb(user_id: str = Depends(get_current_user)):
         "migrated": migrated,
         "total": len(s3_trades)
     }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# INTRADAY SIGNAL ENDPOINTS
+# ──────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/signals")
+async def get_signals(symbol: Optional[str] = None, limit: int = 50, current_user: dict = Depends(get_current_user)):
+    """Return latest intraday signals. Optionally filter by symbol."""
+    from .signal_store import get_recent_signals, get_signals_for_symbol
+    if symbol:
+        signals = get_signals_for_symbol(symbol.upper(), limit=limit)
+    else:
+        signals = get_recent_signals(limit=limit)
+    return {"signals": [s.model_dump() for s in signals], "count": len(signals)}
+
+
+@app.post("/api/signals/scan")
+async def scan_signals(current_user: dict = Depends(get_current_user)):
+    """
+    Trigger an intraday signal scan across all configured instruments.
+    Fetches 4H + 1H + 15m bars, runs EMA/MACD crossover detection,
+    persists new signals to DynamoDB, and returns what was found.
+    Also called automatically by EventBridge every 5 minutes.
+    """
+    from .analyzers.intraday_signal_generator import detect_intraday_signals
+    from .signal_store import save_signal, expire_old_signals
+
+    user_id = current_user.get("user_id", "system")
+    params  = nexus_db.get_settings(user_id) or {}
+    instruments = params.get("instruments", [
+        {"symbol": "WTI",  "name": "Crude Oil WTI"},
+        {"symbol": "XAU",  "name": "Gold"},
+        {"symbol": "BTC",  "name": "Bitcoin"},
+        {"symbol": "XAG",  "name": "Silver"},
+    ])
+
+    # Expire stale signals first
+    expire_old_signals()
+
+    from .twelvedata_fetcher import TwelveDataFetcher
+    fetcher   = TwelveDataFetcher()
+    sym_list  = [i["symbol"].upper() for i in instruments]
+
+    # Fetch all three timeframes in parallel
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        f_4h  = ex.submit(fetcher.fetch_batch_data, sym_list, interval="4h",  days=60)
+        f_1h  = ex.submit(fetcher.fetch_batch_data, sym_list, interval="1h",  days=15)
+        f_15m = ex.submit(fetcher.fetch_batch_data, sym_list, interval="15min", days=4)
+
+    batch_4h  = f_4h.result()
+    batch_1h  = f_1h.result()
+    batch_15m = f_15m.result()
+
+    all_signals = []
+    for inst in instruments:
+        sym  = inst["symbol"].upper()
+        name = inst.get("name", sym)
+        try:
+            new_signals = detect_intraday_signals(
+                symbol   = sym,
+                name     = name,
+                bars_4h  = batch_4h.get(sym),
+                bars_1h  = batch_1h.get(sym),
+                bars_15m = batch_15m.get(sym),
+            )
+            saved = 0
+            for sig in new_signals:
+                if save_signal(sig):
+                    saved += 1
+                    all_signals.append(sig.model_dump())
+                    # Telegram notification for new signals
+                    _notify_intraday_signal(sig)
+            if new_signals:
+                logger.info(f"[SCAN] {sym}: {len(new_signals)} signals detected, {saved} new saved")
+        except Exception as e:
+            logger.warning(f"[SCAN] {sym} failed: {e}")
+
+    return {"scanned": len(instruments), "new_signals": len(all_signals), "signals": all_signals}
+
+
+def _notify_intraday_signal(sig: "IntradaySignal"):
+    """Send Telegram notification for a new intraday signal."""
+    token    = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id  = os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        import requests as _req
+        emoji = "🟢" if sig.signal_type == "LONG" else "🔴"
+        conf_stars = "⭐" * (1 + (sig.confidence - 50) // 15)
+        text = (
+            f"{emoji} *{sig.signal_type} SIGNAL — {sig.symbol} {sig.timeframe}*\n"
+            f"📌 Trigger: `{sig.trigger}`  {conf_stars} ({sig.confidence}%)\n"
+            f"🎯 Entry:  `{sig.entry_price}`\n"
+            f"🛑 SL:     `{sig.stop_loss}`\n"
+            f"✅ TP1:    `{sig.take_profit_1}`   TP2: `{sig.take_profit_2}`\n"
+            f"📊 R:R     `{sig.risk_reward}:1`   4H bias: `{sig.mtf_bias.upper()}`\n"
+            f"⏰ Expires: `{sig.expires_at[:16]} UTC`"
+        )
+        _req.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
+            timeout=5,
+        )
+    except Exception as e:
+        logger.warning(f"[SIGNAL_NOTIFY] Telegram failed: {e}")
+
 
 # Handler for AWS Lambda
 handler = Mangum(app)

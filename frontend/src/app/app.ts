@@ -1,6 +1,6 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences } from './services/market-analyzer.service';
+import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences, IntradaySignal } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { StrategySettingsComponent } from './components/strategy-settings/strategy-settings.component';
@@ -82,6 +82,8 @@ export class App implements OnInit, OnDestroy {
   showDiagnostics = signal<boolean>(false);
   lastErrorInfo = signal<any>(null);
 
+  signals = signal<IntradaySignal[]>([]);
+
   ngOnInit() {
     // Load any previous error information
     this.loadLastError();
@@ -112,6 +114,7 @@ export class App implements OnInit, OnDestroy {
     if (this.authService.isLoggedIn) {
       this.loadPreferences(); // runAnalysis is called inside, after mode is set
       this.startAutoRefresh();
+      this.loadSignals();
     }
   }
 
@@ -580,5 +583,19 @@ export class App implements OnInit, OnDestroy {
     } catch {
       return false;
     }
+  }
+
+  loadSignals() {
+    this.analyzerService.getSignals(undefined, 50).subscribe({
+      next: (resp) => this.signals.set(resp.signals || []),
+      error: () => {}  // silent — signals are optional
+    });
+    // Refresh signals every 15 min to stay in sync with the backend scan cycle
+    interval(15 * 60 * 1000).subscribe(() => {
+      this.analyzerService.getSignals(undefined, 50).subscribe({
+        next: (resp) => this.signals.set(resp.signals || []),
+        error: () => {}
+      });
+    });
   }
 }

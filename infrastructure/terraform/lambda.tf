@@ -125,3 +125,48 @@ resource "aws_lambda_permission" "eventbridge" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.hourly_analysis.arn
 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Intraday Signal Scanner — runs every 15 minutes via EventBridge
+# Calls POST /api/signals/scan to detect EMA/MACD crossovers on 15m/1H/4H
+# ──────────────────────────────────────────────────────────────────────────────
+resource "aws_cloudwatch_event_rule" "signal_scan" {
+  name                = "${var.app_name}-signal-scan${local.env_suffix}"
+  description         = "Run intraday signal scan every 15 minutes"
+  schedule_expression = "rate(15 minutes)"
+}
+
+resource "aws_cloudwatch_event_target" "signal_scan_target" {
+  rule      = aws_cloudwatch_event_rule.signal_scan.name
+  target_id = "TriggerSignalScan"
+  arn       = aws_lambda_function.api.arn
+
+  input = jsonencode({
+    "version"        : "2.0",
+    "routeKey"       : "POST /api/signals/scan",
+    "rawPath"        : "/api/signals/scan",
+    "rawQueryString" : "",
+    "headers"        : {
+      "host"                : "localhost",
+      "x-internal-trigger"  : "signal-scanner",
+      "content-type"        : "application/json"
+    },
+    "requestContext" : {
+      "http" : {
+        "method"   : "POST",
+        "path"     : "/api/signals/scan",
+        "sourceIp" : "127.0.0.1"
+      }
+    },
+    "body"           : "{}",
+    "isBase64Encoded": false
+  })
+}
+
+resource "aws_lambda_permission" "eventbridge_signal_scan" {
+  statement_id  = "AllowSignalScanFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.signal_scan.arn
+}

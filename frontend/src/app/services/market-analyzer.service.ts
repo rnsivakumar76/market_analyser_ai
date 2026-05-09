@@ -4,6 +4,27 @@ import { Observable } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
+export interface IntradaySignal {
+  signal_id: string;
+  symbol: string;
+  name: string;
+  timeframe: string;        // '15m' | '1H' | '4H'
+  signal_type: string;      // 'LONG' | 'SHORT'
+  trigger: string;          // 'EMA_CROSS' | 'MACD_CROSS' | 'EMA_MACD_CONFLUENCE'
+  entry_price: number;
+  stop_loss: number;
+  take_profit_1: number;
+  take_profit_2: number;
+  risk_reward: number;
+  mtf_bias: string;
+  confidence: number;
+  generated_at: string;
+  bar_time: string;
+  expires_at: string;
+  status: string;           // 'ACTIVE' | 'EXPIRED' | 'HIT_TP1' | 'HIT_TP2' | 'HIT_SL'
+  notes: string;
+}
+
 export interface GeopoliticalEvent {
   title: string;
   description: string;
@@ -618,5 +639,15 @@ export class MarketAnalyzerService {
 
   chatWithCopilot(payload: ChatRequest): Observable<ChatResponse> {
     return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, payload).pipe(timeout(25000));
+  }
+
+  getSignals(symbol?: string, limit: number = 50): Observable<{ signals: IntradaySignal[]; count: number }> {
+    const params: Record<string, string> = { limit: String(limit) };
+    if (symbol) params['symbol'] = symbol;
+    return this.http.get<{ signals: IntradaySignal[]; count: number }>(`${this.apiUrl}/signals`, { params });
+  }
+
+  triggerSignalScan(): Observable<{ scanned: number; new_signals: number; signals: IntradaySignal[] }> {
+    return this.http.post<{ scanned: number; new_signals: number; signals: IntradaySignal[] }>(`${this.apiUrl}/signals/scan`, {});
   }
 }
