@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 from scipy.stats import percentileofscore
 from app.models import VolatilityAnalysis
-from ...domain.indicators.atr import calculate_atr as _domain_calculate_atr, calculate_atr_series
-from ...domain.constants import INDICATOR_ATR_PERIOD, VOLATILITY_REGIME_ATR_MULTIPLIERS
+from domain.indicators.atr import calculate_atr as _domain_calculate_atr, calculate_atr_series
+from domain.constants import INDICATOR_ATR_PERIOD, VOLATILITY_REGIME_ATR_MULTIPLIERS
 
 
 def calculate_atr(data: pd.DataFrame, period: int = INDICATOR_ATR_PERIOD) -> float:
