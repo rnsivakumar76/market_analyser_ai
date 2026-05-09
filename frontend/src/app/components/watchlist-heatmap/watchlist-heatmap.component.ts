@@ -96,7 +96,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       font-size: 0.90rem;
       font-weight: 800;
       letter-spacing: 1.5px;
-      color: #6c7086;
+      color: #64748b;
       margin: 0;
     }
 
@@ -110,9 +110,9 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       font-weight: 600;
     }
 
-    .legend-item.bullish { color: #a6e3a1; }
-    .legend-item.bearish { color: #f38ba8; }
-    .legend-item.neutral { color: #f9e2af; }
+    .legend-item.bullish { color: #86efac; }
+    .legend-item.bearish { color: #f87171; }
+    .legend-item.neutral { color: #fcd34d; }
 
     .heatmap-grid {
       display: grid;
@@ -148,7 +148,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     }
 
     .heat-cell.selected {
-      border-color: #89b4fa !important;
+      border-color: #60a5fa !important;
       box-shadow: 0 0 20px rgba(137, 180, 250, 0.25);
       transform: scale(1.04);
       z-index: 3;
@@ -193,7 +193,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     .cell-symbol {
       font-size: 0.95rem;
       font-weight: 800;
-      color: #cdd6f4;
+      color: #e2e8f0;
       letter-spacing: 0.5px;
     }
 
@@ -203,23 +203,23 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       line-height: 1;
     }
 
-    .bullish-cell .cell-score { color: #a6e3a1; }
-    .bearish-cell .cell-score { color: #f38ba8; }
-    .neutral-cell .cell-score { color: #f9e2af; }
+    .bullish-cell .cell-score { color: #86efac; }
+    .bearish-cell .cell-score { color: #f87171; }
+    .neutral-cell .cell-score { color: #fcd34d; }
 
     .cell-change {
       font-size: 0.90rem;
       font-weight: 700;
     }
 
-    .cell-change.positive { color: #a6e3a1; }
-    .cell-change.negative { color: #f38ba8; }
-    .cell-change.neutral { color: #f9e2af; }
+    .cell-change.positive { color: #86efac; }
+    .cell-change.negative { color: #f87171; }
+    .cell-change.neutral { color: #fcd34d; }
 
     .cell-phase {
       font-size: 0.76rem;
       font-weight: 700;
-      color: #6c7086;
+      color: #64748b;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -247,7 +247,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       left: 6px;
       font-size: 0.82rem;
       font-weight: 800;
-      color: #a6e3a1;
+      color: #86efac;
       background: rgba(166, 227, 161, 0.15);
       border-radius: 50%;
       width: 14px;
@@ -267,11 +267,11 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       gap: 6px;
       margin-top: 8px;
     }
-    .wl-ready { color: #a6e3a1; }
-    .wl-monitoring { color: #45475a; }
+    .wl-ready { color: #86efac; }
+    .wl-monitoring { color: #334155; }
     .wl-group-count {
       background: rgba(108,112,134,0.15);
-      color: #6c7086;
+      color: #64748b;
       border-radius: 8px;
       padding: 1px 6px;
       font-size: 0.72rem;
@@ -287,10 +287,10 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       border-radius: 8px;
       letter-spacing: 0.3px;
     }
-    .gates-5 { background: rgba(166,227,161,0.2); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.35); }
-    .gates-4 { background: rgba(166,227,161,0.12); color: #a6e3a1; border: 1px solid rgba(166,227,161,0.25); }
-    .gates-3 { background: rgba(249,226,175,0.12); color: #f9e2af; border: 1px solid rgba(249,226,175,0.25); }
-    .gates-2, .gates-1, .gates-0 { background: rgba(108,112,134,0.1); color: #45475a; border: 1px solid rgba(108,112,134,0.2); }
+    .gates-5 { background: rgba(166,227,161,0.2); color: #86efac; border: 1px solid rgba(166,227,161,0.35); }
+    .gates-4 { background: rgba(166,227,161,0.12); color: #86efac; border: 1px solid rgba(166,227,161,0.25); }
+    .gates-3 { background: rgba(249,226,175,0.12); color: #fcd34d; border: 1px solid rgba(249,226,175,0.25); }
+    .gates-2, .gates-1, .gates-0 { background: rgba(108,112,134,0.1); color: #334155; border: 1px solid rgba(108,112,134,0.2); }
 
     @keyframes glow-pulse {
       0%, 100% { opacity: 0.5; }
