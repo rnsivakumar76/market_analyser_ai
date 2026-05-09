@@ -16,23 +16,55 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
           <span class="legend-item neutral">● Neutral</span>
         </div>
       </div>
+
+      @if (getReadyInstruments().length > 0) {
+      <div class="wl-group-header wl-ready">⚡ SETUP READY <span class="wl-group-count">{{ getReadyInstruments().length }}</span></div>
       <div class="heatmap-grid">
-        @for (instrument of instruments; track instrument.symbol) {
+        @for (instrument of getReadyInstruments(); track instrument.symbol) {
           <div class="heat-cell"
                [class]="getCellClass(instrument)"
                [class.selected]="selectedSymbol === instrument.symbol"
                [class.trade-worthy]="instrument.trade_signal.trade_worthy"
-               [style.flex-grow]="getCellWeight(instrument)"
                [title]="getCellTooltip(instrument)"
                (click)="select.emit(instrument)">
             <div class="cell-content">
               <span class="cell-symbol">{{ instrument.symbol }}</span>
               <span class="cell-score">{{ instrument.trade_signal.score > 0 ? '+' : '' }}{{ instrument.trade_signal.score }}</span>
               <span class="cell-change" [class]="getChangeClass(instrument)">
-                {{ instrument.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ instrument.daily_strength.price_change_percent.toFixed(2) }}%
+                {{ (instrument.daily_strength?.price_change_percent ?? 0) > 0 ? '+' : '' }}{{ (instrument.daily_strength?.price_change_percent ?? 0).toFixed(2) }}% · 1D
               </span>
-              <span class="cell-phase">{{ instrument.market_phase.phase }}</span>
+              <span class="cell-phase">{{ instrument.market_phase?.phase || 'No Data' }}</span>
             </div>
+            <div class="cell-gate-badge" [class]="'gates-' + getGateCount(instrument)">{{ getGateCount(instrument) }}/5</div>
+            @if (instrument.trade_signal.trade_worthy) {
+              <div class="worthy-glow"></div>
+            }
+            @if (instrument.pullback_warning?.is_warning) {
+              <div class="cell-warning">⚠️</div>
+            }
+          </div>
+        }
+      </div>
+      }
+
+      <div class="wl-group-header wl-monitoring">👁 MONITORING <span class="wl-group-count">{{ getMonitoringInstruments().length }}</span></div>
+      <div class="heatmap-grid">
+        @for (instrument of getMonitoringInstruments(); track instrument.symbol) {
+          <div class="heat-cell"
+               [class]="getCellClass(instrument)"
+               [class.selected]="selectedSymbol === instrument.symbol"
+               [class.trade-worthy]="instrument.trade_signal.trade_worthy"
+               [title]="getCellTooltip(instrument)"
+               (click)="select.emit(instrument)">
+            <div class="cell-content">
+              <span class="cell-symbol">{{ instrument.symbol }}</span>
+              <span class="cell-score">{{ instrument.trade_signal.score > 0 ? '+' : '' }}{{ instrument.trade_signal.score }}</span>
+              <span class="cell-change" [class]="getChangeClass(instrument)">
+                {{ (instrument.daily_strength?.price_change_percent ?? 0) > 0 ? '+' : '' }}{{ (instrument.daily_strength?.price_change_percent ?? 0).toFixed(2) }}% · 1D
+              </span>
+              <span class="cell-phase">{{ instrument.market_phase?.phase || 'No Data' }}</span>
+            </div>
+            <div class="cell-gate-badge" [class]="'gates-' + getGateCount(instrument)">{{ getGateCount(instrument) }}/5</div>
             @if (instrument.trade_signal.trade_worthy) {
               <div class="worthy-glow"></div>
             }
@@ -61,10 +93,10 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     }
 
     .heatmap-title {
-      font-size: 0.7rem;
+      font-size: 0.90rem;
       font-weight: 800;
       letter-spacing: 1.5px;
-      color: #6c7086;
+      color: #64748b;
       margin: 0;
     }
 
@@ -74,25 +106,30 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     }
 
     .legend-item {
-      font-size: 0.65rem;
+      font-size: 0.86rem;
       font-weight: 600;
     }
 
-    .legend-item.bullish { color: #a6e3a1; }
-    .legend-item.bearish { color: #f38ba8; }
-    .legend-item.neutral { color: #f9e2af; }
+    .legend-item.bullish { color: #86efac; }
+    .legend-item.bearish { color: #f87171; }
+    .legend-item.neutral { color: #fcd34d; }
 
     .heatmap-grid {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       gap: 6px;
       flex: 1;
       align-content: flex-start;
     }
 
+    @media (max-width: 600px) {
+      .heatmap-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     .heat-cell {
       position: relative;
-      min-width: 100px;
       min-height: 90px;
       border-radius: 10px;
       cursor: pointer;
@@ -111,7 +148,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     }
 
     .heat-cell.selected {
-      border-color: #89b4fa !important;
+      border-color: #60a5fa !important;
       box-shadow: 0 0 20px rgba(137, 180, 250, 0.25);
       transform: scale(1.04);
       z-index: 3;
@@ -156,7 +193,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     .cell-symbol {
       font-size: 0.95rem;
       font-weight: 800;
-      color: #cdd6f4;
+      color: #e2e8f0;
       letter-spacing: 0.5px;
     }
 
@@ -166,22 +203,23 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       line-height: 1;
     }
 
-    .bullish-cell .cell-score { color: #a6e3a1; }
-    .bearish-cell .cell-score { color: #f38ba8; }
-    .neutral-cell .cell-score { color: #f9e2af; }
+    .bullish-cell .cell-score { color: #86efac; }
+    .bearish-cell .cell-score { color: #f87171; }
+    .neutral-cell .cell-score { color: #fcd34d; }
 
     .cell-change {
-      font-size: 0.7rem;
+      font-size: 0.90rem;
       font-weight: 700;
     }
 
-    .cell-change.positive { color: #a6e3a1; }
-    .cell-change.negative { color: #f38ba8; }
+    .cell-change.positive { color: #86efac; }
+    .cell-change.negative { color: #f87171; }
+    .cell-change.neutral { color: #fcd34d; }
 
     .cell-phase {
-      font-size: 0.55rem;
+      font-size: 0.76rem;
       font-weight: 700;
-      color: #6c7086;
+      color: #64748b;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -199,7 +237,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       position: absolute;
       top: 4px;
       right: 6px;
-      font-size: 0.7rem;
+      font-size: 0.90rem;
     }
 
     .trade-worthy::after {
@@ -207,9 +245,9 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       position: absolute;
       top: 4px;
       left: 6px;
-      font-size: 0.6rem;
+      font-size: 0.82rem;
       font-weight: 800;
-      color: #a6e3a1;
+      color: #86efac;
       background: rgba(166, 227, 161, 0.15);
       border-radius: 50%;
       width: 14px;
@@ -218,6 +256,41 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       align-items: center;
       justify-content: center;
     }
+
+    .wl-group-header {
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      padding: 6px 4px 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .wl-ready { color: #86efac; }
+    .wl-monitoring { color: #334155; }
+    .wl-group-count {
+      background: rgba(108,112,134,0.15);
+      color: #64748b;
+      border-radius: 8px;
+      padding: 1px 6px;
+      font-size: 0.72rem;
+    }
+
+    .cell-gate-badge {
+      position: absolute;
+      bottom: 5px;
+      right: 6px;
+      font-size: 0.72rem;
+      font-weight: 900;
+      padding: 1px 5px;
+      border-radius: 8px;
+      letter-spacing: 0.3px;
+    }
+    .gates-5 { background: rgba(166,227,161,0.2); color: #86efac; border: 1px solid rgba(166,227,161,0.35); }
+    .gates-4 { background: rgba(166,227,161,0.12); color: #86efac; border: 1px solid rgba(166,227,161,0.25); }
+    .gates-3 { background: rgba(249,226,175,0.12); color: #fcd34d; border: 1px solid rgba(249,226,175,0.25); }
+    .gates-2, .gates-1, .gates-0 { background: rgba(108,112,134,0.1); color: #334155; border: 1px solid rgba(108,112,134,0.2); }
 
     @keyframes glow-pulse {
       0%, 100% { opacity: 0.5; }
@@ -229,6 +302,25 @@ export class WatchlistHeatmapComponent {
     @Input({ required: true }) instruments!: InstrumentAnalysis[];
     @Input() selectedSymbol: string | null = null;
     @Output() select = new EventEmitter<InstrumentAnalysis>();
+
+    getGateCount(inst: InstrumentAnalysis): number {
+        let count = 0;
+        // Handle failed analyses where some fields might be null
+        if (inst.monthly_trend && inst.trade_signal && inst.monthly_trend.direction === inst.trade_signal.recommendation) count++;
+        if (inst.daily_strength && inst.daily_strength.adx >= 25) count++;
+        if (inst.daily_strength && inst.daily_strength.volume_ratio >= 1.0) count++;
+        if ((inst.pullback_warning?.warning_score ?? 0) <= 2) count++;
+        if (!inst.trade_signal.signal_conflict?.conflict_type || inst.trade_signal.signal_conflict.conflict_type === 'none') count++;
+        return count;
+    }
+
+    getReadyInstruments(): InstrumentAnalysis[] {
+        return this.instruments.filter(i => this.getGateCount(i) >= 3);
+    }
+
+    getMonitoringInstruments(): InstrumentAnalysis[] {
+        return this.instruments.filter(i => this.getGateCount(i) < 3);
+    }
 
     getCellClass(instrument: InstrumentAnalysis): string {
         const direction = instrument.trade_signal.recommendation;
@@ -246,11 +338,16 @@ export class WatchlistHeatmapComponent {
     }
 
     getChangeClass(instrument: InstrumentAnalysis): string {
-        return instrument.daily_strength.price_change_percent >= 0 ? 'positive' : 'negative';
+        const change = instrument.daily_strength?.price_change_percent ?? 0;
+        if (change > 0) return 'positive';
+        if (change < 0) return 'negative';
+        return 'neutral';
     }
 
     getCellTooltip(instrument: InstrumentAnalysis): string {
         const s = instrument.trade_signal;
-        return `${instrument.name}\nScore: ${s.score} | ${s.recommendation.toUpperCase()}\n${instrument.market_phase.phase} → $${instrument.current_price}`;
+        const priceChange = instrument.daily_strength?.price_change_percent ?? 0;
+        const phase = instrument.market_phase?.phase || 'No Data';
+        return `${instrument.name}\nScore: ${s.score} | ${s.recommendation.toUpperCase()}\n1D: ${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%\n${phase} -> $${instrument.current_price}`;
     }
 }

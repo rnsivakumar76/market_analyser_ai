@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><title>NEXUS — Proposed GUI Wireframe</title>
+<link rel="stylesheet" href="wf.css">
+</head>
+<body>
+
+<nav>
+  <div><div class="nt">NEXUS — PROPOSED GUI REDESIGN</div><div class="ns">WIREFRAME · INTERACTIVE · BACKEND UNCHANGED · WTI example data</div></div>
+  <div>
+    <button class="nbtn act" onclick="sim(2)">Simulate: 2/5 WAIT</button>
+    <button class="nbtn" onclick="sim(4)">Simulate: 4/5 TACTICAL</button>
+    <button class="nbtn" onclick="sim(5)">Simulate: 5/5 EXECUTE</button>
+    <button class="nbtn" style="margin-left:14px;border-color:rgba(137,180,250,.4);color:#89b4fa" onclick="document.getElementById('notes').classList.add('on')">📋 Design Notes</button>
+  </div>
+</nav>
+
+<main>
+
+<!-- ── WATCHLIST ─────────────────────────────── -->
+<aside>
+  <div class="wh">
+    <div><div class="wt">WATCHLIST</div><div class="wc">8 instruments · 3 ready</div></div>
+    <select style="font-size:.4rem;background:#1e1e2e;border:1px solid #313244;color:#6c7086;padding:2px 5px;border-radius:3px">
+      <option>Gates ▼</option><option>Score</option><option>Change</option>
+    </select>
+  </div>
+  <div class="wsec">▶ SETUP READY</div>
+  <div class="wcard bull">
+    <div><div class="wsym">EURUSD</div><div class="wpx">1.0847 <span style="color:#a6e3a1;font-size:.47rem;font-weight:700">+0.32%</span></div></div>
+    <div class="gp gpe">5/5 EXECUTE</div>
+  </div>
+  <div class="wcard bull">
+    <div><div class="wsym">GOLD</div><div class="wpx">2,941 <span style="color:#a6e3a1;font-size:.47rem;font-weight:700">+0.8%</span></div></div>
+    <div class="gp gpt">4/5 TACTICAL</div>
+  </div>
+  <div class="wcard bull">
+    <div><div class="wsym">BTC</div><div class="wpx">84,110 <span style="color:#a6e3a1;font-size:.47rem;font-weight:700">+2.1%</span></div></div>
+    <div class="gp gpt">4/5 TACTICAL</div>
+  </div>
+  <div class="wsec">▶ MONITORING</div>
+  <div class="wcard bear sel">
+    <div><div class="wsym">WTI</div><div class="wpx">$93.15 <span style="color:#f38ba8;font-size:.47rem;font-weight:700">−3.1%</span></div></div>
+    <div class="gp gpw" id="wti-gp">2/5 WAIT</div>
+  </div>
+  <div class="wcard">
+    <div><div class="wsym">GBPUSD</div><div class="wpx">1.2934 <span style="color:#f38ba8;font-size:.47rem;font-weight:700">−0.1%</span></div></div>
+    <div class="gp gpw">2/5 WAIT</div>
+  </div>
+  <div class="wcard bear">
+    <div><div class="wsym">NASDAQ</div><div class="wpx">18,204 <span style="color:#f38ba8;font-size:.47rem;font-weight:700">−1.4%</span></div></div>
+    <div class="gp gpw">2/5 WAIT</div>
+  </div>
+  <div class="wcard">
+    <div><div class="wsym">USDJPY</div><div class="wpx">148.22 <span style="color:#a6e3a1;font-size:.47rem;font-weight:700">+0.1%</span></div></div>
+    <div class="gp gpw">1/5 WAIT</div>
+  </div>
+</aside>
+
+<!-- ── INSTRUMENT PANEL ───────────────────────── -->
+<section>
+
+  <!-- ZONE A: Compact Header (replaces full MTF banner + bloated header) -->
+  <div class="zh">
+    <div class="zhr">
+      <div style="display:flex;align-items:baseline">
+        <span class="sym">WTI</span><span class="px">$93.15</span><span class="chg">−3.15%</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <div class="pill"><span class="sc">5</span><span class="rec">BULLISH</span></div>
+        <div class="estate" id="exec-state">CONDITIONAL</div>
+      </div>
+    </div>
+    <div class="zhr2">
+      <span class="ses">🕐 LONDON</span>
+      <span class="mod">⏱ SHORT-TERM</span>
+      <span class="tag tn">Bearish momentum</span>
+      <span class="tag tp">Near S2 support</span>
+      <span class="tag tu">Macro-Tactical split</span>
+      <span class="more" onclick="alert('All reasons: Daily bullish · Monthly unclear · Bearish momentum · ADX=39 · Vol low · Near S2 · Neutral regime · RSI=39 · Against trend · News +10')">+7 more ▾</span>
+    </div>
+  </div>
+
+  <!-- ZONE B: EXECUTION DECISION — HERO (was item #6, now item #1) -->
+  <div class="ze">
+    <div class="zec" id="gate-count">2 / 5 GATES PASSED</div>
+    <div class="banner bw" id="exec-banner">⏸ &nbsp; WAIT — Setup not confirmed</div>
+    <div class="gates">
+      <div class="gr"><div class="gn">BIAS</div><div class="gd">Macro BULLISH · Tactical BEARISH → active conflict</div><div class="gc gcw" id="g0">COUNTERTREND</div></div>
+      <div class="gr"><div class="gn">LOCATION</div><div class="gd">Price mid-range · nearest key level 1.2% away</div><div class="gc gcn" id="g1">NO</div></div>
+      <div class="gr"><div class="gn">TRIGGER</div><div class="gd">State: CONDITIONAL · no trigger candle printed yet</div><div class="gc gcn" id="g2">NO</div></div>
+      <div class="gr"><div class="gn">CONFIRM</div><div class="gd">ADX=39 strong · RSI=39 in bearish momentum zone</div><div class="gc gcw" id="g3">WEAK</div></div>
+      <div class="gr"><div class="gn">RISK</div><div class="gd">Stop $92.69 · Target $98.63 · R:R = 3.0:1</div><div class="gc gcy" id="g4">YES</div></div>
+    </div>
+    <div class="mic">Macro-Tactical conflict → system defaults to WAIT · Enter only when BIAS + LOCATION + TRIGGER align</div>
+  </div>
+
+  <!-- ZONE C: Trade Levels — CONDITIONAL (hidden on WAIT, visible when ≥3 gates pass) -->
+  <div class="zlvl" id="levels-panel" style="display:none">
+    <div class="zlh">📍 TRADE SETUP — Active levels</div>
+    <div class="lboxes">
+      <div class="lb en"><div class="ll">ENTRY ZONE</div><div class="lv">$93.37–$93.70</div></div>
+      <div class="lb sl"><div class="ll">HARD STOP</div><div class="lv">$92.69</div></div>
+      <div class="lb tg"><div class="ll">TARGET T1</div><div class="lv">$98.63</div></div>
+    </div>
+    <div class="lstats">
+      <div><div class="lsl">R:R RATIO</div><div class="lsv" style="color:#a6e3a1">3.0:1</div></div>
+      <div><div class="lsl">LOT SIZE</div><div class="lsv">0.50</div></div>
+      <div><div class="lsl">ACCT RISK</div><div class="lsv">$46</div></div>
+      <div><div class="lsl">EXP. VALUE</div><div class="lsv" style="color:#a6e3a1">+$138</div></div>
+    </div>
+  </div>
+  <div class="lwait" id="levels-wait">⚠ Trade levels hidden while WAIT state active — appear once BIAS + LOCATION + TRIGGER gates pass</div>
+
+  <!-- ZONE D: Battle Plan (collapsible, open by default) -->
+  <div class="zbp">
+    <div class="zbph" onclick="togBP()">
+      <span class="bpt">🎖️ EXPERT BATTLE PLAN</span>
+      <div style="display:flex;align-items:center;gap:7px">
+        <span class="bpr">RVOL 1.0x</span>
+        <span class="bpr" style="color:#fab387">London Active</span>
+        <span class="arr op" id="bparr">▲</span>
+      </div>
+    </div>
+    <div id="bpbody">
+      <div class="bpsit">SITUATION: ORB BEARISH — Price broke below OR Low ($95.87). Intraday bias EXTRA bearish. This is a pullback within a larger uptrend — look for a long reversal at key support, not a new short.</div>
+      <div class="bptxt">ENTRY: Watch $93.37–$93.70 for reversal trigger. Look for a heavy engulfing candle on 15m before entering long. TARGETS: T1 → $97.32 (take 50% profit) · T2 → $98.63 (trail stop to breakeven). STOP: Hard stop below $92.69 (2.69 ATR buffer). CONVICTION: RVOL 1.0x — wait for volume before full size · ADX 39 (trend-following favoured) · RSI 39 (bearish momentum, London session active).</div>
+    </div>
+  </div>
+
+  <!-- ZONE E: Accordion Drawers (replace SIGNAL/RISK/PERFORMANCE tabs) -->
+  <div class="dws">
+
+    <div class="dw">
+      <div class="dwh" onclick="tog('d1')">
+        <span class="dwic">📊</span><span class="dwt">Bias &amp; Momentum</span>
+        <span class="dbadge dbw">CONFLICT</span><span class="darr" id="d1a">▶</span>
+      </div>
+      <div class="dwb" id="d1b">
+        <div class="mtfrow">
+          <div class="mtfc"><div class="mtftf">MONTHLY</div><div class="mtfd bull">BULLISH</div></div>
+          <div class="mtfc"><div class="mtftf">WEEKLY</div><div class="mtfd bull">BULLISH</div></div>
+          <div class="mtfc"><div class="mtftf">DAILY</div><div class="mtfd neu">NEUTRAL</div></div>
+          <div class="mtfc"><div class="mtftf">4H TACTICAL</div><div class="mtfd bear">BEARISH</div></div>
+        </div>
+        <div class="mg">
+          <div class="mc"><div class="mcl">ADX</div><div class="mcv">39</div><div class="mci">Ultra-Strong — do not fight this move</div></div>
+          <div class="mc"><div class="mcl">RSI</div><div class="mcv">39</div><div class="mci">Bearish zone — sellers in tactical control</div></div>
+          <div class="mc"><div class="mcl">VWAP DIST</div><div class="mcv" style="color:#f38ba8">−2.3%</div><div class="mci">Below session VWAP — bearish intraday bias</div></div>
+          <div class="mc"><div class="mcl">VOL REGIME</div><div class="mcv" style="color:#f9e2af">EXTREME</div><div class="mci">ATR 93rd pct · HV 24.8%</div></div>
+        </div>
+        <div class="dn">Conflict: Macro bullish (monthly/weekly) vs Tactical bearish (4H). Potential long reversal at support — not a short. Wait for 4H structure to turn before entering long.</div>
+      </div>
+    </div>
+
+    <div class="dw">
+      <div class="dwh" onclick="tog('d2')">
+        <span class="dwic">🛡️</span><span class="dwt">Risk Factors</span>
+        <span class="dbadge dbh">3 warnings</span><span class="darr" id="d2a">▶</span>
+      </div>
+      <div class="dwb" id="d2b">
+        <div class="cklist">
+          <div class="ckr pass"><div><div class="ckl">Trend Structure</div><div class="ckn">Macro confirms strong institutional accumulation</div></div><div class="ckv pass">BULLISH</div></div>
+          <div class="ckr pass"><div><div class="ckl">Momentum (ADX=39)</div><div class="ckn">Ultra-Strong Trend locked in</div></div><div class="ckv pass">PASS</div></div>
+          <div class="ckr warn"><div><div class="ckl">Volatility Regime</div><div class="ckn">ATR 93rd pct · HV 24.8% — extreme, cap position size</div></div><div class="ckv warn">EXTREME</div></div>
+          <div class="ckr warn"><div><div class="ckl">Key Level Position</div><div class="ckn">Price mid-range — not at high-conviction entry level</div></div><div class="ckv warn">MID-RANGE</div></div>
+          <div class="ckr warn"><div><div class="ckl">Pullback Risk</div><div class="ckn">Distribution phase · supply absorbing demand</div></div><div class="ckv warn">MODERATE</div></div>
+        </div>
+        <div class="dn">Extreme volatility regime — use reduced position size until confirmed. Pullback score 20/100 (low trap risk). Wait for volume confirmation before full size entry.</div>
+      </div>
+    </div>
+
+    <div class="dw">
+      <div class="dwh" onclick="tog('d3')">
+        <span class="dwic">🗺️</span><span class="dwt">Key Levels</span>
+        <span class="dbadge dbi">Liquidity · Pivots · VWAP</span><span class="darr" id="d3a">▶</span>
+      </div>
+      <div class="dwb" id="d3b">
+        <div style="font-size:.4rem;font-weight:900;color:#45475a;letter-spacing:1px;margin-bottom:5px">LIQUIDITY MAP</div>
+        <div class="lpairs">
+          <div class="lp r"><div class="lpt">RESISTANCE</div><div class="lpp">$96.00</div><div class="lpd">+3.1% away · STRONG</div></div>
+          <div class="lp s"><div class="lpt">SUPPORT</div><div class="lpp">$72.00</div><div class="lpd">−22.7% away · STRONG</div></div>
+          <div class="lp r"><div class="lpt">RESISTANCE</div><div class="lpp">$95.00</div><div class="lpd">+2.0% away · MEDIUM</div></div>
+          <div class="lp s"><div class="lpt">SUPPORT</div><div class="lpp">$72.67</div><div class="lpd">−21.9% away · MEDIUM</div></div>
+        </div>
+        <div style="font-size:.4rem;font-weight:900;color:#45475a;letter-spacing:1px;margin-bottom:5px;margin-top:8px">PIVOT POINTS</div>
+        <div class="lpairs">
+          <div class="lp r"><div class="lpt">R1</div><div class="lpp">$97.21</div><div class="lpd">Next resistance target</div></div>
+          <div class="lp s"><div class="lpt">S1</div><div class="lpp">$91.41</div><div class="lpd">Key support below</div></div>
+          <div class="lp r"><div class="lpt">R2</div><div class="lpp">$99.07</div><div class="lpd">Upper target zone</div></div>
+          <div class="lp s"><div class="lpt">S2</div><div class="lpp">$88.41</div><div class="lpd">Critical support floor</div></div>
+        </div>
+        <div class="dn">Price mid-range — not near a high-conviction level. Nearest resistance: $94.00 (0.45% away). No clean entry level until price reaches S1 $91.41 or R1 $97.21.</div>
+      </div>
+    </div>
+
+    <div class="dw">
+      <div class="dwh" onclick="tog('d4')">
+        <span class="dwic">📈</span><span class="dwt">Backtest &amp; Performance</span>
+        <span class="dbadge dbo">Win rate 64%</span><span class="darr" id="d4a">▶</span>
+      </div>
+      <div class="dwb" id="d4b">
+        <div class="btg">
+          <div class="btc"><div class="btcl">WIN RATE</div><div class="btcv" style="color:#a6e3a1">64%</div></div>
+          <div class="btc"><div class="btcl">SHARPE</div><div class="btcv">1.82</div></div>
+          <div class="btc"><div class="btcl">MAX DD</div><div class="btcv" style="color:#f38ba8">−8.4%</div></div>
+          <div class="btc"><div class="btcl">EXPECTANCY</div><div class="btcv" style="color:#a6e3a1">+1.2%</div></div>
+          <div class="btc"><div class="btcl">SAMPLE</div><div class="btcv">48</div></div>
+          <div class="btc"><div class="btcl">MAX LOSS RUN</div><div class="btcv" style="color:#f9e2af">3</div></div>
+          <div class="btc"><div class="btcl">MAE</div><div class="btcv">1.8%</div></div>
+          <div class="btc"><div class="btcl">PROB SCORE</div><div class="btcv" style="color:#6c7086">20/100</div></div>
+        </div>
+        <div class="dn">Backtest: Normal confidence (48 samples). 64% win rate + 3.0 R:R = solidly positive expectancy. Historical max 3-loss run — size down after 2 consecutive losses.</div>
+      </div>
+    </div>
+
+    <div class="dw">
+      <div class="dwh" onclick="tog('d5')">
+        <span class="dwic">🌍</span><span class="dwt">Geopolitical Context</span>
+        <span class="dbadge dbw">Score 70 · HIGH</span><span class="darr" id="d5a">▶</span>
+      </div>
+      <div class="dwb" id="d5b">
+        <div style="display:flex;flex-direction:column;gap:0">
+          <div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #1f1f3a"><span style="font-size:.45rem;color:#a6adc8;flex:1">ATR/Volatility — elevated, geo-driven price reaction confirmed</span><span style="font-size:.45rem;font-weight:900;color:#a6e3a1;white-space:nowrap">BULLISH</span></div>
+          <div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #1f1f3a"><span style="font-size:.45rem;color:#a6adc8;flex:1">ADX/Trend Strength — aligned with geo impact direction</span><span style="font-size:.45rem;font-weight:900;color:#a6e3a1;white-space:nowrap">BULLISH</span></div>
+          <div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid #1f1f3a"><span style="font-size:.45rem;color:#a6adc8;flex:1">Volume Ratio — geo risk not yet driving flows</span><span style="font-size:.45rem;font-weight:900;color:#9399b2;white-space:nowrap">NEUTRAL</span></div>
+          <div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0"><span style="font-size:.45rem;color:#a6adc8;flex:1">RSI/Momentum — contradicts bullish geo expansion</span><span style="font-size:.45rem;font-weight:900;color:#f38ba8;white-space:nowrap">BEARISH</span></div>
+        </div>
+        <div class="dn">Middle East conflict risk to WTI supply. 3/4 indicators beginning to confirm bullish geo impact. Confirmation: EARLY. Monitor closely — full impact not yet in price.</div>
+      </div>
+    </div>
+
+  </div><!-- /drawers -->
+</section>
+
+<!-- ── CONTEXT PANEL ──────────────────────────── -->
+<div class="ctx">
+  <div class="ctxhd">
+    <div class="ctxtabs">
+      <div class="ctxt on" onclick="swCtx(this,'cnews')">📰 News</div>
+      <div class="ctxt" onclick="swCtx(this,'cevents')">📅 Events</div>
+      <div class="ctxt" onclick="swCtx(this,'cchat')">🤖 AI Chat</div>
+    </div>
+  </div>
+  <div class="ctxbd">
+
+    <div id="cnews">
+      <div class="ctxsec">
+        <div class="ctxsl">SENTIMENT</div>
+        <div class="sbadge sbpos">POSITIVE (+10)</div>
+        <div class="sbsum">Geopolitical supply risk driving oil prices. Positive sentiment with elevated volatility confirmed by multiple institutional sources.</div>
+      </div>
+      <div class="ctxsec">
+        <div class="ctxsl">HEADLINES</div>
+        <div class="ni"><div class="nir"><span class="nis">Reuters</span><span class="nist pos">BULLISH</span></div><div class="nitt">Middle East tensions fuel oil price volatility, supply disruption risk elevated</div><div class="niag">2h ago</div></div>
+        <div class="ni"><div class="nir"><span class="nis">Bloomberg</span><span class="nist pos">BULLISH</span></div><div class="nitt">Bank of Canada "Possible To Look Through" tariff impact — commodity currencies supported</div><div class="niag">4h ago</div></div>
+        <div class="ni"><div class="nir"><span class="nis">CNBC</span><span class="nist neg">BEARISH</span></div><div class="nitt">WTI crude drops on demand concerns, US stockpile data disappoints</div><div class="niag">6h ago</div></div>
+        <div class="ni"><div class="nir"><span class="nis">FT</span><span class="nist neu">NEUTRAL</span></div><div class="nitt">OPEC+ meeting agenda revealed — production decision expected next week</div><div class="niag">8h ago</div></div>
+      </div>
+    </div>
+
+    <div id="cevents" style="display:none">
+      <div class="ctxsec">
+        <div class="ctxsl">UPCOMING EVENTS</div>
+        <div class="evi"><span style="font-size:.6rem">🔴</span><span class="evit"><strong>EIA Crude Inventories</strong> — Wed 10:30 EST · HIGH IMPACT · Score penalised −30pts</span></div>
+        <div class="evi"><span style="font-size:.6rem">🟡</span><span class="evit"><strong>US PPI m/m</strong> — Thu 08:30 EST · MEDIUM IMPACT</span></div>
+        <div class="evi"><span style="font-size:.6rem">🟡</span><span class="evit"><strong>Fed Chair Powell Speech</strong> — Thu 14:00 EST · MEDIUM IMPACT</span></div>
+      </div>
+      <div style="font-size:.53rem;color:#f9e2af;padding:8px 0;border-top:1px solid #1f1f3a;margin-top:4px;line-height:1.5">⚠ High-impact event within 60 min — position size capped at 50% until after EIA release</div>
+    </div>
+
+    <div id="cchat" style="display:none">
+      <div style="background:#1e1e2e;border-radius:6px;padding:10px;margin-bottom:8px;border:1px solid #313244">
+        <div style="font-size:.4rem;color:#45475a;margin-bottom:4px">AI Copilot</div>
+        <div style="font-size:.55rem;color:#a6adc8;line-height:1.6">WTI is at a potential long reversal zone. The macro structure is bullish (monthly/weekly) but tactical momentum is bearish (4H). Wait for a 4H candle to confirm a reversal before entering long. Don't short this — you'd be trading against the macro trend.</div>
+      </div>
+      <div style="background:rgba(137,180,250,.06);border-radius:6px;padding:10px;border:1px solid rgba(137,180,250,.15);margin-bottom:10px">
+        <div style="font-size:.4rem;color:#89b4fa;margin-bottom:3px">You</div>
+        <div style="font-size:.55rem;color:#bac2de">What should I watch for as confirmation?</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <input type="text" placeholder="Ask about WTI…" style="flex:1;background:#1e1e2e;border:1px solid #313244;border-radius:4px;padding:6px 8px;color:#cdd6f4;font-size:.53rem;outline:none">
+        <button style="padding:6px 10px;background:#89b4fa;color:#11111b;border:none;border-radius:4px;font-size:.48rem;font-weight:900;cursor:pointer">SEND</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<!-- ── DESIGN NOTES MODAL ─────────────────────── -->
+<div class="modal" id="notes">
+  <div class="mbox">
+    <div class="mh">
+      <span>📋 REDESIGN NOTES — What changed &amp; why</span>
+      <button class="mclose" onclick="document.getElementById('notes').classList.remove('on')">✕</button>
+    </div>
+    <div class="nitem h"><div class="nilbl">🔴 Execution decision was buried (item #6 in scroll)</div><div class="nitxt">The 5-gate checklist sat below MTF banner + 10 reason tags + score note + battle plan. "Should I trade now?" had no clear answer location. <strong>Now: Zone B is the hero</strong> — the first full section after the compact header.</div></div>
+    <div class="nitem h"><div class="nilbl">🔴 MTF Banner: full-width, passive, always expanded</div><div class="nitxt">4-box MTF alignment at the very top anchored attention on context before decision. <strong>Now: compressed into a single MTF row inside the Bias &amp; Momentum drawer</strong> — open on demand.</div></div>
+    <div class="nitem h"><div class="nilbl">🔴 Cognitive overload — 10+ sections all competing</div><div class="nitxt">3 tabs with 50+ data points competing simultaneously. <strong>Now: 5 accordion drawers, all collapsed by default</strong>. Each badge shows status (CONFLICT / 3 WARNINGS / 64%) so you know which to open.</div></div>
+    <div class="nitem m"><div class="nilbl">🟠 Signal reason tags: all 10+ always visible</div><div class="nitxt">Every tag shown with equal weight. <strong>Now: top 3 impactful tags pinned to header</strong>. Informational tags (ADX, RSI) live inside the Bias drawer. "+7 more" on demand.</div></div>
+    <div class="nitem m"><div class="nilbl">🟠 Risk tab hidden behind a click — traders miss it</div><div class="nitxt">Volatility regime, liquidity map, pullback trap all required a RISK tab click. <strong>Now: Risk Factors is drawer #2</strong> — always in the scroll path with a warning badge count.</div></div>
+    <div class="nitem m"><div class="nilbl">🟠 Trade levels shown even on WAIT state</div><div class="nitxt">Entry/Stop/Target always visible, even on CONDITIONAL/STAND ASIDE. Creates false readiness. <strong>Now: Zone C is hidden with an explanatory note while in WAIT state</strong>. Appears only when ≥3 gates pass. Try the "Simulate" buttons above.</div></div>
+    <div class="nitem g"><div class="nilbl">✅ Watchlist now shows execution readiness</div><div class="nitxt">Cards now show gate count + decision badge (5/5 EXECUTE · 4/5 TACTICAL · 2/5 WAIT) and are sorted by readiness. Instruments are grouped: Setup Ready vs Monitoring.</div></div>
+    <div class="nitem g"><div class="nilbl">✅ Context panel role is clarified</div><div class="nitxt">News / Events / AI Chat separated into 3 explicit tabs. Narrower (258px) to give more room to the decision panel. No backend change — same data, cleaner routing.</div></div>
+    <div style="margin-top:12px;padding:10px 12px;background:rgba(137,180,250,.06);border:1px solid rgba(137,180,250,.2);border-radius:6px;font-size:.62rem;color:#89b4fa;line-height:1.6">
+      <strong>Backend impact: ZERO.</strong> All data comes from the same InstrumentAnalysis object. This is a pure frontend layout and hierarchy change. The only Angular work is restructuring template sections and removing tab navigation in favour of accordion components.
+    </div>
+  </div>
+</div>
+
+<script>
+function tog(id){
+  var b=document.getElementById(id+'b'), a=document.getElementById(id+'a');
+  b.classList.toggle('op'); a.classList.toggle('op');
+}
+function togBP(){
+  var b=document.getElementById('bpbody'), a=document.getElementById('bparr');
+  b.style.display=b.style.display==='none'?'block':'none';
+  a.classList.toggle('op');
+}
+function swCtx(tab,panel){
+  document.querySelectorAll('.ctxt').forEach(t=>t.classList.remove('on'));
+  tab.classList.add('on');
+  ['cnews','cevents','cchat'].forEach(id=>{
+    var el=document.getElementById(id);
+    if(el) el.style.display=id===panel?'block':'none';
+  });
+}
+function sim(n){
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('act'));
+  event.target.classList.add('act');
+  var gates=[
+    {el:'g0',v:['COUNTERTREND','YES','YES'],cls:['gcw','gcy','gcy']},
+    {el:'g1',v:['NO','YES','YES'],cls:['gcn','gcy','gcy']},
+    {el:'g2',v:['NO','YES','YES'],cls:['gcn','gcy','gcy']},
+    {el:'g3',v:['WEAK','WEAK','YES'],cls:['gcw','gcw','gcy']},
+    {el:'g4',v:['YES','YES','YES'],cls:['gcy','gcy','gcy']}
+  ];
+  var idx=n===2?0:n===4?1:2;
+  gates.forEach(function(g){
+    var el=document.getElementById(g.el);
+    el.textContent=g.v[idx];
+    el.className='gc '+g.cls[idx];
+  });
+  var cnt=n===2?'2':n===4?'4':'5';
+  document.getElementById('gate-count').textContent=cnt+' / 5 GATES PASSED';
+  var b=document.getElementById('exec-banner');
+  var s=document.getElementById('exec-state');
+  var gp=document.getElementById('wti-gp');
+  var lp=document.getElementById('levels-panel');
+  var lw=document.getElementById('levels-wait');
+  if(n===5){
+    b.className='banner be'; b.textContent='✓  EXECUTE — Full size'; s.textContent='READY';
+    gp.className='gp gpe'; gp.textContent='5/5 EXECUTE';
+    lp.style.display='block'; lw.style.display='none';
+  } else if(n===4){
+    b.className='banner bt2'; b.textContent='⚡  TACTICAL — 0.5× size only'; s.textContent='CONDITIONAL';
+    gp.className='gp gpt'; gp.textContent='4/5 TACTICAL';
+    lp.style.display='block'; lw.style.display='none';
+  } else {
+    b.className='banner bw'; b.textContent='⏸  WAIT — Setup not confirmed'; s.textContent='CONDITIONAL';
+    gp.className='gp gpw'; gp.textContent='2/5 WAIT';
+    lp.style.display='none'; lw.style.display='block';
+  }
+}
+</script>
+</body>
+</html>

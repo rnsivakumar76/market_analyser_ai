@@ -52,6 +52,7 @@ export class App implements OnInit, OnDestroy {
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
   mobileTab = signal<'watchlist' | 'analysis' | 'context'>('watchlist');
+  contextPanelTab = signal<'context' | 'chat'>('context');
   sidebarTab = signal<'heatmap' | 'orb'>('heatmap');
 
   // Auto-refresh properties
@@ -203,7 +204,7 @@ export class App implements OnInit, OnDestroy {
     if (this.strategyMode() === mode) return; // already in this mode
     this.strategyMode.set(mode);
     this.savePreference('strategy_mode', mode);
-    this.runAnalysis(); // triggers full refetch with new mode
+    this.runAnalysis(false, true); // force fresh fetch to avoid stale per-mode cache mismatch
     this.secondsRemaining = this.REFRESH_INTERVAL_SEC; // reset countdown
   }
 

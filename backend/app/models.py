@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from enum import Enum
 from datetime import date
@@ -204,6 +204,9 @@ class TradeSignal(BaseModel):
     score: int  # -100 to +100
     reasons: List[str]
     trade_worthy: bool
+    execution_state: str = "stand_aside"  # "ready" | "conditional" | "stand_aside"
+    opportunity_grade: str = "D"          # A/B/C/D quality band
+    suggested_size_text: str = "0.0x (no entry)"
     action_plan: str = ""
     action_plan_details: str = ""
     psychological_guard: str = ""
@@ -259,6 +262,28 @@ class GeopoliticalRisk(BaseModel):
     indicators: List[GeoIndicatorCheck]
     ai_narrative: str
     action_bias: str
+
+
+class BlowOffTopSignals(BaseModel):
+    vertical_move: bool = False
+    range_expansion: bool = False
+    rsi_bearish_divergence: bool = False
+    failed_breakout: bool = False
+    structure_break: bool = False
+
+
+class BlowOffTopAnalysis(BaseModel):
+    applicable: bool = False
+    detected: bool = False
+    blowoff_score: int = 0
+    phase: str = "normal"  # "normal" | "acceleration" | "blowoff" | "confirmed_breakdown"
+    entry_state: str = "wait"  # "wait" | "armed" | "triggered"
+    trigger_level: Optional[float] = None
+    invalidation_level: Optional[float] = None
+    recent_peak: Optional[float] = None
+    structural_low: Optional[float] = None
+    signals: BlowOffTopSignals = Field(default_factory=BlowOffTopSignals)
+    narrative: str = ""
 
 
 class VolumeProfileBucket(BaseModel):
@@ -355,6 +380,7 @@ class InstrumentAnalysis(BaseModel):
     liquidity_map: Optional[LiquidityMap] = None
     block_flow: Optional[BlockFlowDetection] = None
     geopolitical_risk: Optional[GeopoliticalRisk] = None
+    blowoff_top: Optional[BlowOffTopAnalysis] = None
 
 
 class PerformanceSummary(BaseModel):
@@ -406,5 +432,6 @@ class StrategySettings(BaseModel):
     atr_multiplier_sl: float
     portfolio_value: float
     risk_per_trade_percent: float
+    aggressiveness_mode: str = "balanced"  # "conservative" | "balanced" | "aggressive"
 
 

@@ -85,6 +85,10 @@ def detect_mtf_disagreement(
     strength_direction: str,
     trigger_up: Optional[float] = None,
     trigger_down: Optional[float] = None,
+    adx: Optional[float] = None,
+    rsi: Optional[float] = None,
+    price_change_percent: Optional[float] = None,
+    vwap_dist_pct: Optional[float] = None,
 ) -> ConflictResult:
     """
     Detect Case 2: Multi-timeframe disagreement between monthly trend and daily momentum.
@@ -98,30 +102,79 @@ def detect_mtf_disagreement(
     Returns:
         ConflictResult — medium severity on disagreement, no conflict otherwise.
     """
+    up_str = f"${trigger_up:.2f}" if trigger_up is not None else "key resistance"
+    down_str = f"${trigger_down:.2f}" if trigger_down is not None else "key support"
+
     if trend_direction == BULLISH and strength_direction == BEARISH:
+        details = [
+            "Daily momentum is pulling back against the long-term uptrend.",
+            "This is a potential dip-buy setup — wait for daily to stabilise before adding exposure.",
+            "Avoid chasing the dip.",
+        ]
+
+        if adx is not None:
+            if adx >= 40:
+                details.append(f"ADX {adx:.1f} indicates trend structure is still strong.")
+            elif adx >= 25:
+                details.append(f"ADX {adx:.1f} shows a tradable trend, but momentum is cooling.")
+            else:
+                details.append(f"ADX {adx:.1f} suggests trend conviction is weakening.")
+
+        if rsi is not None:
+            if rsi >= 70:
+                details.append(f"RSI {rsi:.1f} is overbought — pullback risk is elevated.")
+            elif rsi <= 40:
+                details.append(f"RSI {rsi:.1f} is already soft, so downside momentum can extend before reversal.")
+
+        if vwap_dist_pct is not None:
+            details.append(f"VWAP distance {vwap_dist_pct:+.2f}% helps frame stretch vs mean.")
+
+        if price_change_percent is not None:
+            details.append(f"Latest session change: {price_change_percent:+.2f}%.")
+
+        details.append(f"Scenario levels: reclaim above {up_str} favors continuation; loss of {down_str} opens deeper pullback.")
+
         return ConflictResult(
             conflict_type="mtf_disagreement",
             severity="medium",
             headline="MTF Conflict: Monthly BULLISH vs Daily BEARISH momentum",
-            guidance=(
-                "Daily momentum is pulling back against the long-term uptrend. "
-                "This is a potential dip-buy setup — wait for daily to stabilise "
-                "before adding exposure. Avoid chasing the dip."
-            ),
+            guidance=" ".join(details),
             trigger_price_up=trigger_up,
             trigger_price_down=trigger_down,
         )
 
     if trend_direction == BEARISH and strength_direction == BULLISH:
+        details = [
+            "Daily bounce is occurring inside a broader downtrend.",
+            "This is a dangerous dead cat bounce scenario.",
+            "Avoid buying into this move unless monthly trend reverses.",
+        ]
+
+        if adx is not None:
+            if adx >= 40:
+                details.append(f"ADX {adx:.1f} suggests trend pressure remains persistent.")
+            elif adx >= 25:
+                details.append(f"ADX {adx:.1f} confirms trend conditions, but with less conviction.")
+
+        if rsi is not None:
+            if rsi >= 60:
+                details.append(f"RSI {rsi:.1f} reflects bounce momentum that may fade into resistance.")
+            elif rsi <= 35:
+                details.append(f"RSI {rsi:.1f} remains weak despite bounce attempts.")
+
+        if vwap_dist_pct is not None:
+            details.append(f"VWAP distance {vwap_dist_pct:+.2f}% tracks whether bounce is stretched.")
+
+        if price_change_percent is not None:
+            details.append(f"Latest session change: {price_change_percent:+.2f}%.")
+
+        details.append(f"Scenario levels: break above {up_str} needed to invalidate bear structure; failure and break below {down_str} resumes downside.")
+
         return ConflictResult(
             conflict_type="mtf_disagreement",
             severity="medium",
             headline="MTF Conflict: Monthly BEARISH vs Daily BULLISH momentum",
-            guidance=(
-                "Daily bounce is occurring inside a broader downtrend. "
-                "This is a dangerous 'dead cat bounce' scenario. "
-                "Avoid buying into this move unless monthly trend reverses."
-            ),
+            guidance=" ".join(details),
             trigger_price_up=trigger_up,
             trigger_price_down=trigger_down,
         )
@@ -136,6 +189,9 @@ def detect_signal_conflict(
     strength_direction: str,
     trigger_up: Optional[float] = None,
     trigger_down: Optional[float] = None,
+    rsi: Optional[float] = None,
+    price_change_percent: Optional[float] = None,
+    vwap_dist_pct: Optional[float] = None,
     strong_adx_threshold: float = CONFLICT_STRONG_ADX,
 ) -> ConflictResult:
     """
@@ -162,4 +218,13 @@ def detect_signal_conflict(
     if result.conflict_type != "none":
         return result
 
-    return detect_mtf_disagreement(trend_direction, strength_direction, trigger_up, trigger_down)
+    return detect_mtf_disagreement(
+        trend_direction,
+        strength_direction,
+        trigger_up,
+        trigger_down,
+        adx=adx,
+        rsi=rsi,
+        price_change_percent=price_change_percent,
+        vwap_dist_pct=vwap_dist_pct,
+    )

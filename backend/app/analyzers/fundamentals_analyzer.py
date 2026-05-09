@@ -76,6 +76,13 @@ def analyze_fundamentals(symbol: str) -> FundamentalsAnalysis:
 
             if impact == 'High' and country in currencies:
                 try:
+                    # Ensure date_str is a string and not a tuple
+                    if isinstance(date_str, tuple):
+                        date_str = str(date_str[0] if date_str else '')
+                    elif not isinstance(date_str, str):
+                        date_str = str(date_str)
+                    
+                    # Parse datetime safely
                     dt = datetime.fromisoformat(date_str[:19])
                     if now <= dt <= cutoff_48h:
                         hours_away = int((dt - now).total_seconds() // 3600)

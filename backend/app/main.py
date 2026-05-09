@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .auth import get_current_user
 from .oauth import router as auth_router
 from .news.geopolitical_routes import router as geopolitical_router
+from .chat_routes import router as chat_router
 
 # Base logging
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +44,7 @@ def _fetch_via_yfinance(ticker: str, days: int = 30):
 
     TwelveData free-tier consistently rejects DXY and TNX symbols.
     yfinance requires no API key and provides:
-      - DX=F  → US Dollar Index (continuous futures, closely tracks spot DXY)
+      - DXY  → US Dollar Index (spot index)
       - ^TNX  → CBOE 10-Year Treasury Yield (value = yield × 10, e.g. 42.5 = 4.25%)
     """
     try:
@@ -86,6 +87,8 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 # Include Geopolitical routes
 app.include_router(geopolitical_router)
+# Include AI chat routes
+app.include_router(chat_router)
 
 # Required for Authlib OAuth state storage
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "super-secret-session-key")
@@ -147,7 +150,8 @@ def analyze_instrument_lazy(
         get_backtest_results, detect_candle_patterns, analyze_technical_indicators,
         analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength,
         analyze_intermarket_context, analyze_session_context,
-        detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan
+        detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan,
+        analyze_blowoff_top,
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode, IntermarketContext
@@ -240,10 +244,18 @@ def analyze_instrument_lazy(
     pullback.description = f"[{pullback_label}] " + pullback.description
     
     strength = analyze_daily_strength(execution_data, params.get('daily', {}))
-    # Override price change to be TRUE DAILY change
-    # In Long Term mode, execution_data is 1d. In Short Term mode, macro_data is 1d.
+    # Override price change to be TRUE DAILY change.
+    # LONG_TERM: execution_data is already 1d.
+    # SHORT_TERM: prefer macro_data (1d), and fall back to a fresh 1d fetch if missing.
     daily_source = execution_data if mode == StrategyMode.LONG_TERM else macro_data
-    if not daily_source.empty and len(daily_source) >= 2:
+    if daily_source is None or daily_source.empty or len(daily_source) < 2:
+        try:
+            daily_source = fetch_historical_data(symbol, days=10, interval="1day")
+        except Exception as _e:
+            logger.warning(f"Failed to fetch fallback daily source for {symbol}: {_e}")
+            daily_source = None
+
+    if daily_source is not None and not daily_source.empty and len(daily_source) >= 2:
         daily_change = float(((daily_source['Close'].iloc[-1] - daily_source['Close'].iloc[-2]) / daily_source['Close'].iloc[-2]) * 100)
         strength.price_change_percent = float(round(daily_change, 2))
     strength.description = f"[{execution_label}] " + strength.description
@@ -295,20 +307,37 @@ def analyze_instrument_lazy(
 
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value, entry_price=ideal_entry)
     fundamentals = analyze_fundamentals(symbol)
+    blowoff_top = analyze_blowoff_top(
+        symbol=symbol,
+        df=execution_data,
+        technical_indicators=tech_indicators,
+        volatility=volatility,
+    )
     
     # NEW: Relative Strength Analysis (Alpha vs Beta)
-    # Determine which benchmark to use
-    is_crypto = any(sub in symbol.upper() for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(symbol) > 6 and "USD" in symbol.upper())
-    bench_sym = "BTC" if is_crypto else "SPX"
-    
-    # Use pre-fetched data if available, otherwise fetch on the fly
-    if benchmark_data_df is not None:
-        bench_data = benchmark_data_df
+    # Commodities (WTI/XAU/XAG) → compare against DXY (DXY falls = gold/oil outperforms).
+    # Crypto → compare against BTC.  Everything else → SPX.
+    _COMMODITY_SYMS_RS = {"WTI", "XAU", "XAG", "GOLD", "SILVER", "OIL"}
+    _is_crypto_rs  = any(sub in symbol.upper() for sub in ["BTC", "ETH", "CRYPTO", "BITCOIN"]) or (len(symbol) > 6 and "USD" in symbol.upper())
+    _is_commodity_rs = any(sub in symbol.upper() for sub in _COMMODITY_SYMS_RS)
+
+    if _is_commodity_rs:
+        bench_sym = "DXY"
+        # Use the already-fetched 60-day DXY dataframe; fall back to a live fetch if missing.
+        if dxy_df is not None and not dxy_df.empty:
+            bench_data = dxy_df
+        else:
+            bench_data = fetch_historical_data("DXY", days=60, interval="1day")
+    elif _is_crypto_rs:
+        bench_sym = "BTC"
+        bench_data = benchmark_data_df if benchmark_data_df is not None else fetch_historical_data(
+            bench_sym, days=(500 if mode == StrategyMode.LONG_TERM else 20),
+            interval=("1day" if mode == StrategyMode.LONG_TERM else "1h")
+        )
     else:
-        # Fetch benchmark data at the SAME execution interval
-        bench_data = fetch_historical_data(
-            bench_sym, 
-            days=(500 if mode == StrategyMode.LONG_TERM else 20), 
+        bench_sym = "SPX"
+        bench_data = benchmark_data_df if benchmark_data_df is not None else fetch_historical_data(
+            bench_sym, days=(500 if mode == StrategyMode.LONG_TERM else 20),
             interval=("1day" if mode == StrategyMode.LONG_TERM else "1h")
         )
     
@@ -320,6 +349,10 @@ def analyze_instrument_lazy(
         lookback_periods=20
     )
     
+    # Pullback warning is part of score context and must be included before
+    # final recommendation/action classification.
+    pullback_warning = analyze_pullback_warning(execution_data, trend.direction)
+
     trade_signal = generate_trade_signal(
         trend=trend, 
         pullback=pullback, 
@@ -331,45 +364,13 @@ def analyze_instrument_lazy(
         tech_indicators=tech_indicators,
         volatility=volatility,
         fundamentals=fundamentals,
-        relative_strength=rs_analysis
+        relative_strength=rs_analysis,
+        blowoff_top=blowoff_top,
+        strategy_mode=mode.value,
+        pullback_warning=pullback_warning,
+        news_sentiment_label=news_sentiment.label,
+        benchmark_symbol=bench_sym,
     )
-    
-    # NEW: Pullback Warning Logic
-    pullback_warning = analyze_pullback_warning(execution_data, trend.direction)
-    
-    # Boost/adjust score based on technical indicators
-    if tech_indicators.trend_breakout == 'bullish_breakout':
-        trade_signal.score = min(trade_signal.score + 15, 100)
-        trade_signal.reasons.append(f"Bullish Breakout ({tech_indicators.breakout_confidence*100:.0f}% confidence)")
-    elif tech_indicators.trend_breakout == 'bearish_breakout':
-        trade_signal.score = max(trade_signal.score - 15, -100)
-        trade_signal.reasons.append(f"Bearish Breakout ({tech_indicators.breakout_confidence*100:.0f}% confidence)")
-
-    # Adjust score based on pullback warning
-    if pullback_warning.is_warning:
-        # Penalize score if extended
-        if trend.direction == Signal.BULLISH:
-            trade_signal.score = max(trade_signal.score - 20, 0)
-            trade_signal.reasons.append(f"Caution: {pullback_warning.description}")
-        elif trend.direction == Signal.BEARISH:
-            trade_signal.score = min(trade_signal.score + 20, 0)
-            trade_signal.reasons.append(f"Caution: {pullback_warning.description}")
-
-    # Boost/adjust based on news sentiment
-    if news_sentiment.label == "Bullish":
-        trade_signal.score = min(trade_signal.score + 10, 100)
-        trade_signal.reasons.append(f"Positive News Sentiment (+10 boost)")
-    elif news_sentiment.label == "Bearish":
-        trade_signal.score = max(trade_signal.score - 10, -100)
-        trade_signal.reasons.append(f"Negative News Sentiment (-10 penalty)")
-
-    # Boost/adjust based on Relative Strength
-    if rs_analysis.label == "Leader":
-        trade_signal.score = min(trade_signal.score + 15, 100)
-        trade_signal.reasons.append(f"Market Leader: Strong Relative Strength vs {bench_sym} (+15 boost)")
-    elif rs_analysis.label == "Laggard":
-        trade_signal.score = max(trade_signal.score - 15, -100)
-        trade_signal.reasons.append(f"Market Laggard: Weak Relative Strength vs {bench_sym} (-15 penalty)")
 
     # Build expert plan now that trade_signal.recommendation is final and volatility.atr is available
     if _expert_or_data is not None:
@@ -441,10 +442,29 @@ def analyze_instrument_lazy(
         liquidity_map=liquidity_map,
         block_flow=block_flow,
         geopolitical_risk=geopolitical_risk,
+        blowoff_top=blowoff_top,
     ), execution_data
 
 # In-memory store for sent alerts
 SENT_ALERTS = set()
+
+
+def is_weekend_market_close() -> bool:
+    """Return True during the commodity/forex weekend-close window.
+
+    WTI, XAU, XAG markets close Friday ~22:00 UTC and reopen Sunday ~21:00 UTC.
+    BTC is 24/7 but weekend analysis adds little signal value.
+    Returning True suppresses alerts during this window; cache still serves the UI.
+    """
+    now = datetime.now(timezone.utc)
+    wd  = now.weekday()          # 5 = Saturday, 6 = Sunday, 0-4 = Mon-Fri
+    if wd == 5:                  # All day Saturday
+        return True
+    if wd == 4 and now.hour >= 22:  # Friday after 22:00 UTC (5pm ET)
+        return True
+    if wd == 6 and now.hour < 21:   # Sunday before 21:00 UTC (markets still closed)
+        return True
+    return False
 
 async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = None):
     from .config_loader import load_config, get_instruments, get_analysis_params, get_alert_config, get_strategy_config, get_newsapi_key
@@ -454,7 +474,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         analyze_monthly_trend, calculate_weekly_performance, 
         calculate_correlations, apply_position_sizing, analyze_psychological_state
     )
-    from .notifier import send_alerts
+    from .notifier import send_alerts, send_expert_alert
     from concurrent.futures import ThreadPoolExecutor, as_completed
     
     if mode is None:
@@ -510,7 +530,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
             "atr_multiplier_tp": 3.0,
             "atr_multiplier_sl": 1.5,
             "portfolio_value": 10000.0,
-            "risk_per_trade_percent": 1.0
+            "risk_per_trade_percent": 1.0,
+            "aggressiveness_mode": "balanced",
         })
     
     # Performance Context: Intervals for scan
@@ -541,7 +562,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         # the TwelveData batch above.  If yfinance is unavailable or returns empty
         # data, intermarket analysis degrades gracefully to None.
         with ThreadPoolExecutor(max_workers=2) as _yfin_pool:
-            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DX=F",  60)
+            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DXY",  60)
             _f_us10y = _yfin_pool.submit(_fetch_via_yfinance, "^TNX",  60)
             _dxy_df   = _f_dxy.result()
             _us10y_df = _f_us10y.result()
@@ -564,6 +585,21 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         spy_bench = analyze_monthly_trend(benchmarks_data["SPX_macro"], params.get('monthly', {})).direction
     if benchmarks_data.get("BTC_macro") is not None and not benchmarks_data["BTC_macro"].empty:
         btc_bench = analyze_monthly_trend(benchmarks_data["BTC_macro"], params.get('monthly', {})).direction
+
+    # Commodity benchmark: use inverted DXY (weak dollar = bullish for WTI/XAU/XAG)
+    # DXY direction is derived from a 20-bar MA comparison on the 60-day daily data.
+    commodity_bench = Signal.NEUTRAL
+    _dxy_data = benchmarks_data.get("DXY")
+    if _dxy_data is not None and not _dxy_data.empty and len(_dxy_data) >= 20:
+        _dxy_close = _dxy_data['Close']
+        _dxy_ma = _dxy_close.rolling(20).mean().iloc[-1]
+        _dxy_cur = _dxy_close.iloc[-1]
+        if _dxy_cur > _dxy_ma * 1.005:    # Dollar strong → headwind for commodities
+            commodity_bench = Signal.BEARISH
+        elif _dxy_cur < _dxy_ma * 0.995:  # Dollar weak  → tailwind for commodities
+            commodity_bench = Signal.BULLISH
+        # else stays NEUTRAL (no beta filter applied)
+    logger.info(f"[BENCHMARKS] spy={spy_bench.value}, btc={btc_bench.value}, commodity(DXY-inv)={commodity_bench.value}")
             
     # 5. TIERED BATCH FETCH (The "Speed & Limit" Solution)
     # We only fetch LIVE data (Execution/Expert) on refresh. 
@@ -604,11 +640,9 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         if expert_batch:
             logger.info(f"[INSTRUMENTS] Expert 15min batch: {list(expert_batch.keys())}")
 
-        # Fetch live prices for all instruments in ONE API call (LONG_TERM only — hourly candle is fresh in SHORT_TERM)
-        if mode == StrategyMode.LONG_TERM:
-            live_prices = shared_fetcher.fetch_batch_prices(sym_list)
-        else:
-            live_prices = {}
+        # Fetch live prices for all instruments in ONE API call for BOTH modes.
+        # This keeps displayed current_price consistent between short_term and long_term views.
+        live_prices = shared_fetcher.fetch_batch_prices(sym_list)
 
         # We'll allow the analyzer to use whatever history it has from previous runs or fall back
         macro_batch = {}
@@ -621,10 +655,19 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         sym = inst['symbol'].upper()
         t_inst = time.time()
         try:
-            # Improved Crypto Detection (Whitelisted for BTC)
+            # Benchmark assignment: crypto→BTC, commodity→inverted-DXY, equity→SPX
+            _COMMODITY_SYMS = {"WTI", "XAU", "XAG", "GOLD", "SILVER", "OIL"}
             is_crypto = any(sub in sym for sub in ["BTC", "CRYPTO", "BITCOIN"]) or (len(sym) > 6 and "USD" in sym)
-            bench = btc_bench if is_crypto else spy_bench
-            bench_exec_df = benchmarks_data.get("BTC_exec") if is_crypto else benchmarks_data.get("SPX_exec")
+            is_commodity = any(sub in sym for sub in _COMMODITY_SYMS)
+            if is_crypto:
+                bench = btc_bench
+                bench_exec_df = benchmarks_data.get("BTC_exec")
+            elif is_commodity:
+                bench = commodity_bench  # inverted DXY — correct driver for WTI/XAU/XAG
+                bench_exec_df = None     # no exec-level benchmark needed for commodities
+            else:
+                bench = spy_bench
+                bench_exec_df = benchmarks_data.get("SPX_exec")
             
             # Pass pre-fetched data
             analysis, hist_data = analyze_instrument_lazy(
@@ -657,14 +700,71 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 if analysis:
                     results.append(analysis)
                     data_map[sym] = hist_data
-                    # Alerts
-                    if analysis.trade_signal.trade_worthy:
-                        alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}_{mode.value}"
-                        if alert_key not in SENT_ALERTS:
-                            send_alerts(analysis, alert_config)
-                            SENT_ALERTS.add(alert_key)
+                    # Alerts — suppressed during weekend commodity/forex close
+                    if not is_weekend_market_close():
+                        if analysis.trade_signal.trade_worthy:
+                            alert_key = f"{user_id}_{sym}_{analysis.trade_signal.recommendation}_{date.today()}_{mode.value}"
+                            if alert_key not in SENT_ALERTS:
+                                send_alerts(analysis, alert_config)
+                                SENT_ALERTS.add(alert_key)
+                        # Expert Battle Plan alert: only for actual ORB breaks (or_broken != 'none')
+                        # with high intent — send_expert_alert also guards internally, but we skip
+                        # adding noise keys to SENT_ALERTS for consolidating states.
+                        if analysis.expert_trade_plan:
+                            or_broken = analysis.expert_trade_plan.get('or_broken', 'none')
+                            is_high_intent = analysis.expert_trade_plan.get('is_high_intent', False)
+                            if or_broken != 'none' and is_high_intent:
+                                expert_key = f"expert_{user_id}_{sym}_{or_broken}_{date.today()}_{mode.value}"
+                                if expert_key not in SENT_ALERTS:
+                                    send_expert_alert(analysis, alert_config)
+                                    SENT_ALERTS.add(expert_key)
                 else:
                     logger.warning(f"Analysis produced no result for {sym}")
+                    # Create fallback analysis for failed instruments so they still appear in monitoring
+                    from .models import InstrumentAnalysis, Signal, TradeSignal
+                    
+                    # Find the original instrument config
+                    original_inst = next((inst for inst in instruments if inst['symbol'].upper() == sym), None)
+                    if original_inst:
+                        fallback_analysis = InstrumentAnalysis(
+                            symbol=sym,
+                            name=original_inst.get('name', sym),
+                            current_price=0.0,
+                            analysis_date=date.today(),
+                            last_updated=datetime.now(timezone.utc).isoformat(),
+                            monthly_trend=None,  # Will show as "No data"
+                            weekly_pullback=None,
+                            daily_strength=None,
+                            market_phase=None,
+                            volatility_risk=None,
+                            fundamentals=None,
+                            backtest_results=None,
+                            candle_patterns=None,
+                            benchmark_direction=Signal.NEUTRAL,
+                            trade_signal=TradeSignal(
+                                score=0,
+                                recommendation='neutral',
+                                confidence=0.0,
+                                reasons=['Analysis failed - data unavailable'],
+                                trade_worthy=False,
+                                signal_conflict=None
+                            ),
+                            technical_indicators=None,
+                            news_sentiment=None,
+                            relative_strength=None,
+                            expert_trade_plan=None,
+                            strategy_mode=mode,
+                            intermarket_context=None,
+                            session_context=None,
+                            volume_profile=None,
+                            session_vwap=None,
+                            liquidity_map=None,
+                            block_flow=None,
+                            geopolitical_risk=None,
+                            blowoff_top=None,
+                        )
+                        results.append(fallback_analysis)
+                        logger.info(f"Created fallback analysis for failed instrument {sym}")
     except Exception as e:
         logger.error(f"Parallel analysis loop failed: {e}")
         # Continue with whatever results we have (possibly empty)
@@ -1006,6 +1106,7 @@ async def get_preferences(user_id: str = Depends(get_current_user)):
             "atr_multiplier_sl": 1.5,
             "portfolio_value": 10000.0,
             "risk_per_trade_percent": 1.0,
+            "aggressiveness_mode": "balanced",
         }
     }
 

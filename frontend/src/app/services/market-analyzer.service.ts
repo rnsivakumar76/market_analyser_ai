@@ -140,6 +140,9 @@ export interface TradeSignal {
   score: number;
   reasons: string[];
   trade_worthy: boolean;
+  execution_state: 'ready' | 'conditional' | 'stand_aside';
+  opportunity_grade: 'A' | 'B' | 'C' | 'D';
+  suggested_size_text: string;
   action_plan: string;
   action_plan_details: string;
   psychological_guard: string;
@@ -220,6 +223,7 @@ export interface StrategySettings {
   atr_multiplier_sl: number;
   portfolio_value: number;
   risk_per_trade_percent: number;
+  aggressiveness_mode: 'conservative' | 'balanced' | 'aggressive';
 }
 
 export interface CandleAnalysis {
@@ -274,6 +278,28 @@ export interface GeopoliticalRisk {
   indicators: GeoIndicatorCheck[];
   ai_narrative: string;
   action_bias: string;
+}
+
+export interface BlowOffTopSignals {
+  vertical_move: boolean;
+  range_expansion: boolean;
+  rsi_bearish_divergence: boolean;
+  failed_breakout: boolean;
+  structure_break: boolean;
+}
+
+export interface BlowOffTopAnalysis {
+  applicable: boolean;
+  detected: boolean;
+  blowoff_score: number;
+  phase: 'normal' | 'acceleration' | 'blowoff' | 'confirmed_breakdown';
+  entry_state: 'wait' | 'armed' | 'triggered';
+  trigger_level?: number;
+  invalidation_level?: number;
+  recent_peak?: number;
+  structural_low?: number;
+  signals: BlowOffTopSignals;
+  narrative: string;
 }
 
 export interface ChartData {
@@ -343,6 +369,7 @@ export interface InstrumentAnalysis {
   liquidity_map?: LiquidityMap;
   block_flow?: BlockFlowDetection;
   geopolitical_risk?: GeopoliticalRisk;
+  blowoff_top?: BlowOffTopAnalysis;
 }
 
 export interface VolumeProfileBucket {
@@ -460,6 +487,41 @@ export interface UserPreferences {
   strategy: StrategySettings;
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatUsage {
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number;
+}
+
+export interface ChatSafety {
+  adviceType: 'educational';
+  containsFinancialGuarantee: boolean;
+}
+
+export interface ChatRequest {
+  sessionId: string;
+  intent: 'signal_explainer' | 'risk_coach' | 'setup_monitor' | 'general';
+  symbol?: string;
+  question: string;
+  strategyMode: StrategyMode;
+  analysisContext: Record<string, unknown>;
+  history: ChatMessage[];
+}
+
+export interface ChatResponse {
+  answer: string;
+  modelUsed: string;
+  escalated: boolean;
+  citations: string[];
+  usage: ChatUsage;
+  safety: ChatSafety;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -552,5 +614,9 @@ export class MarketAnalyzerService {
 
   getHistoricalSentiment(days: number = 7): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/geopolitical/historical-sentiment?days=${days}`);
+  }
+
+  chatWithCopilot(payload: ChatRequest): Observable<ChatResponse> {
+    return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, payload).pipe(timeout(25000));
   }
 }

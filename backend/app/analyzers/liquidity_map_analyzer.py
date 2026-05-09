@@ -65,10 +65,15 @@ def calculate_liquidity_map(
             return None
 
         data = df.tail(200).copy()
+        recent_data = df.tail(30).copy()
         lookback = 5
 
         swing_highs = _find_swing_highs(data['High'], lookback)
         swing_lows = _find_swing_lows(data['Low'], lookback)
+
+        # Near-term swings (last 30 bars) — prioritised for relevance
+        recent_highs = _find_swing_highs(recent_data['High'], min(lookback, 3))
+        recent_lows = _find_swing_lows(recent_data['Low'], min(lookback, 3))
 
         # Also include round-number levels (psychological)
         price_digits = len(str(int(abs(current_price)))) if int(abs(current_price)) > 0 else 1
@@ -84,8 +89,13 @@ def calculate_liquidity_map(
         level_count = int((round_high - round_low) / step) if step > 0 else 0
         round_numbers = [round_low + i * step for i in range(max(0, level_count) + 1)]
 
-        all_resistance = swing_highs + [r for r in round_numbers if r > current_price]
-        all_support = swing_lows + [r for r in round_numbers if r < current_price]
+        # Near-term levels (within 8% of current price) come first
+        near_threshold = current_price * 0.08
+        near_resistance = [r for r in recent_highs if current_price < r <= current_price + near_threshold]
+        near_support = [s for s in recent_lows if current_price - near_threshold <= s < current_price]
+
+        all_resistance = near_resistance + swing_highs + [r for r in round_numbers if r > current_price]
+        all_support = near_support + swing_lows + [r for r in round_numbers if r < current_price]
 
         resistance_clustered = _cluster_levels([r for r in all_resistance if r > current_price])
         support_clustered = _cluster_levels(sorted([s for s in all_support if s < current_price], reverse=True))

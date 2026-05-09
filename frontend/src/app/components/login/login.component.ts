@@ -32,7 +32,12 @@ import { environment } from '../../../environments/environment';
         <div class="divider"><span>OR</span></div>
 
         <button (click)="loginWithGoogle()" class="google-btn">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_'G'_logo.svg" alt="Google logo" />
+          <svg class="google-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-.9 2.3-1.9 3.1l3.1 2.4c1.8-1.7 2.8-4.1 2.8-6.9 0-.7-.1-1.4-.2-2H12z"/>
+            <path fill="#34A853" d="M12 22c2.6 0 4.8-.9 6.4-2.4l-3.1-2.4c-.9.6-2 .9-3.3.9-2.5 0-4.7-1.7-5.4-4.1H3.4v2.6C5 19.8 8.2 22 12 22z"/>
+            <path fill="#4A90E2" d="M6.6 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.4C2.5 9 2 10.4 2 12s.5 3 1.4 4.6L6.6 14z"/>
+            <path fill="#FBBC05" d="M12 5.9c1.4 0 2.7.5 3.7 1.4l2.8-2.8C16.8 2.9 14.6 2 12 2 8.2 2 5 4.2 3.4 7.4l3.2 2.6c.7-2.4 2.9-4.1 5.4-4.1z"/>
+          </svg>
           <span>Sign in with Google</span>
         </button>
         
@@ -103,9 +108,10 @@ import { environment } from '../../../environments/environment';
       cursor: pointer;
       transition: all 0.3s ease;
       
-      img {
+      .google-icon {
         width: 20px;
         height: 20px;
+        flex-shrink: 0;
       }
 
       &:hover {

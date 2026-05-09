@@ -51,8 +51,8 @@ interface TimeframeSignal {
   `,
   styles: [`
     .mtf-container {
-      background: #1e1e2e;
-      border: 1px solid #313244;
+      background: #1e293b;
+      border: 1px solid #253348;
       border-radius: 12px;
       padding: 16px;
     }
@@ -65,14 +65,14 @@ interface TimeframeSignal {
     }
 
     .mtf-title {
-      font-size: 0.65rem;
+      font-size: 0.86rem;
       font-weight: 800;
       letter-spacing: 1.5px;
-      color: #6c7086;
+      color: #64748b;
     }
 
     .alignment-badge {
-      font-size: 0.6rem;
+      font-size: 0.82rem;
       font-weight: 800;
       padding: 3px 10px;
       border-radius: 4px;
@@ -82,19 +82,19 @@ interface TimeframeSignal {
 
     .alignment-badge.aligned {
       background: rgba(166, 227, 161, 0.15);
-      color: #a6e3a1;
+      color: #86efac;
       border: 1px solid rgba(166, 227, 161, 0.3);
     }
 
     .alignment-badge.partial {
       background: rgba(249, 226, 175, 0.15);
-      color: #f9e2af;
+      color: #fcd34d;
       border: 1px solid rgba(249, 226, 175, 0.3);
     }
 
     .alignment-badge.conflicting {
       background: rgba(243, 139, 168, 0.15);
-      color: #f38ba8;
+      color: #f87171;
       border: 1px solid rgba(243, 139, 168, 0.3);
     }
 
@@ -117,7 +117,7 @@ interface TimeframeSignal {
       padding: 10px 16px;
       border-radius: 10px;
       background: rgba(17, 17, 27, 0.5);
-      border: 1px solid #313244;
+      border: 1px solid #253348;
       min-width: 85px;
       transition: all 0.2s;
       position: relative;
@@ -139,15 +139,15 @@ interface TimeframeSignal {
     }
 
     .tf-label {
-      font-size: 0.6rem;
+      font-size: 0.82rem;
       font-weight: 800;
-      color: #6c7086;
+      color: #64748b;
       text-transform: uppercase;
       letter-spacing: 1px;
     }
 
     .tf-direction-badge {
-      font-size: 0.65rem;
+      font-size: 0.86rem;
       font-weight: 800;
       padding: 2px 8px;
       border-radius: 4px;
@@ -155,17 +155,17 @@ interface TimeframeSignal {
 
     .tf-direction-badge.bullish {
       background: rgba(166, 227, 161, 0.2);
-      color: #a6e3a1;
+      color: #86efac;
     }
 
     .tf-direction-badge.bearish {
       background: rgba(243, 139, 168, 0.2);
-      color: #f38ba8;
+      color: #f87171;
     }
 
     .tf-direction-badge.neutral {
       background: rgba(249, 226, 175, 0.15);
-      color: #f9e2af;
+      color: #fcd34d;
     }
 
     .tf-details {
@@ -178,7 +178,7 @@ interface TimeframeSignal {
     .tf-phase {
       font-size: 0.55rem;
       font-weight: 700;
-      color: #585b70;
+      color: #475569;
       text-transform: uppercase;
     }
 
@@ -187,17 +187,17 @@ interface TimeframeSignal {
       font-weight: 700;
     }
 
-    .tf-strength.bullish { color: #a6e3a1; }
-    .tf-strength.bearish { color: #f38ba8; }
-    .tf-strength.neutral { color: #6c7086; }
+    .tf-strength.bullish { color: #86efac; }
+    .tf-strength.bearish { color: #f87171; }
+    .tf-strength.neutral { color: #64748b; }
 
     .tf-pullback-dot {
       position: absolute;
       top: -6px;
       right: -4px;
-      font-size: 0.75rem;
+      font-size: 0.90rem;
       background: rgba(250, 179, 135, 0.2);
-      color: #fab387;
+      color: #fb923c;
       border-radius: 50%;
       width: 18px;
       height: 18px;
@@ -215,33 +215,33 @@ interface TimeframeSignal {
     .connector-line {
       width: 20px;
       height: 2px;
-      background: #313244;
+      background: #253348;
     }
 
     .connector-arrow {
-      font-size: 0.8rem;
-      color: #45475a;
+      font-size: 0.94rem;
+      color: #334155;
     }
 
     .tf-connector.aligned .connector-line {
-      background: #a6e3a1;
+      background: #86efac;
     }
 
     .tf-connector.aligned .connector-arrow {
-      color: #a6e3a1;
+      color: #86efac;
     }
 
     .tf-connector.conflicting .connector-line {
-      background: #f38ba8;
+      background: #f87171;
     }
 
     .tf-connector.conflicting .connector-arrow {
-      color: #f38ba8;
+      color: #f87171;
     }
 
     .mtf-description {
-      font-size: 0.75rem;
-      color: #a6adc8;
+      font-size: 0.90rem;
+      color: #94a3b8;
       margin: 12px 0 0;
       font-style: italic;
       text-align: center;
@@ -267,7 +267,7 @@ interface TimeframeSignal {
       }
 
       .tf-label {
-        font-size: 0.5rem;
+        font-size: 0.74rem;
         letter-spacing: 0.5px;
       }
 
@@ -281,7 +281,7 @@ interface TimeframeSignal {
       }
 
       .mtf-description {
-        font-size: 0.68rem;
+        font-size: 0.88rem;
       }
     }
 
@@ -291,7 +291,7 @@ interface TimeframeSignal {
       }
 
       .alignment-badge {
-        font-size: 0.5rem;
+        font-size: 0.74rem;
         padding: 2px 7px;
       }
 
@@ -328,19 +328,19 @@ export class MultiTimeframeOverlayComponent {
       },
       {
         label: `INTERMEDIATE STATE (${isLongTerm ? 'WEEKLY' : '4-HOUR'})`,
-        direction: a.weekly_pullback.detected ? 'bullish' : (a.monthly_trend.direction === 'bullish' ? 'neutral' : a.monthly_trend.direction),
+        direction: a.weekly_pullback.detected ? 'neutral' : (a.monthly_trend.direction === 'bullish' ? 'neutral' : a.monthly_trend.direction),
         score: 0,
         phase: a.weekly_pullback.detected ? 'Pullback' : 'Extended',
         pullback: a.weekly_pullback.detected,
-        strength: a.weekly_pullback.detected ? 'bullish' : 'neutral'
+        strength: a.weekly_pullback.detected ? 'neutral' : 'neutral'
       },
       {
         label: `TACTICAL MOMENTUM (${isLongTerm ? 'DAILY' : '1-HOUR'})`,
-        direction: a.daily_strength.signal,
+        direction: (['bullish', 'bearish', 'neutral'].includes(a.daily_strength.signal) ? a.daily_strength.signal : 'neutral'),
         score: 0,
-        phase: a.candle_patterns.pattern !== 'none' ? a.candle_patterns.pattern : 'Execution',
+        phase: (a.candle_patterns.pattern && a.candle_patterns.pattern !== 'none') ? a.candle_patterns.pattern.replace(/_/g, ' ') : 'Execution',
         pullback: false,
-        strength: a.daily_strength.signal
+        strength: (['bullish', 'bearish', 'neutral'].includes(a.daily_strength.signal) ? a.daily_strength.signal : 'neutral')
       }
     ];
   }
@@ -381,7 +381,11 @@ export class MultiTimeframeOverlayComponent {
     const cls = this.getAlignmentClass();
     const tfs = this.timeframes;
     if (cls === 'aligned') {
-      return `All timeframes agree on ${tfs[0].direction} — high-confidence directional environment.`;
+      const direction = tfs[0].direction;
+      if (direction === 'neutral') {
+        return 'All timeframes neutral — consolidation/ranging environment. Wait for a directional breakout before committing to a side.';
+      }
+      return `All timeframes agree on ${direction} — high-confidence directional environment.`;
     }
     if (cls === 'conflicting') {
       return 'Macro and micro timeframes are in conflict — avoid aggressive positioning until alignment improves.';

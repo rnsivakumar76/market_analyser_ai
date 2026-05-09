@@ -28,7 +28,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
           {{ analysis.market_phase.phase.toUpperCase() }}
         </div>
         <div class="change" [class]="getPriceChangeClass()">
-          {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}%
+          {{ analysis.daily_strength.price_change_percent > 0 ? '+' : '' }}{{ analysis.daily_strength.price_change_percent.toFixed(2) }}% · 1D
         </div>
       </div>
 
@@ -164,6 +164,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
     .change.positive { color: #a6e3a1; }
     .change.negative { color: #f38ba8; }
+    .change.neutral { color: #f9e2af; }
 
     .worthy-indicator {
       position: absolute;
@@ -220,6 +221,9 @@ export class InstrumentSummaryComponent {
   }
 
   getPriceChangeClass() {
-    return this.analysis.daily_strength.price_change_percent >= 0 ? 'positive' : 'negative';
+    const change = this.analysis.daily_strength.price_change_percent;
+    if (change > 0) return 'positive';
+    if (change < 0) return 'negative';
+    return 'neutral';
   }
 }
