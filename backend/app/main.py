@@ -938,6 +938,21 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
             except Exception as e:
                 logger.error(f"Failed to cache analysis: {e}")
 
+        # Send Telegram alerts for high-intent signals (scheduler path only)
+        if user_id == "global_default" and results:
+            try:
+                from .notifier import send_alerts
+                from .config_loader import load_config, get_alert_config
+                cfg = load_config(user_id=user_id)
+                alert_cfg = get_alert_config(cfg)
+                for inst in results:
+                    try:
+                        send_alerts(inst, alert_cfg)
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.warning(f"[NOTIFIER] Telegram alert send failed: {e}")
+
         return _scrub_nans(response.dict())
 
     except Exception as e:
@@ -1191,6 +1206,43 @@ async def get_chart_data(symbol: str):
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+@app.get("/api/debug/telegram")
+async def debug_telegram(send_test: bool = False, user_id: str = Depends(get_current_user)):
+    """
+    Diagnostic endpoint to verify Telegram configuration.
+    Pass ?send_test=true to actually fire a test message to the configured chat.
+    """
+    token   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+    result = {
+        "TELEGRAM_BOT_TOKEN": "SET" if token else "MISSING",
+        "TELEGRAM_CHAT_ID":   "SET" if chat_id else "MISSING",
+        "token_prefix":       token[:10] + "..." if token else None,
+        "chat_id":            chat_id if chat_id else None,
+        "test_sent":          False,
+        "test_error":         None,
+    }
+    if send_test and token and chat_id:
+        try:
+            import requests as _req
+            resp = _req.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={
+                    "chat_id": chat_id,
+                    "text":    f"✅ *Market Analyser — Telegram Test*\nSent at `{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}`",
+                    "parse_mode": "Markdown",
+                },
+                timeout=8,
+            )
+            result["test_sent"]         = resp.status_code == 200
+            result["telegram_response"] = resp.json()
+        except Exception as e:
+            result["test_error"] = str(e)
+    elif send_test:
+        result["test_error"] = "Cannot send — one or both env vars missing"
+    return result
 
 @app.get("/api/test/gold")
 async def test_gold():
