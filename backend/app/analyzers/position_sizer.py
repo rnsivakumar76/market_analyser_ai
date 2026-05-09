@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 from ..models import InstrumentAnalysis, PositionSizing, StrategySettings, Signal
 import logging
-from domain.trading.position_sizer import (
+from ...domain.trading.position_sizer import (
     calculate_correlation_penalty,
     calculate_risk_per_unit,
     calculate_position_units as _domain_size,
