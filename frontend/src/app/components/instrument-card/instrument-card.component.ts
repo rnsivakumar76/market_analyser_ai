@@ -539,6 +539,80 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <p class="intel-text-sm">{{ analysis.market_phase.description }}</p>
             </div>
 
+            <!-- OIL MARKET CONTEXT (WTI only) -->
+            @if (analysis.oil_market_context) {
+            <div class="oil-context-block">
+              <div class="tile-header">🛢️ OIL MARKET CONTEXT
+                <span class="oil-regime-badge" [class]="'oil-regime-' + analysis.oil_market_context.overall_regime.toLowerCase()">
+                  {{ analysis.oil_market_context.overall_regime }}
+                </span>
+              </div>
+
+              <!-- OVX Regime -->
+              @if (analysis.oil_market_context.ovx) {
+              <div class="oil-row">
+                <div class="oil-row-icon">📊</div>
+                <div class="oil-row-body">
+                  <span class="oil-row-label">OVX (Oil VIX)</span>
+                  <span class="oil-ovx-val" [class]="'ovx-' + analysis.oil_market_context.ovx.regime.toLowerCase()">
+                    {{ analysis.oil_market_context.ovx.current_value }} — {{ analysis.oil_market_context.ovx.regime_label }}
+                  </span>
+                  <p class="oil-row-desc">{{ analysis.oil_market_context.ovx.trading_implication }}</p>
+                </div>
+                <div class="oil-size-pill">
+                  {{ (analysis.oil_market_context.ovx.size_multiplier * 100).toFixed(0) }}% SIZE
+                </div>
+              </div>
+              }
+
+              <!-- EIA Inventory -->
+              @if (analysis.oil_market_context.eia_inventory) {
+              <div class="oil-row">
+                <div class="oil-row-icon">🏭</div>
+                <div class="oil-row-body">
+                  <span class="oil-row-label">EIA Crude Inventory</span>
+                  <span class="oil-eia-dir" [class]="analysis.oil_market_context.eia_inventory.direction">
+                    {{ analysis.oil_market_context.eia_inventory.change_mbbl !== null ? (analysis.oil_market_context.eia_inventory.change_mbbl! > 0 ? '+' : '') + analysis.oil_market_context.eia_inventory.change_mbbl + 'M bbl' : 'Pending' }}
+                  </span>
+                  <p class="oil-row-desc">{{ analysis.oil_market_context.eia_inventory.description }}</p>
+                  <p class="oil-row-meta">Next report: {{ analysis.oil_market_context.eia_inventory.next_report_date }} ({{ analysis.oil_market_context.eia_inventory.days_to_next }}d)</p>
+                </div>
+              </div>
+              }
+
+              <!-- OPEC Window -->
+              @if (analysis.oil_market_context.opec_window) {
+              <div class="oil-row" [class.oil-row-alert]="analysis.oil_market_context.opec_window.is_active_window">
+                <div class="oil-row-icon">🏛️</div>
+                <div class="oil-row-body">
+                  <span class="oil-row-label">OPEC+ Calendar</span>
+                  <span class="oil-opec-status" [class.active-window]="analysis.oil_market_context.opec_window.is_active_window">
+                    {{ analysis.oil_market_context.opec_window.is_active_window ? '⚠️ ACTIVE WINDOW' : analysis.oil_market_context.opec_window.next_meeting_date }}
+                  </span>
+                  <p class="oil-row-desc">{{ analysis.oil_market_context.opec_window.caution_message }}</p>
+                </div>
+              </div>
+              }
+
+              <!-- Warnings -->
+              @if (analysis.oil_market_context.warnings.length > 0) {
+              <div class="oil-warnings">
+                @for (w of analysis.oil_market_context.warnings; track w) {
+                  <div class="oil-warn-item">⚡ {{ w }}</div>
+                }
+              </div>
+              }
+
+              <!-- Size Guidance -->
+              <div class="oil-size-guidance">
+                <span class="osg-label">COMBINED SIZE GUIDANCE</span>
+                <span class="osg-value" [class]="'osg-' + analysis.oil_market_context.overall_regime.toLowerCase()">
+                  {{ (analysis.oil_market_context.size_guidance * 100).toFixed(0) }}% OF NORMAL SIZE
+                </span>
+              </div>
+            </div>
+            }
+
             <!-- LIQUIDITY MAP -->
             @if (analysis.liquidity_map) {
             <div class="liquidity-map-section">
@@ -912,6 +986,41 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .verdict-banner-final.go { background: rgba(166, 227, 161, 0.1); color: #86efac; border-color: #86efac; }
     .verdict-banner-final.caution { background: rgba(249, 226, 175, 0.1); color: #fcd34d; border-color: #fcd34d; }
     .verdict-banner-final.no-go { background: rgba(243, 139, 168, 0.1); color: #f87171; border-color: #f87171; }
+
+    /* OIL MARKET CONTEXT PANEL */
+    .oil-context-block { background: rgba(15,23,42,0.9); border: 1px solid #253348; border-left: 4px solid #fb923c; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+    .oil-regime-badge { padding: 2px 10px; border-radius: 10px; font-size: 0.74rem; font-weight: 900; margin-left: 8px; letter-spacing: 0.5px; }
+    .oil-regime-clear { background: rgba(134,239,172,0.15); color: #86efac; border: 1px solid rgba(134,239,172,0.3); }
+    .oil-regime-caution { background: rgba(253,211,77,0.15); color: #fcd34d; border: 1px solid rgba(253,211,77,0.3); }
+    .oil-regime-high_risk { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+    .oil-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid #192642; }
+    .oil-row:last-of-type { border-bottom: none; }
+    .oil-row-alert { background: rgba(248,113,113,0.05); border-radius: 6px; padding: 10px; border: 1px solid rgba(248,113,113,0.2); margin-bottom: 4px; }
+    .oil-row-icon { font-size: 1.1rem; margin-top: 2px; flex-shrink: 0; }
+    .oil-row-body { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+    .oil-row-label { font-size: 0.72rem; font-weight: 900; color: #64748b; letter-spacing: 0.8px; text-transform: uppercase; }
+    .oil-ovx-val { font-size: 0.86rem; font-weight: 800; }
+    .ovx-low { color: #86efac; }
+    .ovx-normal { color: #60a5fa; }
+    .ovx-elevated { color: #fcd34d; }
+    .ovx-extreme { color: #f87171; }
+    .oil-eia-dir { font-size: 0.86rem; font-weight: 800; }
+    .oil-eia-dir.bullish_draw { color: #86efac; }
+    .oil-eia-dir.bearish_build { color: #f87171; }
+    .oil-eia-dir.neutral { color: #94a3b8; }
+    .oil-opec-status { font-size: 0.86rem; font-weight: 800; color: #94a3b8; }
+    .oil-opec-status.active-window { color: #f87171; }
+    .oil-row-desc { font-size: 0.78rem; color: #94a3b8; line-height: 1.4; margin: 0; }
+    .oil-row-meta { font-size: 0.72rem; color: #475569; margin: 0; }
+    .oil-size-pill { flex-shrink: 0; font-size: 0.72rem; font-weight: 900; padding: 3px 8px; background: rgba(96,165,250,0.1); color: #60a5fa; border: 1px solid rgba(96,165,250,0.2); border-radius: 10px; white-space: nowrap; }
+    .oil-warnings { margin: 10px 0; display: flex; flex-direction: column; gap: 5px; }
+    .oil-warn-item { font-size: 0.78rem; color: #fcd34d; padding: 5px 10px; background: rgba(253,211,77,0.07); border-left: 3px solid #fcd34d; border-radius: 0 4px 4px 0; }
+    .oil-size-guidance { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(15,23,42,0.6); border-radius: 6px; margin-top: 12px; border: 1px solid #192642; }
+    .osg-label { font-size: 0.72rem; color: #64748b; font-weight: 900; letter-spacing: 0.8px; text-transform: uppercase; }
+    .osg-value { font-size: 0.9rem; font-weight: 950; letter-spacing: 1px; }
+    .osg-clear { color: #86efac; }
+    .osg-caution { color: #fcd34d; }
+    .osg-high_risk { color: #f87171; }
 
     /* Intel Stack Column CSS */
     .intel-column-stack { display: flex; flex-direction: column; gap: 30px; }

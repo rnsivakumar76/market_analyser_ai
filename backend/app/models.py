@@ -286,6 +286,41 @@ class BlowOffTopAnalysis(BaseModel):
     narrative: str = ""
 
 
+class OVXRegime(BaseModel):
+    current_value: float
+    regime: str  # "LOW" | "NORMAL" | "ELEVATED" | "EXTREME"
+    regime_label: str
+    trading_implication: str
+    size_multiplier: float  # suggested position size multiplier
+
+
+class EIAInventoryReport(BaseModel):
+    report_date: str
+    change_mbbl: Optional[float] = None       # week-on-week change (million barrels)
+    prior_change_mbbl: Optional[float] = None
+    direction: str = "neutral"                 # "bullish_draw" | "bearish_build" | "neutral"
+    description: str = ""
+    next_report_date: Optional[str] = None
+    days_to_next: Optional[int] = None
+
+
+class OpecWindow(BaseModel):
+    next_meeting_date: str
+    days_until: int
+    is_active_window: bool   # within ±5 days of a meeting
+    caution_message: str
+
+
+class OilMarketContext(BaseModel):
+    ovx: Optional[OVXRegime] = None
+    eia_inventory: Optional[EIAInventoryReport] = None
+    opec_window: Optional[OpecWindow] = None
+    overall_regime: str = "CLEAR"    # "CLEAR" | "CAUTION" | "HIGH_RISK"
+    regime_summary: str = ""
+    size_guidance: float = 1.0        # final combined position-size multiplier
+    warnings: List[str] = []
+
+
 class VolumeProfileBucket(BaseModel):
     price_low: float
     price_high: float
@@ -381,6 +416,7 @@ class InstrumentAnalysis(BaseModel):
     block_flow: Optional[BlockFlowDetection] = None
     geopolitical_risk: Optional[GeopoliticalRisk] = None
     blowoff_top: Optional[BlowOffTopAnalysis] = None
+    oil_market_context: Optional[OilMarketContext] = None
 
 
 class PerformanceSummary(BaseModel):

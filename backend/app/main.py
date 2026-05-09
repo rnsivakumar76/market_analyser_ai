@@ -682,6 +682,15 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 us10y_df=benchmarks_data.get("US10Y"),
                 news_api_key=newsapi_key
             )
+            # Oil market context — only for WTI
+            if is_commodity and "WTI" in sym and analysis:
+                try:
+                    from .analyzers.oil_market_analyzer import analyze_oil_market_context
+                    analysis.oil_market_context = analyze_oil_market_context()
+                    logger.info(f"[OIL_CTX] {sym}: regime={analysis.oil_market_context.overall_regime}, size_guidance={analysis.oil_market_context.size_guidance}")
+                except Exception as oil_exc:
+                    logger.warning(f"[OIL_CTX] {sym}: failed to build oil context: {oil_exc}")
+
             elapsed_inst = round(time.time() - t_inst, 2)
             signal_rec = analysis.trade_signal.recommendation if analysis and analysis.trade_signal else 'N/A'
             price = analysis.current_price if analysis else 'N/A'
