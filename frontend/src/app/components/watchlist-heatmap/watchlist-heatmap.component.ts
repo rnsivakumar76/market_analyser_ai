@@ -31,7 +31,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
               <span class="cell-symbol">{{ instrument.symbol }}</span>
               <span class="cell-score">{{ instrument.trade_signal.score > 0 ? '+' : '' }}{{ instrument.trade_signal.score }}</span>
               <span class="cell-change" [class]="getChangeClass(instrument)">
-                {{ instrument.daily_strength?.price_change_percent > 0 ? '+' : '' }}{{ (instrument.daily_strength?.price_change_percent ?? 0).toFixed(2) }}% · 1D
+                {{ (instrument.daily_strength?.price_change_percent ?? 0) > 0 ? '+' : '' }}{{ (instrument.daily_strength?.price_change_percent ?? 0).toFixed(2) }}% · 1D
               </span>
               <span class="cell-phase">{{ instrument.market_phase?.phase || 'No Data' }}</span>
             </div>
@@ -60,7 +60,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
               <span class="cell-symbol">{{ instrument.symbol }}</span>
               <span class="cell-score">{{ instrument.trade_signal.score > 0 ? '+' : '' }}{{ instrument.trade_signal.score }}</span>
               <span class="cell-change" [class]="getChangeClass(instrument)">
-                {{ instrument.daily_strength?.price_change_percent > 0 ? '+' : '' }}{{ (instrument.daily_strength?.price_change_percent ?? 0).toFixed(2) }}% · 1D
+                {{ (instrument.daily_strength?.price_change_percent ?? 0) > 0 ? '+' : '' }}{{ (instrument.daily_strength?.price_change_percent ?? 0).toFixed(2) }}% · 1D
               </span>
               <span class="cell-phase">{{ instrument.market_phase?.phase || 'No Data' }}</span>
             </div>
