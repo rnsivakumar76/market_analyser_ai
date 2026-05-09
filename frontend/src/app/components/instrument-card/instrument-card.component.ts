@@ -158,7 +158,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                    <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
                 </div>
 
-                @if (getExecPassCount() >= 3) {
+                @if (analysis.trade_signal.recommendation === 'neutral') {
+                  <div class="levels-dormant">⏸ Two-sided conditional plan — directional levels activate once a side is confirmed (close above R1 for long, below S1 for short)</div>
+                } @else if (getExecPassCount() >= 3) {
                 <div class="levels-stack">
                   <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
                   <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
@@ -168,6 +170,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   <div class="levels-dormant">⏸ Trade levels appear once {{ 3 - getExecPassCount() }} more execution gate{{ (3 - getExecPassCount()) !== 1 ? 's' : '' }} pass ({{ getExecPassCount() }}/5 currently)</div>
                 }
 
+                @if (analysis.trade_signal.recommendation !== 'neutral') {
                 <div class="rr-visual-diagram">
                   <div class="rrd-header">VISUAL R/R DIAGRAM</div>
                   <div class="rrd-chart">
@@ -200,6 +203,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     <div class="rrd-stat"><span>SIGNAL SCORE</span><strong [class]="getSignalClass()">{{ analysis.trade_signal.score }}</strong></div>
                   </div>
                 </div>
+                }
 
                 <div class="terminal-gauge">
                    <div class="tg-track">

@@ -381,7 +381,11 @@ export class MultiTimeframeOverlayComponent {
     const cls = this.getAlignmentClass();
     const tfs = this.timeframes;
     if (cls === 'aligned') {
-      return `All timeframes agree on ${tfs[0].direction} — high-confidence directional environment.`;
+      const direction = tfs[0].direction;
+      if (direction === 'neutral') {
+        return 'All timeframes neutral — consolidation/ranging environment. Wait for a directional breakout before committing to a side.';
+      }
+      return `All timeframes agree on ${direction} — high-confidence directional environment.`;
     }
     if (cls === 'conflicting') {
       return 'Macro and micro timeframes are in conflict — avoid aggressive positioning until alignment improves.';
