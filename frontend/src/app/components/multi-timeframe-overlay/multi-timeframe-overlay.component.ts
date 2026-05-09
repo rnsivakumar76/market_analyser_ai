@@ -65,14 +65,14 @@ interface TimeframeSignal {
     }
 
     .mtf-title {
-      font-size: 0.65rem;
+      font-size: 0.86rem;
       font-weight: 800;
       letter-spacing: 1.5px;
       color: #6c7086;
     }
 
     .alignment-badge {
-      font-size: 0.6rem;
+      font-size: 0.82rem;
       font-weight: 800;
       padding: 3px 10px;
       border-radius: 4px;
@@ -139,7 +139,7 @@ interface TimeframeSignal {
     }
 
     .tf-label {
-      font-size: 0.6rem;
+      font-size: 0.82rem;
       font-weight: 800;
       color: #6c7086;
       text-transform: uppercase;
@@ -147,7 +147,7 @@ interface TimeframeSignal {
     }
 
     .tf-direction-badge {
-      font-size: 0.65rem;
+      font-size: 0.86rem;
       font-weight: 800;
       padding: 2px 8px;
       border-radius: 4px;
@@ -195,7 +195,7 @@ interface TimeframeSignal {
       position: absolute;
       top: -6px;
       right: -4px;
-      font-size: 0.75rem;
+      font-size: 0.90rem;
       background: rgba(250, 179, 135, 0.2);
       color: #fab387;
       border-radius: 50%;
@@ -219,7 +219,7 @@ interface TimeframeSignal {
     }
 
     .connector-arrow {
-      font-size: 0.8rem;
+      font-size: 0.94rem;
       color: #45475a;
     }
 
@@ -240,7 +240,7 @@ interface TimeframeSignal {
     }
 
     .mtf-description {
-      font-size: 0.75rem;
+      font-size: 0.90rem;
       color: #a6adc8;
       margin: 12px 0 0;
       font-style: italic;
@@ -267,7 +267,7 @@ interface TimeframeSignal {
       }
 
       .tf-label {
-        font-size: 0.5rem;
+        font-size: 0.74rem;
         letter-spacing: 0.5px;
       }
 
@@ -281,7 +281,7 @@ interface TimeframeSignal {
       }
 
       .mtf-description {
-        font-size: 0.68rem;
+        font-size: 0.88rem;
       }
     }
 
@@ -291,7 +291,7 @@ interface TimeframeSignal {
       }
 
       .alignment-badge {
-        font-size: 0.5rem;
+        font-size: 0.74rem;
         padding: 2px 7px;
       }
 

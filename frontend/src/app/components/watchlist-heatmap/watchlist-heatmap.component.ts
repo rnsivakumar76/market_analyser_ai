@@ -93,7 +93,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     }
 
     .heatmap-title {
-      font-size: 0.7rem;
+      font-size: 0.90rem;
       font-weight: 800;
       letter-spacing: 1.5px;
       color: #6c7086;
@@ -106,7 +106,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     }
 
     .legend-item {
-      font-size: 0.65rem;
+      font-size: 0.86rem;
       font-weight: 600;
     }
 
@@ -208,7 +208,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     .neutral-cell .cell-score { color: #f9e2af; }
 
     .cell-change {
-      font-size: 0.7rem;
+      font-size: 0.90rem;
       font-weight: 700;
     }
 
@@ -217,7 +217,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     .cell-change.neutral { color: #f9e2af; }
 
     .cell-phase {
-      font-size: 0.55rem;
+      font-size: 0.76rem;
       font-weight: 700;
       color: #6c7086;
       text-transform: uppercase;
@@ -237,7 +237,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       position: absolute;
       top: 4px;
       right: 6px;
-      font-size: 0.7rem;
+      font-size: 0.90rem;
     }
 
     .trade-worthy::after {
@@ -245,7 +245,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       position: absolute;
       top: 4px;
       left: 6px;
-      font-size: 0.6rem;
+      font-size: 0.82rem;
       font-weight: 800;
       color: #a6e3a1;
       background: rgba(166, 227, 161, 0.15);
@@ -258,7 +258,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     }
 
     .wl-group-header {
-      font-size: 0.48rem;
+      font-size: 0.72rem;
       font-weight: 900;
       letter-spacing: 1.2px;
       padding: 6px 4px 4px;
@@ -274,14 +274,14 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       color: #6c7086;
       border-radius: 8px;
       padding: 1px 6px;
-      font-size: 0.48rem;
+      font-size: 0.72rem;
     }
 
     .cell-gate-badge {
       position: absolute;
       bottom: 5px;
       right: 6px;
-      font-size: 0.48rem;
+      font-size: 0.72rem;
       font-weight: 900;
       padding: 1px 5px;
       border-radius: 8px;
