@@ -160,38 +160,35 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
 
     .heatmap-header {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: flex-start;
       margin-bottom: 12px;
       padding: 0 4px;
-      gap: 8px;
+      gap: 5px;
     }
 
     .heatmap-title {
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 800;
       letter-spacing: 1.2px;
       color: #6b8299;
       margin: 0;
-      white-space: nowrap;
     }
 
     .heatmap-legend {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: nowrap;
     }
 
     .legend-item {
-      font-size: 0.72rem;
+      font-size: 0.70rem;
       font-weight: 700;
     }
 
     .legend-item.bullish { color: #86efac; }
     .legend-item.bearish { color: #f87171; }
     .legend-item.neutral { color: #fcd34d; }
-    .legend-item::before { content: '•'; margin-right: 3px; opacity: 0.6; }
 
     .heatmap-grid {
       display: grid;
