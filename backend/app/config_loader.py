@@ -67,10 +67,26 @@ def _load_local_config(user_id: str = DEFAULT_USER_ID, config_path: str = None) 
 ALLOWED_SYMBOLS = {'XAU', 'XAG', 'WTI', 'BTC'}
 BENCHMARK_ONLY_SYMBOLS = {'SPX', 'DXY', 'TNX'}  # Used internally as benchmarks, not user instruments
 
+DEFAULT_INSTRUMENTS = [
+    {'symbol': 'XAU', 'name': 'Gold'},
+    {'symbol': 'XAG', 'name': 'Silver'},
+    {'symbol': 'WTI', 'name': 'Crude Oil'},
+    {'symbol': 'BTC', 'name': 'Bitcoin'},
+]
+
 def get_instruments(config: Dict[str, Any]) -> List[Dict[str, str]]:
-    """Extract instruments list from config, strictly filtered to the allowed 5."""
-    instruments = config.get('instruments', [])
-    return [inst for inst in instruments if inst.get('symbol', '').upper() in ALLOWED_SYMBOLS]
+    """Extract instruments list from config, filtered to allowed symbols.
+
+    Always backfills any missing ALLOWED_SYMBOLS from DEFAULT_INSTRUMENTS so
+    that a stale / partial user S3 config never results in a subset of instruments.
+    """
+    stored = config.get('instruments', [])
+    filtered = [inst for inst in stored if inst.get('symbol', '').upper() in ALLOWED_SYMBOLS]
+    present = {inst['symbol'].upper() for inst in filtered}
+    for default in DEFAULT_INSTRUMENTS:
+        if default['symbol'] not in present:
+            filtered.append(default)
+    return filtered
 
 
 def get_analysis_params(config: Dict[str, Any]) -> Dict[str, Any]:

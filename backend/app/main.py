@@ -1056,6 +1056,14 @@ async def add_instrument(instrument_data: Dict[str, str], user_id: str = Depends
     save_instruments(instruments, user_id=user_id)
     return {"message": f"Instrument {symbol} added successfully", "instruments": instruments}
 
+@app.post("/api/instruments/reset")
+async def reset_instruments(user_id: str = Depends(get_current_user)):
+    """Reset instrument list to the four default symbols (XAU, XAG, WTI, BTC)."""
+    from .config_loader import load_config, save_instruments, DEFAULT_INSTRUMENTS
+    config = load_config(user_id=user_id)
+    save_instruments(list(DEFAULT_INSTRUMENTS), user_id=user_id)
+    return {"message": "Instruments reset to defaults", "instruments": DEFAULT_INSTRUMENTS}
+
 @app.delete("/api/instruments/{symbol}")
 async def delete_instrument(symbol: str, user_id: str = Depends(get_current_user)):
     from .config_loader import load_config, get_instruments, save_instruments
