@@ -1384,6 +1384,59 @@ async def get_signals(symbol: Optional[str] = None, limit: int = 50, user_id: st
     return {"signals": [s.model_dump() for s in signals], "count": len(signals)}
 
 
+@app.get("/api/signals/stats")
+async def get_signal_stats(user_id: str = Depends(get_current_user)):
+    """Return aggregated signal performance stats across all recent signals."""
+    from .signal_store import get_recent_signals
+    signals = get_recent_signals(limit=200)
+
+    total    = len(signals)
+    active   = sum(1 for s in signals if s.status == "ACTIVE")
+    tp_hits  = sum(1 for s in signals if s.status in ("HIT_TP1", "HIT_TP2"))
+    tp2_hits = sum(1 for s in signals if s.status == "HIT_TP2")
+    sl_hits  = sum(1 for s in signals if s.status == "HIT_SL")
+    expired  = sum(1 for s in signals if s.status == "EXPIRED")
+    closed   = tp_hits + sl_hits
+
+    # Per-timeframe breakdown
+    breakdown: dict = {}
+    for tf in ("15m", "1H", "4H"):
+        tf_sigs  = [s for s in signals if s.timeframe == tf]
+        tf_tp    = sum(1 for s in tf_sigs if s.status in ("HIT_TP1", "HIT_TP2"))
+        tf_sl    = sum(1 for s in tf_sigs if s.status == "HIT_SL")
+        tf_closed = tf_tp + tf_sl
+        breakdown[tf] = {
+            "total":    len(tf_sigs),
+            "tp_hits":  tf_tp,
+            "sl_hits":  tf_sl,
+            "win_rate": round(tf_tp / tf_closed * 100, 1) if tf_closed > 0 else None,
+        }
+
+    # Per-trigger breakdown
+    triggers: dict = {}
+    for sig in signals:
+        base = sig.trigger.split("+")[0]
+        if base not in triggers:
+            triggers[base] = {"total": 0, "tp": 0, "sl": 0}
+        triggers[base]["total"] += 1
+        if sig.status in ("HIT_TP1", "HIT_TP2"):
+            triggers[base]["tp"] += 1
+        elif sig.status == "HIT_SL":
+            triggers[base]["sl"] += 1
+
+    return {
+        "total":    total,
+        "active":   active,
+        "tp_hits":  tp_hits,
+        "tp2_hits": tp2_hits,
+        "sl_hits":  sl_hits,
+        "expired":  expired,
+        "win_rate": round(tp_hits / closed * 100, 1) if closed > 0 else None,
+        "by_timeframe": breakdown,
+        "by_trigger":   triggers,
+    }
+
+
 @app.post("/api/signals/scan")
 async def scan_signals(user_id: str = Depends(get_current_user)):
     """
@@ -1393,7 +1446,7 @@ async def scan_signals(user_id: str = Depends(get_current_user)):
     Also called automatically by EventBridge every 5 minutes.
     """
     from .analyzers.intraday_signal_generator import detect_intraday_signals
-    from .signal_store import save_signal, expire_old_signals
+    from .signal_store import save_signal, expire_old_signals, check_signal_outcomes
 
     from .config_loader import load_config, get_instruments
     config = load_config(user_id=user_id)
@@ -1441,7 +1494,29 @@ async def scan_signals(user_id: str = Depends(get_current_user)):
         except Exception as e:
             logger.warning(f"[SCAN] {sym} failed: {e}")
 
-    return {"scanned": len(instruments), "new_signals": len(all_signals), "signals": all_signals}
+    # ── TP / SL outcome tracking ──────────────────────────────────────────────
+    # Extract current prices from the 1H batch (last closed bar)
+    current_prices: dict = {}
+    for sym in sym_list:
+        bars_1h = batch_1h.get(sym)
+        if bars_1h is not None and len(bars_1h) > 1:
+            current_prices[sym] = float(bars_1h["Close"].iloc[-2])
+
+    outcomes = check_signal_outcomes(current_prices)
+    for outcome in outcomes:
+        sig        = outcome["signal"]
+        new_status = outcome["new_status"]
+        _notify_signal_outcome(sig, new_status)
+        logger.info(f"[SCAN] {sig.symbol} {sig.timeframe} outcome: {new_status}")
+
+    return {
+        "scanned":     len(instruments),
+        "new_signals": len(all_signals),
+        "signals":     all_signals,
+        "outcomes":    [{"symbol": o["signal"].symbol, "timeframe": o["signal"].timeframe,
+                         "signal_type": o["signal"].signal_type, "status": o["new_status"]}
+                        for o in outcomes],
+    }
 
 
 def _notify_intraday_signal(sig: "IntradaySignal"):
@@ -1477,6 +1552,39 @@ def _notify_intraday_signal(sig: "IntradaySignal"):
         )
     except Exception as e:
         logger.warning(f"[SIGNAL_NOTIFY] Telegram failed: {e}")
+
+
+def _notify_signal_outcome(sig: "IntradaySignal", new_status: str):
+    """Send Telegram notification when a signal hits TP or SL."""
+    token   = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        import requests as _req
+        if new_status == "HIT_SL":
+            emoji, label = "🔴", "STOP LOSS HIT"
+        elif new_status == "HIT_TP2":
+            emoji, label = "🏆", "TP2 HIT — FULL TARGET"
+        elif new_status == "HIT_TP1":
+            emoji, label = "✅", "TP1 HIT — PARTIAL TARGET"
+        else:
+            return
+
+        dir_emoji = "🟢 LONG" if sig.signal_type == "LONG" else "🔴 SHORT"
+        text = (
+            f"{emoji} *{label}*\n"
+            f"{dir_emoji} {sig.symbol} {sig.timeframe} — `{sig.trigger.split('+')[0]}`\n"
+            f"Entry: `{sig.entry_price}` → {new_status}\n"
+            f"SL: `{sig.stop_loss}`  TP1: `{sig.take_profit_1}`  TP2: `{sig.take_profit_2}`"
+        )
+        _req.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
+            timeout=5,
+        )
+    except Exception as e:
+        logger.warning(f"[OUTCOME_NOTIFY] Telegram failed: {e}")
 
 
 # Handler for AWS Lambda

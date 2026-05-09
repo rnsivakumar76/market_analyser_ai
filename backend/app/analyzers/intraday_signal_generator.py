@@ -237,6 +237,45 @@ def _pin_bar(opens: np.ndarray, highs: np.ndarray, lows: np.ndarray, closes: np.
 
 
 # ---------------------------------------------------------------------------
+# Break of Structure (BOS)
+# ---------------------------------------------------------------------------
+
+_BOS_LOOKBACK = 20   # bars to define the prior range
+
+
+def _break_of_structure(
+    closes: np.ndarray, highs: np.ndarray, lows: np.ndarray,
+    lookback: int = _BOS_LOOKBACK,
+) -> str:
+    """
+    Detect a Break of Structure on the last CLOSED bar.
+
+    Bullish BOS: last closed bar closes ABOVE the highest high in the prior
+                 `lookback` bars (excluding the last closed bar itself).
+    Bearish BOS: last closed bar closes BELOW the lowest low in the prior
+                 `lookback` bars.
+
+    Only applied on 4H and 1H timeframes to confirm trend breaks.
+    Returns 'bullish' | 'bearish' | 'none'
+    """
+    if len(closes) < lookback + 3:
+        return "none"
+
+    # Prior range: bars[-lookback-2 : -2]  (skip live bar at -1, use closed bar at -2)
+    prior_highs = highs[-lookback - 2 : -2]
+    prior_lows  = lows[-lookback - 2 : -2]
+    prior_high  = float(np.max(prior_highs))
+    prior_low   = float(np.min(prior_lows))
+    curr_close  = float(closes[-2])
+
+    if curr_close > prior_high:
+        return "bullish"
+    if curr_close < prior_low:
+        return "bearish"
+    return "none"
+
+
+# ---------------------------------------------------------------------------
 # Per-timeframe signal detection
 # ---------------------------------------------------------------------------
 
@@ -317,6 +356,13 @@ def _scan_timeframe(
         if pin == direction:
             confidence = min(confidence + 10, 95)
             quality_tags.append("PIN_BAR")
+
+    # Break of Structure on 4H / 1H (structure confirmation, +10 conf)
+    if timeframe in ("4H", "1H"):
+        bos = _break_of_structure(closes, highs, lows)
+        if bos == direction:
+            confidence = min(confidence + 10, 95)
+            quality_tags.append("BOS")
 
     if quality_tags:
         trigger = trigger + "+" + "+".join(quality_tags)

@@ -119,6 +119,34 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
         } @else {
           <div class="signals-empty">No signals detected yet — scan runs every 15 min</div>
         }
+
+        <!-- Performance stats bar -->
+        @if (signals && signals.length > 0) {
+        <div class="sig-stats-bar">
+          <div class="sig-stat">
+            <span class="sst-val">{{ getSignalStats().total }}</span>
+            <span class="sst-label">TOTAL</span>
+          </div>
+          <div class="sig-stat">
+            <span class="sst-val active-c">{{ getSignalStats().active }}</span>
+            <span class="sst-label">ACTIVE</span>
+          </div>
+          <div class="sig-stat">
+            <span class="sst-val tp-c">{{ getSignalStats().tp_hits }}</span>
+            <span class="sst-label">TP HIT</span>
+          </div>
+          <div class="sig-stat">
+            <span class="sst-val sl-c">{{ getSignalStats().sl_hits }}</span>
+            <span class="sst-label">SL HIT</span>
+          </div>
+          <div class="sig-stat">
+            <span class="sst-val" [class]="getSignalStats().win_rate >= 50 ? 'tp-c' : 'sl-c'">
+              {{ getSignalStats().win_rate }}%
+            </span>
+            <span class="sst-label">WIN RATE</span>
+          </div>
+        </div>
+        }
       </div>
     </div>
   `,
@@ -382,6 +410,16 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .status-hit_sl   { color: #f87171; }
     .status-expired  { color: #334155; }
     .signals-empty { font-size: 0.76rem; color: #334155; text-align: center; padding: 12px 0; }
+
+    /* Signal performance stats bar */
+    .sig-stats-bar { display: flex; gap: 0; margin-top: 10px; border: 1px solid #192642; border-radius: 6px; overflow: hidden; }
+    .sig-stat { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; background: rgba(15,23,42,0.6); border-right: 1px solid #192642; }
+    .sig-stat:last-child { border-right: none; }
+    .sst-val { font-size: 0.82rem; font-weight: 900; color: #e2e8f0; line-height: 1; }
+    .sst-label { font-size: 0.58rem; font-weight: 700; color: #334155; letter-spacing: 0.6px; margin-top: 2px; }
+    .active-c { color: #60a5fa; }
+    .tp-c { color: #86efac; }
+    .sl-c { color: #f87171; }
   `]
 })
 export class WatchlistHeatmapComponent {
@@ -402,6 +440,16 @@ export class WatchlistHeatmapComponent {
         if (confidence >= 75) return 'sig-conf conf-high';
         if (confidence >= 60) return 'sig-conf conf-medium';
         return 'sig-conf conf-low';
+    }
+
+    getSignalStats(): { total: number; active: number; tp_hits: number; sl_hits: number; win_rate: number } {
+        const sigs = this.signals || [];
+        const active  = sigs.filter(s => s.status === 'ACTIVE').length;
+        const tp_hits = sigs.filter(s => s.status === 'HIT_TP1' || s.status === 'HIT_TP2').length;
+        const sl_hits = sigs.filter(s => s.status === 'HIT_SL').length;
+        const closed  = tp_hits + sl_hits;
+        const win_rate = closed > 0 ? Math.round((tp_hits / closed) * 100) : 0;
+        return { total: sigs.length, active, tp_hits, sl_hits, win_rate };
     }
 
     getGateCount(inst: InstrumentAnalysis): number {

@@ -112,6 +112,75 @@ def get_signals_for_symbol(symbol: str, limit: int = 20) -> List[IntradaySignal]
         return []
 
 
+def update_signal_status(signal: IntradaySignal, new_status: str) -> bool:
+    """
+    Update the status field of a stored signal in-place.
+    Used for TP/SL hit tracking and manual overrides.
+    """
+    if not nexus_db.is_dynamo_enabled():
+        return False
+    try:
+        table = nexus_db._get_table()
+        sk    = f"{signal.timeframe}#{signal.signal_type}#{signal.bar_time}"
+        table.update_item(
+            Key={"PK": f"SIGNAL#{signal.symbol}", "SK": sk},
+            UpdateExpression="SET #s = :v",
+            ExpressionAttributeNames={"#s": "status"},
+            ExpressionAttributeValues={":v": new_status},
+        )
+        logger.info(f"[SIGNAL_STORE] {signal.symbol} {signal.timeframe} → {new_status}")
+        return True
+    except Exception as e:
+        logger.warning(f"[SIGNAL_STORE] update_signal_status failed: {e}")
+        return False
+
+
+def check_signal_outcomes(current_prices: dict) -> list:
+    """
+    Iterate all ACTIVE signals and check whether TP1, TP2, or SL has been hit
+    by the current market price.
+
+    Args:
+        current_prices: {symbol_upper: float}  e.g. {"WTI": 83.45, "XAU": 2310.0}
+
+    Returns:
+        List of dicts: [{"signal": IntradaySignal, "new_status": str}, ...]
+        Empty list when DynamoDB is unavailable or no active signals exist.
+    """
+    if not nexus_db.is_dynamo_enabled():
+        return []
+
+    active = [s for s in get_recent_signals(limit=100) if s.status == "ACTIVE"]
+    results = []
+
+    for sig in active:
+        price = current_prices.get(sig.symbol.upper())
+        if price is None:
+            continue
+
+        new_status = None
+        if sig.signal_type == "LONG":
+            if price <= sig.stop_loss:
+                new_status = "HIT_SL"
+            elif price >= sig.take_profit_2:
+                new_status = "HIT_TP2"
+            elif price >= sig.take_profit_1:
+                new_status = "HIT_TP1"
+        else:  # SHORT
+            if price >= sig.stop_loss:
+                new_status = "HIT_SL"
+            elif price <= sig.take_profit_2:
+                new_status = "HIT_TP2"
+            elif price <= sig.take_profit_1:
+                new_status = "HIT_TP1"
+
+        if new_status:
+            if update_signal_status(sig, new_status):
+                results.append({"signal": sig, "new_status": new_status})
+
+    return results
+
+
 def expire_old_signals() -> int:
     """
     Mark ACTIVE signals as EXPIRED if their expires_at has passed.
