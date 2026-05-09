@@ -161,32 +161,37 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .heatmap-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
+      align-items: flex-start;
+      margin-bottom: 12px;
       padding: 0 4px;
+      gap: 8px;
     }
 
     .heatmap-title {
-      font-size: 0.90rem;
+      font-size: 0.78rem;
       font-weight: 800;
-      letter-spacing: 1.5px;
-      color: #64748b;
+      letter-spacing: 1.2px;
+      color: #6b8299;
       margin: 0;
+      white-space: nowrap;
     }
 
     .heatmap-legend {
       display: flex;
-      gap: 12px;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .legend-item {
-      font-size: 0.86rem;
-      font-weight: 600;
+      font-size: 0.72rem;
+      font-weight: 700;
     }
 
     .legend-item.bullish { color: #86efac; }
     .legend-item.bearish { color: #f87171; }
     .legend-item.neutral { color: #fcd34d; }
+    .legend-item::before { content: '•'; margin-right: 3px; opacity: 0.6; }
 
     .heatmap-grid {
       display: grid;
@@ -204,7 +209,7 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
 
     .heat-cell {
       position: relative;
-      min-height: 90px;
+      min-height: 82px;
       border-radius: 10px;
       cursor: pointer;
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -265,14 +270,14 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     }
 
     .cell-symbol {
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       font-weight: 800;
-      color: #e2e8f0;
+      color: #e8f0fa;
       letter-spacing: 0.5px;
     }
 
     .cell-score {
-      font-size: 1.2rem;
+      font-size: 1.05rem;
       font-weight: 800;
       line-height: 1;
     }
@@ -282,7 +287,7 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .neutral-cell .cell-score { color: #fcd34d; }
 
     .cell-change {
-      font-size: 0.90rem;
+      font-size: 0.78rem;
       font-weight: 700;
     }
 
@@ -291,9 +296,9 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .cell-change.neutral { color: #fcd34d; }
 
     .cell-phase {
-      font-size: 0.76rem;
+      font-size: 0.68rem;
       font-weight: 700;
-      color: #64748b;
+      color: #6b8299;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -342,7 +347,7 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
       margin-top: 8px;
     }
     .wl-ready { color: #86efac; }
-    .wl-monitoring { color: #334155; }
+    .wl-monitoring { color: #4e6480; }
     .wl-group-count {
       background: rgba(108,112,134,0.15);
       color: #64748b;
@@ -364,7 +369,7 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .gates-5 { background: rgba(166,227,161,0.2); color: #86efac; border: 1px solid rgba(166,227,161,0.35); }
     .gates-4 { background: rgba(166,227,161,0.12); color: #86efac; border: 1px solid rgba(166,227,161,0.25); }
     .gates-3 { background: rgba(249,226,175,0.12); color: #fcd34d; border: 1px solid rgba(249,226,175,0.25); }
-    .gates-2, .gates-1, .gates-0 { background: rgba(108,112,134,0.1); color: #334155; border: 1px solid rgba(108,112,134,0.2); }
+    .gates-2, .gates-1, .gates-0 { background: rgba(78,100,128,0.12); color: #4e6480; border: 1px solid rgba(78,100,128,0.25); }
 
     @keyframes glow-pulse {
       0%, 100% { opacity: 0.5; }
@@ -372,10 +377,10 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     }
 
     /* LIVE SIGNALS FEED */
-    .signals-section { margin-top: 16px; border-top: 1px solid #192642; padding-top: 12px; }
+    .signals-section { margin-top: 16px; border-top: 1px solid #2c3d58; padding-top: 12px; }
     .signals-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .signals-title { font-size: 0.72rem; font-weight: 900; letter-spacing: 1.2px; color: #60a5fa; }
-    .signals-count { font-size: 0.72rem; color: #334155; background: rgba(96,165,250,0.1); padding: 1px 7px; border-radius: 8px; }
+    .signals-count { font-size: 0.72rem; color: #6b8299; background: rgba(96,165,250,0.12); padding: 1px 7px; border-radius: 8px; }
     .signal-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid transparent; transition: opacity 0.2s; }
     .sig-long  { border-left-color: #86efac; background: rgba(134,239,172,0.05); }
     .sig-short { border-left-color: #f87171; background: rgba(248,113,113,0.05); }
@@ -385,8 +390,8 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .sig-long  .sig-dir { color: #86efac; }
     .sig-short .sig-dir { color: #f87171; }
     .sig-meta { display: flex; flex-direction: column; }
-    .sig-sym { font-size: 0.80rem; font-weight: 900; color: #e2e8f0; }
-    .sig-tf  { font-size: 0.68rem; color: #64748b; font-weight: 700; }
+    .sig-sym { font-size: 0.80rem; font-weight: 900; color: #e8f0fa; }
+    .sig-tf  { font-size: 0.68rem; color: #6b8299; font-weight: 700; }
     .sig-center { flex: 1; display: flex; flex-direction: column; gap: 2px; }
     .sig-trigger-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
     .sig-trigger { font-size: 0.68rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.5px; }
@@ -396,27 +401,27 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .badge-warn { background: rgba(253,211,77,0.15);  color: #fcd34d; border: 1px solid rgba(253,211,77,0.3); }
     .sig-levels { display: flex; gap: 8px; flex-wrap: wrap; }
     .sig-entry, .sig-sl, .sig-tp { font-size: 0.70rem; font-weight: 700; }
-    .sig-entry { color: #94a3b8; }
+    .sig-entry { color: #9fb3cc; }
     .sig-sl { color: #f87171; }
     .sig-tp { color: #86efac; }
     .sig-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; width: 52px; flex-shrink: 0; }
     .sig-conf { font-size: 0.74rem; font-weight: 900; padding: 1px 6px; border-radius: 8px; }
-    .conf-high   { background: rgba(134,239,172,0.15); color: #86efac; }
-    .conf-medium { background: rgba(253,211,77,0.15);  color: #fcd34d; }
-    .conf-low    { background: rgba(100,116,139,0.15); color: #64748b; }
-    .sig-status  { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.5px; color: #475569; }
+    .conf-high   { background: rgba(134,239,172,0.18); color: #86efac; }
+    .conf-medium { background: rgba(253,211,77,0.18);  color: #fcd34d; }
+    .conf-low    { background: rgba(78,100,128,0.18);  color: #6b8299; }
+    .sig-status  { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.5px; color: #4e6480; }
     .status-active   { color: #60a5fa; }
     .status-hit_tp1, .status-hit_tp2 { color: #86efac; }
     .status-hit_sl   { color: #f87171; }
-    .status-expired  { color: #334155; }
-    .signals-empty { font-size: 0.76rem; color: #334155; text-align: center; padding: 12px 0; }
+    .status-expired  { color: #4e6480; }
+    .signals-empty { font-size: 0.76rem; color: #4e6480; text-align: center; padding: 12px 0; }
 
     /* Signal performance stats bar */
-    .sig-stats-bar { display: flex; gap: 0; margin-top: 10px; border: 1px solid #192642; border-radius: 6px; overflow: hidden; }
-    .sig-stat { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; background: rgba(15,23,42,0.6); border-right: 1px solid #192642; }
+    .sig-stats-bar { display: flex; gap: 0; margin-top: 10px; border: 1px solid #2c3d58; border-radius: 6px; overflow: hidden; }
+    .sig-stat { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; background: rgba(26,34,52,0.7); border-right: 1px solid #2c3d58; }
     .sig-stat:last-child { border-right: none; }
-    .sst-val { font-size: 0.82rem; font-weight: 900; color: #e2e8f0; line-height: 1; }
-    .sst-label { font-size: 0.58rem; font-weight: 700; color: #334155; letter-spacing: 0.6px; margin-top: 2px; }
+    .sst-val { font-size: 0.82rem; font-weight: 900; color: #e8f0fa; line-height: 1; }
+    .sst-label { font-size: 0.58rem; font-weight: 700; color: #4e6480; letter-spacing: 0.6px; margin-top: 2px; }
     .active-c { color: #60a5fa; }
     .tp-c { color: #86efac; }
     .sl-c { color: #f87171; }

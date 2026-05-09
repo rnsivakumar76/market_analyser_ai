@@ -4,26 +4,26 @@
 
 /* Default to dark theme if no theme class is present */
 :root {
-  /* Slate/Midnight Theme — rich navy-blue palette */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #253348;
-  --bg-quaternary: #334155;
+  /* Slate/Charcoal Theme — lighter, breathable navy-blue palette */
+  --bg-primary: #1a2234;
+  --bg-secondary: #22304a;
+  --bg-tertiary: #2c3d58;
+  --bg-quaternary: #374d6a;
   
-  --surface-primary: #1e293b;
-  --surface-secondary: #253348;
-  --surface-tertiary: #334155;
-  --surface-elevated: #141f30;
+  --surface-primary: #22304a;
+  --surface-secondary: #2c3d58;
+  --surface-tertiary: #374d6a;
+  --surface-elevated: #1a2a40;
   
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-tertiary: #64748b;
-  --text-quaternary: #475569;
-  --text-inverse: #0f172a;
+  --text-primary: #e8f0fa;
+  --text-secondary: #9fb3cc;
+  --text-tertiary: #6b8299;
+  --text-quaternary: #4e6480;
+  --text-inverse: #1a2234;
   
-  --border-primary: #253348;
-  --border-secondary: #334155;
-  --border-tertiary: #475569;
+  --border-primary: #2c3d58;
+  --border-secondary: #374d6a;
+  --border-tertiary: #4e6480;
   --border-focus: #60a5fa;
   
   --accent-primary: #60a5fa;
@@ -68,30 +68,30 @@
   --gradient-error: linear-gradient(135deg, #f87171, #fb7185);
   --gradient-warning: linear-gradient(135deg, #fb923c, #fcd34d);
   
-  --card-bg: #1e293b;
-  --card-border: #253348;
+  --card-bg: #22304a;
+  --card-border: #2c3d58;
   --card-shadow: var(--shadow);
   
-  --input-bg: #1e293b;
-  --input-border: #334155;
+  --input-bg: #22304a;
+  --input-border: #374d6a;
   --input-border-focus: var(--accent-primary);
   
   --button-primary-bg: var(--accent-primary);
   --button-primary-text: #0f172a;
   --button-primary-hover: var(--accent-primary-hover);
   
-  --button-secondary-bg: #253348;
+  --button-secondary-bg: #2c3d58;
   --button-secondary-text: var(--text-primary);
-  --button-secondary-hover: #334155;
+  --button-secondary-hover: #374d6a;
   
-  --header-bg: #1e293b;
-  --header-border: #253348;
+  --header-bg: #22304a;
+  --header-border: #2c3d58;
   
-  --sidebar-bg: #0f172a;
-  --sidebar-border: #253348;
+  --sidebar-bg: #1a2234;
+  --sidebar-border: #2c3d58;
   
-  --footer-bg: #131d30;
-  --footer-border: #253348;
+  --footer-bg: #1a2234;
+  --footer-border: #2c3d58;
 }
 
 /* ========================================
@@ -204,9 +204,9 @@
    ======================================== */
 
 :root.dark-theme {
-  /* Slate/Midnight — same as :root default */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
+  /* Slate/Charcoal — same as :root default */
+  --bg-primary: #1a2234;
+  --bg-secondary: #22304a;
   --bg-tertiary: #253348;
   --bg-quaternary: #334155;
   --surface-primary: #1e293b;
