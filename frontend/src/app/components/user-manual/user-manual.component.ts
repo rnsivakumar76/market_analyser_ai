@@ -263,6 +263,118 @@ export class UserManualComponent {
       `
     },
     {
+      id: 'how-to-analyze',
+      title: 'How to Analyze an Instrument',
+      icon: '🔍',
+      content: `
+        <h4>1. Summary Card (First check - 10 seconds)</h4>
+        <table class="analysis-table">
+          <thead><tr><th>Field</th><th>What to Look For</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Recommendation</strong></td><td>BUY/SELL/HOLD</td><td>Primary signal</td></tr>
+            <tr><td><strong>Conviction Score</strong></td><td>>+70 = strong, +30-70 = moderate, <+30 = weak</td><td>Higher = more confidence</td></tr>
+            <tr><td><strong>Market Phase</strong></td><td>Markup = uptrend, Markdown = downtrend</td><td>Trade with the phase</td></tr>
+            <tr><td><strong>⚠️ Pullback Warning</strong></td><td>Badge present?</td><td>If yes, be cautious (exhaustion)</td></tr>
+            <tr><td><strong>Daily Change %</strong></td><td>Large move?</td><td>Context for entry timing</td></tr>
+          </tbody>
+        </table>
+
+        <h4>2. Execution Check (Safety gate - 15 seconds)</h4>
+        <p class="warning-text"><strong>This is the most critical section. Only proceed if you pass the checks.</strong></p>
+        <table class="analysis-table">
+          <thead><tr><th>Check</th><th>Pass/Fail Criteria</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Trend Alignment</strong></td><td>✅ Monthly + Weekly + Daily aligned</td><td>Safe to trade</td></tr>
+            <tr><td><strong>Alpha vs Benchmark</strong></td><td>✅ Asset outperforming SPX/BTC/DXY</td><td>Buy strength</td></tr>
+            <tr><td><strong>Signal Conflict</strong></td><td>❌ Red banner</td><td>Stop - conflicting signals</td></tr>
+            <tr><td><strong>Execution Pass Count</strong></td><td>≥3/5</td><td>Ready to execute</td></tr>
+          </tbody>
+        </table>
+        <p class="alert-text"><strong>If Execution Check fails → STOP. Do not trade.</strong></p>
+
+        <h4>3. Technical Tab (Entry timing - 30 seconds)</h4>
+        <table class="analysis-table">
+          <thead><tr><th>Indicator</th><th>Bullish</th><th>Bearish</th><th>What to Do</th></tr></thead>
+          <tbody>
+            <tr><td><strong>ADX</strong></td><td>>25 (trending)</td><td><25 (choppy)</td><td>Avoid if <25</td></tr>
+            <tr><td><strong>RSI</strong></td><td>30-70 (neutral)</td><td>>70 (overbought), <30 (oversold)</td><td>Don't chase extremes</td></tr>
+            <tr><td><strong>MACD</strong></td><td>Bullish crossover</td><td>Bearish crossover</td><td>Confirm trend direction</td></tr>
+            <tr><td><strong>Volume Profile POC</strong></td><td>Price near POC</td><td>Price far from POC</td><td>POC = fair value zone</td></tr>
+            <tr><td><strong>Session VWAP</strong></td><td>Price above VWAP</td><td>Price below VWAP</td><td>VWAP = intraday bias</td></tr>
+          </tbody>
+        </table>
+
+        <h4>4. Risk Tab (Risk assessment - 30 seconds)</h4>
+        <table class="analysis-table">
+          <thead><tr><th>Factor</th><th>What to Look For</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Volatility Regime</strong></td><td>Low/Medium/High</td><td>Adjust position size</td></tr>
+            <tr><td><strong>Pullback Warning Score</strong></td><td>≥3 = high risk</td><td>Reduce size or wait</td></tr>
+            <tr><td><strong>Liquidity Map</strong></td><td>Clear support/resistance levels</td><td>Set stops below/above</td></tr>
+            <tr><td><strong>Correlation to Portfolio</strong></td><td>High correlation (>0.7)</td><td>Reduce position (overexposure)</td></tr>
+            <tr><td><strong>Backtest Win Rate</strong></td><td>>50% = good, <40% = poor</td><td>Lower conviction if poor</td></tr>
+            <tr><td><strong>MAE (Max Adverse Excursion)</strong></td><td>Typical drawdown</td><td>Ensure stop is beyond this</td></tr>
+          </tbody>
+        </table>
+
+        <h4>5. Context Tab (Macro environment - 20 seconds)</h4>
+        <table class="analysis-table">
+          <thead><tr><th>Factor</th><th>Bullish</th><th>Bearish</th><th>Impact</th></tr></thead>
+          <tbody>
+            <tr><td><strong>DXY Direction</strong></td><td>Down (weak dollar)</td><td>Up (strong dollar)</td><td>Gold/crypto inverse to DXY</td></tr>
+            <tr><td><strong>US10Y Direction</strong></td><td>Down (lower rates)</td><td>Up (higher rates)</td><td>Higher rates = risk-off</td></tr>
+            <tr><td><strong>News Sentiment</strong></td><td>Positive boost</td><td>Negative penalty</td><td>Adjust conviction</td></tr>
+            <tr><td><strong>Pre-Event Caution</strong></td><td>Active (≤60min to event)</td><td>Not active</td><td>Reduce size if active</td></tr>
+            <tr><td><strong>Oil Context</strong> (WTI only)</td><td>Bullish OVX regime</td><td>Bearish OVX regime</td><td>WTI-specific</td></tr>
+          </tbody>
+        </table>
+
+        <h4>6. Expert Battle Plan (Final decision - 30 seconds)</h4>
+        <table class="analysis-table">
+          <thead><tr><th>Section</th><th>What to Check</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Entry Zone</strong></td><td>Is price near the recommended level?</td></tr>
+            <tr><td><strong>Stop Loss</strong></td><td>Is the stop level reasonable (1.5x ATR)?</td></tr>
+            <tr><td><strong>Take Profit Levels</strong></td><td>Are TP1/TP2/TP3 realistic?</td></tr>
+            <tr><td><strong>Position Size</strong></td><td>Does it fit your risk tolerance?</td></tr>
+            <tr><td><strong>Reasoning Summary</strong></td><td>Does it make sense logically?</td></tr>
+          </tbody>
+        </table>
+
+        <div class="decision-flow">
+          <h4>Quick Decision Flow</h4>
+          <div class="flow-step">START</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-step">Summary Card: Recommendation + Conviction >+50?</div>
+          <div class="flow-arrow">↓ YES</div>
+          <div class="flow-step">Execution Check: All 5 checks pass?</div>
+          <div class="flow-arrow">↓ YES</div>
+          <div class="flow-step">Technical Tab: ADX >25, RSI not extreme?</div>
+          <div class="flow-arrow">↓ YES</div>
+          <div class="flow-step">Risk Tab: No high-risk warnings?</div>
+          <div class="flow-arrow">↓ YES</div>
+          <div class="flow-step">Context Tab: No major headwinds?</div>
+          <div class="flow-arrow">↓ YES</div>
+          <div class="flow-step">Expert Battle Plan: Entry zone close?</div>
+          <div class="flow-arrow">↓ YES</div>
+          <div class="flow-step success">→ EXECUTE TRADE</div>
+          <div class="flow-note">If any step is NO → Reconsider or wait for better setup</div>
+        </div>
+
+        <div class="red-flags">
+          <h4>🚩 Red Flags (STOP trading if you see these)</h4>
+          <ul>
+            <li>⚠️ <strong>Pullback Warning badge</strong> on Summary Card</li>
+            <li>🔴 <strong>Signal Conflict</strong> in Execution Check</li>
+            <li>❌ <strong>Execution Pass Count < 3/5</strong></li>
+            <li>📉 <strong>ADX < 25</strong> (choppy market)</li>
+            <li>⚠️ <strong>Pre-Event Caution active</strong> (≤60min to major economic release)</li>
+            <li>🔴 <strong>Backtest Win Rate < 40%</strong> (historically poor setup)</li>
+          </ul>
+        </div>
+      `
+    },
+    {
       id: 'terminology',
       title: 'Trading Terminology Guide',
       icon: '📚',
