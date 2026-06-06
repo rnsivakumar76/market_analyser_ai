@@ -10,6 +10,7 @@ Thumbs.db
 backend/venv/
 backend/.env
 backend/__pycache__/
+backend/**/__pycache__/
 backend/*.pyc
 backend/*.pyo
 backend/*.pyd
