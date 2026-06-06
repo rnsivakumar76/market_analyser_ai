@@ -26,10 +26,36 @@ export class AuthService {
         if (savedUser) {
             this.user.set(JSON.parse(savedUser));
         }
+        // Drop any stale/expired token on startup so the login page is shown immediately.
+        const token = this.token();
+        if (token && this.isTokenExpired(token)) {
+            this.clearSession();
+        }
     }
 
     get isLoggedIn(): boolean {
-        return !!this.token();
+        const token = this.token();
+        return !!token && !this.isTokenExpired(token);
+    }
+
+    /** Returns true if the JWT is missing an exp claim or has already expired. */
+    private isTokenExpired(token: string): boolean {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (!payload?.exp) return false; // no exp claim -> treat as non-expiring
+            // 10s leeway to avoid edge-of-expiry flapping
+            return payload.exp * 1000 < Date.now() - 10_000;
+        } catch {
+            return true; // malformed token -> force re-login
+        }
+    }
+
+    /** Clears auth state from memory + localStorage without reloading. */
+    clearSession() {
+        this.token.set(null);
+        this.user.set(null);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
     }
 
     setToken(token: string) {
@@ -43,10 +69,7 @@ export class AuthService {
     }
 
     logout() {
-        this.token.set(null);
-        this.user.set(null);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
+        this.clearSession();
         window.location.reload(); // Refresh to clear state
     }
 

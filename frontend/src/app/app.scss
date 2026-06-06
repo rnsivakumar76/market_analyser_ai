@@ -713,21 +713,30 @@
 
   .user-info { display: none; }
 
-  &:hover .user-info {
+  &:hover .user-info,
+  .user-info:hover {
     display: flex;
     flex-direction: column;
     position: absolute;
-    top: calc(100% + 8px);
+    top: 100%;
     right: 0;
+    /* Transparent top padding bridges the avatar->menu gap so hover isn't lost */
+    padding: 18px 16px 12px;
+    margin-top: -6px;
     background: #1e1e2e;
     border: 1px solid rgba(137, 180, 250, 0.25);
     border-radius: 10px;
-    padding: 12px 16px;
     min-width: 150px;
     gap: 6px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    z-index: 999;
+    z-index: 1100;
     white-space: nowrap;
+  }
+
+  .logout-link {
+    cursor: pointer;
+    pointer-events: auto;
+    padding: 4px 0;
   }
 }
 

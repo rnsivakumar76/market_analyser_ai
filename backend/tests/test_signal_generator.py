@@ -261,7 +261,8 @@ class TestScoreCalculation:
         assert sig.score == 100
         assert sig.recommendation == Signal.BULLISH
         assert sig.trade_worthy is True
-        assert any("Bullish Breakout" in r for r in sig.reasons)
+        # Trend-aligned + volume-confirmed breakout (0.8 conf == 1.6x vol) passes the guard.
+        assert any("breakout confirmed" in r.lower() for r in sig.reasons)
 
 
 # ---------------------------------------------------------------------------

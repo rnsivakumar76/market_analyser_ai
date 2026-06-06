@@ -347,8 +347,9 @@
       </div>
 
       @if (sidebarTab() === 'heatmap') {
-        <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null"
-          (select)="selectedInstrument.set($event)">
+        <app-watchlist-heatmap [instruments]="instruments()" [selectedSymbol]="selectedInstrument()?.symbol || null" [signals]="signals()"
+          [scanning]="scanning()" [scanDiagnostics]="scanDiagnostics()"
+          (select)="selectedInstrument.set($event)" (scan)="runSignalScan()">
         </app-watchlist-heatmap>
       }
       @if (sidebarTab() === 'orb') {

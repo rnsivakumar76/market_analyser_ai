@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { InstrumentAnalysis } from '../../services/market-analyzer.service';
+import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../services/market-analyzer.service';
 
 @Component({
     selector: 'app-watchlist-heatmap',
@@ -74,6 +74,101 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
           </div>
         }
       </div>
+
+      <!-- LIVE SIGNALS FEED -->
+      <div class="signals-section">
+        <div class="signals-header">
+          <span class="signals-title">⚡ LIVE SIGNALS</span>
+          <span class="signals-count">{{ getActiveSignals().length }} active</span>
+          <button class="scan-btn" [disabled]="scanning" (click)="scan.emit()">
+            {{ scanning ? 'Scanning…' : 'Scan now' }}
+          </button>
+        </div>
+        @if (signals && signals.length > 0) {
+          @for (sig of getRecentSignals(); track sig.signal_id) {
+          <div class="signal-row" [class]="'sig-' + sig.signal_type.toLowerCase()" [class.sig-expired]="sig.status === 'EXPIRED'">
+            <div class="sig-left">
+              <span class="sig-dir" [class]="sig.signal_type === 'LONG' ? 'sig-long' : 'sig-short'">{{ sig.signal_type === 'LONG' ? '▲' : '▼' }}</span>
+              <div class="sig-meta">
+                <span class="sig-sym">{{ sig.symbol }}</span>
+                <span class="sig-tf">{{ sig.timeframe }}</span>
+              </div>
+            </div>
+            <div class="sig-center">
+              <div class="sig-trigger-row">
+                <span class="sig-trigger">{{ sig.trigger.split('+')[0] }}</span>
+                @if (sig.trigger.includes('RSI_DIV') && !sig.trigger.includes('WARN')) {
+                  <span class="sig-badge badge-div">✨DIV</span>
+                }
+                @if (sig.trigger.includes('PIN_BAR')) {
+                  <span class="sig-badge badge-pin">📌PIN</span>
+                }
+                @if (sig.trigger.includes('RSI_DIV_WARN')) {
+                  <span class="sig-badge badge-warn">⚠️DIV</span>
+                }
+              </div>
+              <div class="sig-levels">
+                <span class="sig-entry">E: {{ sig.entry_price }}</span>
+                <span class="sig-sl bearish">SL: {{ sig.stop_loss }}</span>
+                <span class="sig-tp bullish">TP1: {{ sig.take_profit_1 }}</span>
+              </div>
+            </div>
+            <div class="sig-right">
+              <div class="sig-conf" [class]="getConfClass(sig.confidence)">{{ sig.confidence }}%</div>
+              <div class="sig-status" [class]="'status-' + sig.status.toLowerCase()">{{ sig.status }}</div>
+            </div>
+          </div>
+          }
+        } @else {
+          <div class="signals-empty">
+            <div class="se-title">No active signals right now</div>
+            @if (scanDiagnostics && scanDiagnostics.length > 0) {
+              <div class="se-sub">Why nothing fired (last scan):</div>
+              <div class="se-diag-list">
+                @for (d of scanDiagnostics; track d.symbol) {
+                  <div class="se-diag">
+                    <span class="se-sym">{{ d.symbol }}</span>
+                    <span class="se-bias">4H: {{ d.bias_4h }} · 1H: {{ d.bias_1h }}</span>
+                    @if (d.skip_reasons?.length) {
+                      <span class="se-reason">{{ d.skip_reasons[d.skip_reasons.length - 1] }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="se-sub">Auto-scan runs every 15 min. Click “Scan now” to check immediately.</div>
+            }
+          </div>
+        }
+
+        <!-- Performance stats bar -->
+        @if (signals && signals.length > 0) {
+        <div class="sig-stats-bar">
+          <div class="sig-stat">
+            <span class="sst-val">{{ getSignalStats().total }}</span>
+            <span class="sst-label">TOTAL</span>
+          </div>
+          <div class="sig-stat">
+            <span class="sst-val active-c">{{ getSignalStats().active }}</span>
+            <span class="sst-label">ACTIVE</span>
+          </div>
+          <div class="sig-stat">
+            <span class="sst-val tp-c">{{ getSignalStats().tp_hits }}</span>
+            <span class="sst-label">TP HIT</span>
+          </div>
+          <div class="sig-stat">
+            <span class="sst-val sl-c">{{ getSignalStats().sl_hits }}</span>
+            <span class="sst-label">SL HIT</span>
+          </div>
+          <div class="sig-stat">
+            <span class="sst-val" [class]="getSignalStats().win_rate >= 50 ? 'tp-c' : 'sl-c'">
+              {{ getSignalStats().win_rate }}%
+            </span>
+            <span class="sst-label">WIN RATE</span>
+          </div>
+        </div>
+        }
+      </div>
     </div>
   `,
     styles: [`
@@ -86,28 +181,30 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
     .heatmap-header {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
+      flex-direction: column;
+      align-items: flex-start;
+      margin-bottom: 12px;
       padding: 0 4px;
+      gap: 5px;
     }
 
     .heatmap-title {
-      font-size: 0.90rem;
+      font-size: 0.76rem;
       font-weight: 800;
-      letter-spacing: 1.5px;
-      color: #64748b;
+      letter-spacing: 1.2px;
+      color: #6b8299;
       margin: 0;
     }
 
     .heatmap-legend {
       display: flex;
-      gap: 12px;
+      gap: 10px;
+      flex-wrap: nowrap;
     }
 
     .legend-item {
-      font-size: 0.86rem;
-      font-weight: 600;
+      font-size: 0.70rem;
+      font-weight: 700;
     }
 
     .legend-item.bullish { color: #86efac; }
@@ -130,7 +227,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
 
     .heat-cell {
       position: relative;
-      min-height: 90px;
+      min-height: 82px;
       border-radius: 10px;
       cursor: pointer;
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -191,14 +288,14 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     }
 
     .cell-symbol {
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       font-weight: 800;
-      color: #e2e8f0;
+      color: #e8f0fa;
       letter-spacing: 0.5px;
     }
 
     .cell-score {
-      font-size: 1.2rem;
+      font-size: 1.05rem;
       font-weight: 800;
       line-height: 1;
     }
@@ -208,7 +305,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     .neutral-cell .cell-score { color: #fcd34d; }
 
     .cell-change {
-      font-size: 0.90rem;
+      font-size: 0.78rem;
       font-weight: 700;
     }
 
@@ -217,9 +314,9 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     .cell-change.neutral { color: #fcd34d; }
 
     .cell-phase {
-      font-size: 0.76rem;
+      font-size: 0.68rem;
       font-weight: 700;
-      color: #64748b;
+      color: #6b8299;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -268,7 +365,7 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
       margin-top: 8px;
     }
     .wl-ready { color: #86efac; }
-    .wl-monitoring { color: #334155; }
+    .wl-monitoring { color: #4e6480; }
     .wl-group-count {
       background: rgba(108,112,134,0.15);
       color: #64748b;
@@ -290,18 +387,108 @@ import { InstrumentAnalysis } from '../../services/market-analyzer.service';
     .gates-5 { background: rgba(166,227,161,0.2); color: #86efac; border: 1px solid rgba(166,227,161,0.35); }
     .gates-4 { background: rgba(166,227,161,0.12); color: #86efac; border: 1px solid rgba(166,227,161,0.25); }
     .gates-3 { background: rgba(249,226,175,0.12); color: #fcd34d; border: 1px solid rgba(249,226,175,0.25); }
-    .gates-2, .gates-1, .gates-0 { background: rgba(108,112,134,0.1); color: #334155; border: 1px solid rgba(108,112,134,0.2); }
+    .gates-2, .gates-1, .gates-0 { background: rgba(78,100,128,0.12); color: #4e6480; border: 1px solid rgba(78,100,128,0.25); }
 
     @keyframes glow-pulse {
       0%, 100% { opacity: 0.5; }
       50% { opacity: 1; }
     }
+
+    /* LIVE SIGNALS FEED */
+    .signals-section { margin-top: 16px; border-top: 1px solid #2c3d58; padding-top: 12px; }
+    .signals-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .signals-title { font-size: 0.72rem; font-weight: 900; letter-spacing: 1.2px; color: #60a5fa; }
+    .signals-count { font-size: 0.72rem; color: #6b8299; background: rgba(96,165,250,0.12); padding: 1px 7px; border-radius: 8px; }
+    .signal-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid transparent; transition: opacity 0.2s; }
+    .sig-long  { border-left-color: #86efac; background: rgba(134,239,172,0.05); }
+    .sig-short { border-left-color: #f87171; background: rgba(248,113,113,0.05); }
+    .sig-expired { opacity: 0.4; }
+    .sig-left { display: flex; align-items: center; gap: 6px; width: 54px; flex-shrink: 0; }
+    .sig-dir { font-size: 1.1rem; font-weight: 900; }
+    .sig-long  .sig-dir { color: #86efac; }
+    .sig-short .sig-dir { color: #f87171; }
+    .sig-meta { display: flex; flex-direction: column; }
+    .sig-sym { font-size: 0.80rem; font-weight: 900; color: #e8f0fa; }
+    .sig-tf  { font-size: 0.68rem; color: #6b8299; font-weight: 700; }
+    .sig-center { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .sig-trigger-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .sig-trigger { font-size: 0.68rem; color: #60a5fa; font-weight: 700; letter-spacing: 0.5px; }
+    .sig-badge { font-size: 0.60rem; font-weight: 800; padding: 0px 4px; border-radius: 6px; white-space: nowrap; }
+    .badge-div  { background: rgba(134,239,172,0.15); color: #86efac; border: 1px solid rgba(134,239,172,0.3); }
+    .badge-pin  { background: rgba(96,165,250,0.15);  color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+    .badge-warn { background: rgba(253,211,77,0.15);  color: #fcd34d; border: 1px solid rgba(253,211,77,0.3); }
+    .sig-levels { display: flex; gap: 8px; flex-wrap: wrap; }
+    .sig-entry, .sig-sl, .sig-tp { font-size: 0.70rem; font-weight: 700; }
+    .sig-entry { color: #9fb3cc; }
+    .sig-sl { color: #f87171; }
+    .sig-tp { color: #86efac; }
+    .sig-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; width: 52px; flex-shrink: 0; }
+    .sig-conf { font-size: 0.74rem; font-weight: 900; padding: 1px 6px; border-radius: 8px; }
+    .conf-high   { background: rgba(134,239,172,0.18); color: #86efac; }
+    .conf-medium { background: rgba(253,211,77,0.18);  color: #fcd34d; }
+    .conf-low    { background: rgba(78,100,128,0.18);  color: #6b8299; }
+    .sig-status  { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.5px; color: #4e6480; }
+    .status-active   { color: #60a5fa; }
+    .status-hit_tp1, .status-hit_tp2 { color: #86efac; }
+    .status-hit_sl   { color: #f87171; }
+    .status-expired  { color: #4e6480; }
+    .signals-empty { font-size: 0.76rem; color: #4e6480; text-align: center; padding: 12px 0; }
+    .se-title { font-weight: 800; color: #94a3b8; margin-bottom: 4px; }
+    .se-sub { font-size: 0.70rem; color: #4e6480; margin-bottom: 8px; }
+    .se-diag-list { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+    .se-diag { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; padding: 5px 8px; background: rgba(255,255,255,0.02); border-radius: 4px; border: 1px solid rgba(255,255,255,0.04); }
+    .se-sym { font-weight: 900; color: #cbd5e1; font-size: 0.72rem; letter-spacing: 0.5px; }
+    .se-bias { font-size: 0.66rem; color: #6b8299; }
+    .se-reason { font-size: 0.66rem; color: #4e6480; flex-basis: 100%; }
+
+    /* Scan now button */
+    .scan-btn { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.5px; color: #60a5fa; background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.3); border-radius: 6px; padding: 3px 10px; cursor: pointer; transition: background 0.2s; }
+    .scan-btn:hover:not(:disabled) { background: rgba(96,165,250,0.22); }
+    .scan-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* Signal performance stats bar */
+    .sig-stats-bar { display: flex; gap: 0; margin-top: 10px; border: 1px solid #2c3d58; border-radius: 6px; overflow: hidden; }
+    .sig-stat { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; background: rgba(26,34,52,0.7); border-right: 1px solid #2c3d58; }
+    .sig-stat:last-child { border-right: none; }
+    .sst-val { font-size: 0.82rem; font-weight: 900; color: #e8f0fa; line-height: 1; }
+    .sst-label { font-size: 0.58rem; font-weight: 700; color: #4e6480; letter-spacing: 0.6px; margin-top: 2px; }
+    .active-c { color: #60a5fa; }
+    .tp-c { color: #86efac; }
+    .sl-c { color: #f87171; }
   `]
 })
 export class WatchlistHeatmapComponent {
     @Input({ required: true }) instruments!: InstrumentAnalysis[];
     @Input() selectedSymbol: string | null = null;
+    @Input() signals: IntradaySignal[] = [];
+    @Input() scanning = false;
+    @Input() scanDiagnostics: ScanDiagnostic[] = [];
     @Output() select = new EventEmitter<InstrumentAnalysis>();
+    @Output() scan = new EventEmitter<void>();
+
+    getActiveSignals(): IntradaySignal[] {
+        return (this.signals || []).filter(s => s.status === 'ACTIVE');
+    }
+
+    getRecentSignals(): IntradaySignal[] {
+        return (this.signals || []).slice(0, 12);
+    }
+
+    getConfClass(confidence: number): string {
+        if (confidence >= 75) return 'sig-conf conf-high';
+        if (confidence >= 60) return 'sig-conf conf-medium';
+        return 'sig-conf conf-low';
+    }
+
+    getSignalStats(): { total: number; active: number; tp_hits: number; sl_hits: number; win_rate: number } {
+        const sigs = this.signals || [];
+        const active  = sigs.filter(s => s.status === 'ACTIVE').length;
+        const tp_hits = sigs.filter(s => s.status === 'HIT_TP1' || s.status === 'HIT_TP2').length;
+        const sl_hits = sigs.filter(s => s.status === 'HIT_SL').length;
+        const closed  = tp_hits + sl_hits;
+        const win_rate = closed > 0 ? Math.round((tp_hits / closed) * 100) : 0;
+        return { total: sigs.length, active, tp_hits, sl_hits, win_rate };
+    }
 
     getGateCount(inst: InstrumentAnalysis): number {
         let count = 0;

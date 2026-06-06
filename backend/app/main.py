@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from starlette.middleware.sessions import SessionMiddleware
 from mangum import Mangum
 from datetime import datetime, date, timezone
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import logging
 import os
 import traceback
@@ -682,6 +682,15 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                 us10y_df=benchmarks_data.get("US10Y"),
                 news_api_key=newsapi_key
             )
+            # Oil market context — only for WTI
+            if is_commodity and "WTI" in sym and analysis:
+                try:
+                    from .analyzers.oil_market_analyzer import analyze_oil_market_context
+                    analysis.oil_market_context = analyze_oil_market_context()
+                    logger.info(f"[OIL_CTX] {sym}: regime={analysis.oil_market_context.overall_regime}, size_guidance={analysis.oil_market_context.size_guidance}")
+                except Exception as oil_exc:
+                    logger.warning(f"[OIL_CTX] {sym}: failed to build oil context: {oil_exc}")
+
             elapsed_inst = round(time.time() - t_inst, 2)
             signal_rec = analysis.trade_signal.recommendation if analysis and analysis.trade_signal else 'N/A'
             price = analysis.current_price if analysis else 'N/A'
@@ -929,6 +938,21 @@ async def analyze_all(mode: Any = None, refresh: bool = False, user_id: str = De
             except Exception as e:
                 logger.error(f"Failed to cache analysis: {e}")
 
+        # Send Telegram alerts for high-intent signals (scheduler path only)
+        if user_id == "global_default" and results:
+            try:
+                from .notifier import send_alerts
+                from .config_loader import load_config, get_alert_config
+                cfg = load_config(user_id=user_id)
+                alert_cfg = get_alert_config(cfg)
+                for inst in results:
+                    try:
+                        send_alerts(inst, alert_cfg)
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.warning(f"[NOTIFIER] Telegram alert send failed: {e}")
+
         return _scrub_nans(response.dict())
 
     except Exception as e:
@@ -1031,6 +1055,14 @@ async def add_instrument(instrument_data: Dict[str, str], user_id: str = Depends
     instruments.append({"symbol": symbol, "name": name})
     save_instruments(instruments, user_id=user_id)
     return {"message": f"Instrument {symbol} added successfully", "instruments": instruments}
+
+@app.post("/api/instruments/reset")
+async def reset_instruments(user_id: str = Depends(get_current_user)):
+    """Reset instrument list to the four default symbols (XAU, XAG, WTI, BTC)."""
+    from .config_loader import load_config, save_instruments, DEFAULT_INSTRUMENTS
+    config = load_config(user_id=user_id)
+    save_instruments(list(DEFAULT_INSTRUMENTS), user_id=user_id)
+    return {"message": "Instruments reset to defaults", "instruments": DEFAULT_INSTRUMENTS}
 
 @app.delete("/api/instruments/{symbol}")
 async def delete_instrument(symbol: str, user_id: str = Depends(get_current_user)):
@@ -1182,6 +1214,43 @@ async def get_chart_data(symbol: str):
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+@app.get("/api/debug/telegram")
+async def debug_telegram(send_test: bool = False, user_id: str = Depends(get_current_user)):
+    """
+    Diagnostic endpoint to verify Telegram configuration.
+    Pass ?send_test=true to actually fire a test message to the configured chat.
+    """
+    token   = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+    result = {
+        "TELEGRAM_BOT_TOKEN": "SET" if token else "MISSING",
+        "TELEGRAM_CHAT_ID":   "SET" if chat_id else "MISSING",
+        "token_prefix":       token[:10] + "..." if token else None,
+        "chat_id":            chat_id if chat_id else None,
+        "test_sent":          False,
+        "test_error":         None,
+    }
+    if send_test and token and chat_id:
+        try:
+            import requests as _req
+            resp = _req.post(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                json={
+                    "chat_id": chat_id,
+                    "text":    f"✅ *Market Analyser — Telegram Test*\nSent at `{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}`",
+                    "parse_mode": "Markdown",
+                },
+                timeout=8,
+            )
+            result["test_sent"]         = resp.status_code == 200
+            result["telegram_response"] = resp.json()
+        except Exception as e:
+            result["test_error"] = str(e)
+    elif send_test:
+        result["test_error"] = "Cannot send — one or both env vars missing"
+    return result
 
 @app.get("/api/test/gold")
 async def test_gold():
@@ -1359,6 +1428,229 @@ async def migrate_journal_to_dynamodb(user_id: str = Depends(get_current_user)):
         "migrated": migrated,
         "total": len(s3_trades)
     }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# INTRADAY SIGNAL ENDPOINTS
+# ──────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/signals")
+async def get_signals(symbol: Optional[str] = None, limit: int = 50, user_id: str = Depends(get_current_user)):
+    """Return latest intraday signals. Optionally filter by symbol."""
+    from .signal_store import get_recent_signals, get_signals_for_symbol
+    if symbol:
+        signals = get_signals_for_symbol(symbol.upper(), limit=limit)
+    else:
+        signals = get_recent_signals(limit=limit)
+    return {"signals": [s.model_dump() for s in signals], "count": len(signals)}
+
+
+@app.get("/api/signals/stats")
+async def get_signal_stats(user_id: str = Depends(get_current_user)):
+    """Return aggregated signal performance stats across all recent signals."""
+    from .signal_store import get_recent_signals
+    signals = get_recent_signals(limit=200)
+
+    total    = len(signals)
+    active   = sum(1 for s in signals if s.status == "ACTIVE")
+    tp_hits  = sum(1 for s in signals if s.status in ("HIT_TP1", "HIT_TP2"))
+    tp2_hits = sum(1 for s in signals if s.status == "HIT_TP2")
+    sl_hits  = sum(1 for s in signals if s.status == "HIT_SL")
+    expired  = sum(1 for s in signals if s.status == "EXPIRED")
+    closed   = tp_hits + sl_hits
+
+    # Per-timeframe breakdown
+    breakdown: dict = {}
+    for tf in ("15m", "1H", "4H"):
+        tf_sigs  = [s for s in signals if s.timeframe == tf]
+        tf_tp    = sum(1 for s in tf_sigs if s.status in ("HIT_TP1", "HIT_TP2"))
+        tf_sl    = sum(1 for s in tf_sigs if s.status == "HIT_SL")
+        tf_closed = tf_tp + tf_sl
+        breakdown[tf] = {
+            "total":    len(tf_sigs),
+            "tp_hits":  tf_tp,
+            "sl_hits":  tf_sl,
+            "win_rate": round(tf_tp / tf_closed * 100, 1) if tf_closed > 0 else None,
+        }
+
+    # Per-trigger breakdown
+    triggers: dict = {}
+    for sig in signals:
+        base = sig.trigger.split("+")[0]
+        if base not in triggers:
+            triggers[base] = {"total": 0, "tp": 0, "sl": 0}
+        triggers[base]["total"] += 1
+        if sig.status in ("HIT_TP1", "HIT_TP2"):
+            triggers[base]["tp"] += 1
+        elif sig.status == "HIT_SL":
+            triggers[base]["sl"] += 1
+
+    return {
+        "total":    total,
+        "active":   active,
+        "tp_hits":  tp_hits,
+        "tp2_hits": tp2_hits,
+        "sl_hits":  sl_hits,
+        "expired":  expired,
+        "win_rate": round(tp_hits / closed * 100, 1) if closed > 0 else None,
+        "by_timeframe": breakdown,
+        "by_trigger":   triggers,
+    }
+
+
+@app.post("/api/signals/scan")
+async def scan_signals(user_id: str = Depends(get_current_user)):
+    """
+    Trigger an intraday signal scan across all configured instruments.
+    Fetches 4H + 1H + 15m bars, runs EMA/MACD crossover detection,
+    persists new signals to DynamoDB, and returns what was found.
+    Also called automatically by EventBridge every 5 minutes.
+    """
+    from .analyzers.intraday_signal_generator import detect_intraday_signals_verbose
+    from .signal_store import save_signal, expire_old_signals, check_signal_outcomes
+
+    from .config_loader import load_config, get_instruments
+    config = load_config(user_id=user_id)
+    raw_instruments = get_instruments(config)
+    instruments = [{"symbol": i["symbol"], "name": i.get("name", i["symbol"])} for i in raw_instruments]
+
+    # Expire stale signals first
+    expire_old_signals()
+
+    from .twelvedata_fetcher import TwelveDataFetcher
+    fetcher   = TwelveDataFetcher()
+    sym_list  = [i["symbol"].upper() for i in instruments]
+
+    # Fetch all three timeframes in parallel
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        f_4h  = ex.submit(fetcher.fetch_batch_data, sym_list, interval="4h",  days=60)
+        f_1h  = ex.submit(fetcher.fetch_batch_data, sym_list, interval="1h",  days=15)
+        f_15m = ex.submit(fetcher.fetch_batch_data, sym_list, interval="15min", days=4)
+
+    batch_4h  = f_4h.result()
+    batch_1h  = f_1h.result()
+    batch_15m = f_15m.result()
+
+    all_signals = []
+    diagnostics = []
+    for inst in instruments:
+        sym  = inst["symbol"].upper()
+        name = inst.get("name", sym)
+        try:
+            new_signals, diag = detect_intraday_signals_verbose(
+                symbol   = sym,
+                name     = name,
+                bars_4h  = batch_4h.get(sym),
+                bars_1h  = batch_1h.get(sym),
+                bars_15m = batch_15m.get(sym),
+            )
+            diagnostics.append(diag)
+            saved = 0
+            for sig in new_signals:
+                if save_signal(sig):
+                    saved += 1
+                    all_signals.append(sig.model_dump())
+                    # Telegram notification for new signals
+                    _notify_intraday_signal(sig)
+            if new_signals:
+                logger.info(f"[SCAN] {sym}: {len(new_signals)} signals detected, {saved} new saved")
+        except Exception as e:
+            logger.warning(f"[SCAN] {sym} failed: {e}")
+            diagnostics.append({"symbol": sym, "bias_4h": "unknown", "bias_1h": "unknown",
+                                "skip_reasons": [f"scan failed: {e}"]})
+
+    # ── TP / SL outcome tracking ──────────────────────────────────────────────
+    # Extract current prices from the 1H batch (last closed bar)
+    current_prices: dict = {}
+    for sym in sym_list:
+        bars_1h = batch_1h.get(sym)
+        if bars_1h is not None and len(bars_1h) > 1:
+            current_prices[sym] = float(bars_1h["Close"].iloc[-2])
+
+    outcomes = check_signal_outcomes(current_prices)
+    for outcome in outcomes:
+        sig        = outcome["signal"]
+        new_status = outcome["new_status"]
+        _notify_signal_outcome(sig, new_status)
+        logger.info(f"[SCAN] {sig.symbol} {sig.timeframe} outcome: {new_status}")
+
+    return {
+        "scanned":     len(instruments),
+        "new_signals": len(all_signals),
+        "signals":     all_signals,
+        "diagnostics": diagnostics,
+        "outcomes":    [{"symbol": o["signal"].symbol, "timeframe": o["signal"].timeframe,
+                         "signal_type": o["signal"].signal_type, "status": o["new_status"]}
+                        for o in outcomes],
+    }
+
+
+def _notify_intraday_signal(sig: "IntradaySignal"):
+    """Send Telegram notification for a new intraday signal."""
+    token    = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id  = os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        import requests as _req
+        emoji = "🟢" if sig.signal_type == "LONG" else "🔴"
+        conf_stars = "⭐" * (1 + (sig.confidence - 50) // 15)
+        quality = ""
+        if "RSI_DIV" in sig.trigger and "WARN" not in sig.trigger:
+            quality += "  ✨ RSI Divergence confirmed"
+        if "RSI_DIV_WARN" in sig.trigger:
+            quality += "  ⚠️ RSI Divergence opposes"
+        if "PIN_BAR" in sig.trigger:
+            quality += "  📌 Pin bar"
+        text = (
+            f"{emoji} *{sig.signal_type} SIGNAL — {sig.symbol} {sig.timeframe}*\n"
+            f"📌 Trigger: `{sig.trigger.split('+')[0]}`  {conf_stars} ({sig.confidence}%){quality}\n"
+            f"🎯 Entry:  `{sig.entry_price}`\n"
+            f"🛑 SL:     `{sig.stop_loss}`\n"
+            f"✅ TP1:    `{sig.take_profit_1}`   TP2: `{sig.take_profit_2}`\n"
+            f"📊 R:R     `{sig.risk_reward}:1`   4H bias: `{sig.mtf_bias.upper()}`\n"
+            f"⏰ Expires: `{sig.expires_at[:16]} UTC`"
+        )
+        _req.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
+            timeout=5,
+        )
+    except Exception as e:
+        logger.warning(f"[SIGNAL_NOTIFY] Telegram failed: {e}")
+
+
+def _notify_signal_outcome(sig: "IntradaySignal", new_status: str):
+    """Send Telegram notification when a signal hits TP or SL."""
+    token   = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        import requests as _req
+        if new_status == "HIT_SL":
+            emoji, label = "🔴", "STOP LOSS HIT"
+        elif new_status == "HIT_TP2":
+            emoji, label = "🏆", "TP2 HIT — FULL TARGET"
+        elif new_status == "HIT_TP1":
+            emoji, label = "✅", "TP1 HIT — PARTIAL TARGET"
+        else:
+            return
+
+        dir_emoji = "🟢 LONG" if sig.signal_type == "LONG" else "🔴 SHORT"
+        text = (
+            f"{emoji} *{label}*\n"
+            f"{dir_emoji} {sig.symbol} {sig.timeframe} — `{sig.trigger.split('+')[0]}`\n"
+            f"Entry: `{sig.entry_price}` → {new_status}\n"
+            f"SL: `{sig.stop_loss}`  TP1: `{sig.take_profit_1}`  TP2: `{sig.take_profit_2}`"
+        )
+        _req.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
+            timeout=5,
+        )
+    except Exception as e:
+        logger.warning(f"[OUTCOME_NOTIFY] Telegram failed: {e}")
+
 
 # Handler for AWS Lambda
 handler = Mangum(app)

@@ -22,6 +22,7 @@ class MarketPhase(str, Enum):
 class StrategyMode(str, Enum):
     LONG_TERM = "long_term"   # Monthly -> Weekly -> Daily
     SHORT_TERM = "short_term" # Daily -> 4Hour -> 1Hour
+    INTRADAY = "intraday"     # 4Hour -> 1Hour -> 15min (signal generator)
 
 
 class SystemStatus(str, Enum):
@@ -199,6 +200,13 @@ class InstrumentCorrelations(BaseModel):
     interpretation: str = ""
 
 
+class TradeVerdict(BaseModel):
+    verdict: str        # "TRADE_LONG" | "TRADE_SHORT" | "WAIT" | "STAND_ASIDE"
+    headline: str       # short, bold instruction shown as the hero element
+    detail: str         # one-line supporting explanation
+    color: str          # "green" | "red" | "amber" | "slate"
+
+
 class TradeSignal(BaseModel):
     recommendation: Signal
     score: int  # -100 to +100
@@ -214,6 +222,7 @@ class TradeSignal(BaseModel):
     scaling_plan: str = ""
     executive_summary: str = ""
     signal_conflict: Optional['SignalConflict'] = None
+    trade_verdict: Optional['TradeVerdict'] = None
 
 
 class PositionSizing(BaseModel):
@@ -284,6 +293,41 @@ class BlowOffTopAnalysis(BaseModel):
     structural_low: Optional[float] = None
     signals: BlowOffTopSignals = Field(default_factory=BlowOffTopSignals)
     narrative: str = ""
+
+
+class OVXRegime(BaseModel):
+    current_value: float
+    regime: str  # "LOW" | "NORMAL" | "ELEVATED" | "EXTREME"
+    regime_label: str
+    trading_implication: str
+    size_multiplier: float  # suggested position size multiplier
+
+
+class EIAInventoryReport(BaseModel):
+    report_date: str
+    change_mbbl: Optional[float] = None       # week-on-week change (million barrels)
+    prior_change_mbbl: Optional[float] = None
+    direction: str = "neutral"                 # "bullish_draw" | "bearish_build" | "neutral"
+    description: str = ""
+    next_report_date: Optional[str] = None
+    days_to_next: Optional[int] = None
+
+
+class OpecWindow(BaseModel):
+    next_meeting_date: str
+    days_until: int
+    is_active_window: bool   # within ±5 days of a meeting
+    caution_message: str
+
+
+class OilMarketContext(BaseModel):
+    ovx: Optional[OVXRegime] = None
+    eia_inventory: Optional[EIAInventoryReport] = None
+    opec_window: Optional[OpecWindow] = None
+    overall_regime: str = "CLEAR"    # "CLEAR" | "CAUTION" | "HIGH_RISK"
+    regime_summary: str = ""
+    size_guidance: float = 1.0        # final combined position-size multiplier
+    warnings: List[str] = []
 
 
 class VolumeProfileBucket(BaseModel):
@@ -381,6 +425,28 @@ class InstrumentAnalysis(BaseModel):
     block_flow: Optional[BlockFlowDetection] = None
     geopolitical_risk: Optional[GeopoliticalRisk] = None
     blowoff_top: Optional[BlowOffTopAnalysis] = None
+    oil_market_context: Optional[OilMarketContext] = None
+
+
+class IntradaySignal(BaseModel):
+    signal_id: str
+    symbol: str
+    name: str
+    timeframe: str            # "15m" | "1H" | "4H"
+    signal_type: str          # "LONG" | "SHORT"
+    trigger: str              # "EMA_CROSS" | "MACD_CROSS" | "EMA_MACD_CONFLUENCE"
+    entry_price: float
+    stop_loss: float
+    take_profit_1: float      # 1R target
+    take_profit_2: float      # 2R target
+    risk_reward: float
+    mtf_bias: str             # 4H direction backing this signal
+    confidence: int           # 0-100
+    generated_at: str         # ISO datetime
+    bar_time: str             # Bar that triggered the signal
+    expires_at: str           # ISO datetime
+    status: str = "ACTIVE"    # "ACTIVE" | "EXPIRED" | "HIT_TP1" | "HIT_TP2" | "HIT_SL"
+    notes: str = ""
 
 
 class PerformanceSummary(BaseModel):

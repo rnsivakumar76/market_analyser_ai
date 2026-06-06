@@ -1,6 +1,6 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences } from './services/market-analyzer.service';
+import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences, IntradaySignal, ScanDiagnostic } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { StrategySettingsComponent } from './components/strategy-settings/strategy-settings.component';
@@ -30,6 +30,7 @@ export class App implements OnInit, OnDestroy {
   public authService = inject(AuthService);
   public themeService = inject(ThemeService);
   private analysisSub?: Subscription;
+  private signalPollSub?: Subscription;
 
   instruments = signal<InstrumentAnalysis[]>([]);
   loading = signal(false);
@@ -82,6 +83,10 @@ export class App implements OnInit, OnDestroy {
   showDiagnostics = signal<boolean>(false);
   lastErrorInfo = signal<any>(null);
 
+  signals = signal<IntradaySignal[]>([]);
+  scanning = signal<boolean>(false);
+  scanDiagnostics = signal<ScanDiagnostic[]>([]);
+
   ngOnInit() {
     // Load any previous error information
     this.loadLastError();
@@ -112,6 +117,7 @@ export class App implements OnInit, OnDestroy {
     if (this.authService.isLoggedIn) {
       this.loadPreferences(); // runAnalysis is called inside, after mode is set
       this.startAutoRefresh();
+      this.loadSignals();
     }
   }
 
@@ -120,6 +126,7 @@ export class App implements OnInit, OnDestroy {
     this.countdownSubscription?.unsubscribe();
     this.analysisSub?.unsubscribe();
     this.ageTickerSub?.unsubscribe();
+    this.signalPollSub?.unsubscribe();
   }
 
   private startAutoRefresh() {
@@ -580,5 +587,36 @@ export class App implements OnInit, OnDestroy {
     } catch {
       return false;
     }
+  }
+
+  loadSignals() {
+    this.analyzerService.getSignals(undefined, 50).subscribe({
+      next: (resp) => this.signals.set(resp.signals || []),
+      error: () => {}  // silent — signals are optional
+    });
+    // Refresh signals every 15 min to stay in sync with the backend scan cycle
+    this.signalPollSub = interval(15 * 60 * 1000).subscribe(() => {
+      this.analyzerService.getSignals(undefined, 50).subscribe({
+        next: (resp) => this.signals.set(resp.signals || []),
+        error: () => {}
+      });
+    });
+  }
+
+  runSignalScan() {
+    if (this.scanning()) return;
+    this.scanning.set(true);
+    this.analyzerService.triggerSignalScan().subscribe({
+      next: (resp) => {
+        this.scanDiagnostics.set(resp.diagnostics || []);
+        // Re-pull the persisted feed so newly created signals show immediately
+        this.analyzerService.getSignals(undefined, 50).subscribe({
+          next: (r) => this.signals.set(r.signals || []),
+          error: () => {}
+        });
+        this.scanning.set(false);
+      },
+      error: () => this.scanning.set(false)
+    });
   }
 }

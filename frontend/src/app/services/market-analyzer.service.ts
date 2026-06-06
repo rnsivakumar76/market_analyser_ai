@@ -4,6 +4,27 @@ import { Observable } from 'rxjs';
 import { timeout } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
+export interface IntradaySignal {
+  signal_id: string;
+  symbol: string;
+  name: string;
+  timeframe: string;        // '15m' | '1H' | '4H'
+  signal_type: string;      // 'LONG' | 'SHORT'
+  trigger: string;          // 'EMA_CROSS' | 'MACD_CROSS' | 'EMA_MACD_CONFLUENCE'
+  entry_price: number;
+  stop_loss: number;
+  take_profit_1: number;
+  take_profit_2: number;
+  risk_reward: number;
+  mtf_bias: string;
+  confidence: number;
+  generated_at: string;
+  bar_time: string;
+  expires_at: string;
+  status: string;           // 'ACTIVE' | 'EXPIRED' | 'HIT_TP1' | 'HIT_TP2' | 'HIT_SL'
+  notes: string;
+}
+
 export interface GeopoliticalEvent {
   title: string;
   description: string;
@@ -135,6 +156,41 @@ export interface IntermarketContext {
   description: string;
 }
 
+export interface OVXRegime {
+  current_value: number;
+  regime: string;
+  regime_label: string;
+  trading_implication: string;
+  size_multiplier: number;
+}
+
+export interface EIAInventoryReport {
+  report_date: string;
+  change_mbbl: number | null;
+  prior_change_mbbl: number | null;
+  direction: string;
+  description: string;
+  next_report_date: string | null;
+  days_to_next: number | null;
+}
+
+export interface OpecWindow {
+  next_meeting_date: string;
+  days_until: number;
+  is_active_window: boolean;
+  caution_message: string;
+}
+
+export interface OilMarketContext {
+  ovx: OVXRegime | null;
+  eia_inventory: EIAInventoryReport | null;
+  opec_window: OpecWindow | null;
+  overall_regime: string;
+  regime_summary: string;
+  size_guidance: number;
+  warnings: string[];
+}
+
 export interface TradeSignal {
   recommendation: 'bullish' | 'bearish' | 'neutral';
   score: number;
@@ -150,6 +206,28 @@ export interface TradeSignal {
   scaling_plan: string;
   executive_summary: string;
   signal_conflict?: SignalConflict;
+  trade_verdict?: TradeVerdict;
+}
+
+export interface TradeVerdict {
+  verdict: 'TRADE_LONG' | 'TRADE_SHORT' | 'WAIT' | 'STAND_ASIDE';
+  headline: string;
+  detail: string;
+  color: 'green' | 'red' | 'amber' | 'slate';
+}
+
+export interface ScanDiagnostic {
+  symbol: string;
+  bias_4h: string;
+  bias_1h: string;
+  skip_reasons: string[];
+}
+
+export interface SignalScanResult {
+  scanned: number;
+  new_signals: number;
+  signals: IntradaySignal[];
+  diagnostics?: ScanDiagnostic[];
 }
 
 export interface SignalConflict {
@@ -370,6 +448,7 @@ export interface InstrumentAnalysis {
   block_flow?: BlockFlowDetection;
   geopolitical_risk?: GeopoliticalRisk;
   blowoff_top?: BlowOffTopAnalysis;
+  oil_market_context?: OilMarketContext;
 }
 
 export interface VolumeProfileBucket {
@@ -618,5 +697,15 @@ export class MarketAnalyzerService {
 
   chatWithCopilot(payload: ChatRequest): Observable<ChatResponse> {
     return this.http.post<ChatResponse>(`${this.apiUrl}/chat`, payload).pipe(timeout(25000));
+  }
+
+  getSignals(symbol?: string, limit: number = 50): Observable<{ signals: IntradaySignal[]; count: number }> {
+    const params: Record<string, string> = { limit: String(limit) };
+    if (symbol) params['symbol'] = symbol;
+    return this.http.get<{ signals: IntradaySignal[]; count: number }>(`${this.apiUrl}/signals`, { params });
+  }
+
+  triggerSignalScan(): Observable<SignalScanResult> {
+    return this.http.post<SignalScanResult>(`${this.apiUrl}/signals/scan`, {}).pipe(timeout(60000));
   }
 }

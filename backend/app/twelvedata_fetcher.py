@@ -107,7 +107,13 @@ class TwelveDataFetcher:
         results = {}
         t_start = time.time()
         logger.info(f"[BATCH_FETCH] START: {len(symbols)} symbols={symbols} interval={interval} days={days}")
-        outputsize = min(days * 24 if "h" in interval else days, 5000)
+        if "min" in interval:
+            mins = int(''.join(c for c in interval if c.isdigit()) or '15')
+            outputsize = min(days * 24 * 60 // mins, 5000)
+        elif "h" in interval:
+            outputsize = min(days * 24, 5000)
+        else:
+            outputsize = min(days, 5000)
 
         def _fetch_chunked(symbols_to_fetch: List[str], get_td_ticker_fn) -> None:
             """Helper to fetch a list of internal symbols and populate results."""
