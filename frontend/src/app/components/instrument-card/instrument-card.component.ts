@@ -3012,7 +3012,7 @@ export class InstrumentCardComponent implements OnChanges {
   getRRReward(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
-    const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
+    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
     const reward = this.isShortTrade()
       ? entry - vr.take_profit
       : vr.take_profit - entry;
@@ -3022,7 +3022,7 @@ export class InstrumentCardComponent implements OnChanges {
   getRRRisk(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
-    const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
+    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
     const risk = this.isShortTrade()
       ? vr.stop_loss - entry
       : entry - vr.stop_loss;
