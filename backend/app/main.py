@@ -305,6 +305,7 @@ def analyze_instrument_lazy(
         elif pp.s1 and fib.ret_382:
             ideal_entry = min(pp.s1, fib.ret_382)
 
+    # Initial volatility calculation using trend direction (may be updated after trade signal)
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value, entry_price=ideal_entry)
     fundamentals = analyze_fundamentals(symbol)
     blowoff_top = analyze_blowoff_top(
@@ -371,6 +372,19 @@ def analyze_instrument_lazy(
         news_sentiment_label=news_sentiment.label,
         benchmark_symbol=bench_sym,
     )
+
+    # Recalculate volatility using the actual trade signal recommendation
+    # to ensure stop/target values match the trade direction
+    ideal_entry_for_signal = None
+    if tech_indicators and tech_indicators.pivot_points and tech_indicators.fibonacci:
+        pp = tech_indicators.pivot_points
+        fib = tech_indicators.fibonacci
+        if trade_signal.recommendation.value == "bearish" and pp.r1 and fib.ret_618:
+            ideal_entry_for_signal = max(pp.r1, fib.ret_618)
+        elif pp.s1 and fib.ret_382:
+            ideal_entry_for_signal = min(pp.s1, fib.ret_382)
+    
+    volatility = analyze_volatility_and_risk(execution_data, current_price, trade_signal.recommendation.value, entry_price=ideal_entry_for_signal)
 
     # Build expert plan now that trade_signal.recommendation is final and volatility.atr is available
     if _expert_or_data is not None:
