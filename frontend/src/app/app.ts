@@ -10,6 +10,7 @@ import { LoginComponent } from './components/login/login.component';
 import { AuthService, User } from './services/auth.service';
 import { WatchlistHeatmapComponent } from './components/watchlist-heatmap/watchlist-heatmap.component';
 import { OrbDashboardComponent } from './components/orb-dashboard/orb-dashboard.component';
+import { OpportunitiesOverviewComponent } from './components/opportunities-overview/opportunities-overview.component';
 import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component';
 import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
 import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
@@ -21,7 +22,7 @@ import { interval, Subscription, timer } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, OrbDashboardComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, ThemeToggleComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, OrbDashboardComponent, OpportunitiesOverviewComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, ThemeToggleComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -53,6 +54,8 @@ export class App implements OnInit, OnDestroy {
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
   mobileTab = signal<'watchlist' | 'analysis' | 'context'>('watchlist');
+  // Top-level navigation: high-level opportunities overview vs. detailed analysis
+  viewMode = signal<'overview' | 'detail'>('overview');
   contextPanelTab = signal<'context' | 'chat'>('context');
   sidebarTab = signal<'heatmap' | 'orb'>('heatmap');
 
@@ -523,6 +526,19 @@ export class App implements OnInit, OnDestroy {
     } catch (e) {
       console.warn('Could not load error info:', e);
     }
+  }
+
+  /** Open the full detailed analysis for an instrument from the overview */
+  openInstrumentDetail(instrument: InstrumentAnalysis) {
+    this.selectedInstrument.set(instrument);
+    this.viewMode.set('detail');
+    this.mobileTab.set('analysis');
+  }
+
+  /** Return to the high-level opportunities overview */
+  backToOverview() {
+    this.viewMode.set('overview');
+    this.mobileTab.set('watchlist');
   }
 
   refreshInstrument(symbol: string) {

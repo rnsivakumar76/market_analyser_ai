@@ -1349,6 +1349,37 @@ app-ai-copilot     { display: block; }
   }
 }
 
+.overview-container {
+  height: calc(100vh - 146px);
+  overflow-y: auto;
+  background: var(--bg-primary);
+
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: var(--bg-secondary); }
+  &::-webkit-scrollbar-thumb { background: var(--bg-quaternary); border-radius: 4px; }
+}
+
+.back-to-overview-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-primary);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--bg-quaternary);
+    color: var(--text-primary);
+  }
+}
+
 .split-view-container {
   display: flex;
   height: calc(100vh - 146px);
