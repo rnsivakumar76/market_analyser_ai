@@ -200,6 +200,13 @@ class InstrumentCorrelations(BaseModel):
     interpretation: str = ""
 
 
+class TradeVerdict(BaseModel):
+    verdict: str        # "TRADE_LONG" | "TRADE_SHORT" | "WAIT" | "STAND_ASIDE"
+    headline: str       # short, bold instruction shown as the hero element
+    detail: str         # one-line supporting explanation
+    color: str          # "green" | "red" | "amber" | "slate"
+
+
 class TradeSignal(BaseModel):
     recommendation: Signal
     score: int  # -100 to +100
@@ -215,6 +222,7 @@ class TradeSignal(BaseModel):
     scaling_plan: str = ""
     executive_summary: str = ""
     signal_conflict: Optional['SignalConflict'] = None
+    trade_verdict: Optional['TradeVerdict'] = None
 
 
 class PositionSizing(BaseModel):

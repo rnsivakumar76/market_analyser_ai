@@ -1,6 +1,6 @@
 import { Component, signal, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences, IntradaySignal } from './services/market-analyzer.service';
+import { MarketAnalyzerService, InstrumentAnalysis, AnalysisResponse, WeeklyPerformance, CorrelationData, StrategyMode, PsychologicalGuardrail, UserPreferences, IntradaySignal, ScanDiagnostic } from './services/market-analyzer.service';
 import { InstrumentCardComponent } from './components/instrument-card/instrument-card.component';
 import { SettingsComponent } from './components/settings/settings.component';
 import { StrategySettingsComponent } from './components/strategy-settings/strategy-settings.component';
@@ -84,6 +84,8 @@ export class App implements OnInit, OnDestroy {
   lastErrorInfo = signal<any>(null);
 
   signals = signal<IntradaySignal[]>([]);
+  scanning = signal<boolean>(false);
+  scanDiagnostics = signal<ScanDiagnostic[]>([]);
 
   ngOnInit() {
     // Load any previous error information
@@ -598,6 +600,23 @@ export class App implements OnInit, OnDestroy {
         next: (resp) => this.signals.set(resp.signals || []),
         error: () => {}
       });
+    });
+  }
+
+  runSignalScan() {
+    if (this.scanning()) return;
+    this.scanning.set(true);
+    this.analyzerService.triggerSignalScan().subscribe({
+      next: (resp) => {
+        this.scanDiagnostics.set(resp.diagnostics || []);
+        // Re-pull the persisted feed so newly created signals show immediately
+        this.analyzerService.getSignals(undefined, 50).subscribe({
+          next: (r) => this.signals.set(r.signals || []),
+          error: () => {}
+        });
+        this.scanning.set(false);
+      },
+      error: () => this.scanning.set(false)
     });
   }
 }

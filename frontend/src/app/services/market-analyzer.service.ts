@@ -206,6 +206,28 @@ export interface TradeSignal {
   scaling_plan: string;
   executive_summary: string;
   signal_conflict?: SignalConflict;
+  trade_verdict?: TradeVerdict;
+}
+
+export interface TradeVerdict {
+  verdict: 'TRADE_LONG' | 'TRADE_SHORT' | 'WAIT' | 'STAND_ASIDE';
+  headline: string;
+  detail: string;
+  color: 'green' | 'red' | 'amber' | 'slate';
+}
+
+export interface ScanDiagnostic {
+  symbol: string;
+  bias_4h: string;
+  bias_1h: string;
+  skip_reasons: string[];
+}
+
+export interface SignalScanResult {
+  scanned: number;
+  new_signals: number;
+  signals: IntradaySignal[];
+  diagnostics?: ScanDiagnostic[];
 }
 
 export interface SignalConflict {
@@ -683,7 +705,7 @@ export class MarketAnalyzerService {
     return this.http.get<{ signals: IntradaySignal[]; count: number }>(`${this.apiUrl}/signals`, { params });
   }
 
-  triggerSignalScan(): Observable<{ scanned: number; new_signals: number; signals: IntradaySignal[] }> {
-    return this.http.post<{ scanned: number; new_signals: number; signals: IntradaySignal[] }>(`${this.apiUrl}/signals/scan`, {});
+  triggerSignalScan(): Observable<SignalScanResult> {
+    return this.http.post<SignalScanResult>(`${this.apiUrl}/signals/scan`, {}).pipe(timeout(60000));
   }
 }

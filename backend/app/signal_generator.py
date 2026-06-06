@@ -3,11 +3,13 @@ from .models import (
     TrendAnalysis, PullbackAnalysis, StrengthAnalysis, 
     TradeSignal, Signal, CandleAnalysis, StrategySettings,
     FundamentalsAnalysis, RelativeStrengthAnalysis, SignalConflict,
-    PullbackWarningAnalysis, BlowOffTopAnalysis
+    PullbackWarningAnalysis, BlowOffTopAnalysis, TradeVerdict
 )
 from domain.signals.scoring_engine import compute_composite_score, classify_recommendation
 from domain.signals.filter_engine import apply_all_hard_filters
 from domain.signals.conflict_detector import detect_signal_conflict as _domain_detect_conflict
+from domain.signals.breakout_guard import evaluate_breakout as _domain_evaluate_breakout
+from domain.signals.verdict import compute_verdict as _domain_compute_verdict
 from domain.constants import (
     SIGNAL_CONVICTION_THRESHOLD,
     FILTER_ADX_THRESHOLD,
@@ -183,13 +185,22 @@ def generate_trade_signal(
     adx_value = strength.adx
 
     # Contextual score refinements happen BEFORE final recommendation/classification.
-    if tech_indicators:
-        if tech_indicators.trend_breakout == "bullish_breakout":
-            score = min(score + 15, 100)
-            reasons.append(f"Bullish Breakout ({tech_indicators.breakout_confidence * 100:.0f}% confidence)")
-        elif tech_indicators.trend_breakout == "bearish_breakout":
-            score = max(score - 15, -100)
-            reasons.append(f"Bearish Breakout ({tech_indicators.breakout_confidence * 100:.0f}% confidence)")
+    # Breakout trap guard: only reward breakouts that are trend-aligned AND volume-confirmed.
+    # Counter-trend or thin-volume breakouts get NO boost and are flagged as trap risk.
+    breakout_trap = False
+    breakout_reason = ""
+    if tech_indicators and tech_indicators.trend_breakout in ("bullish_breakout", "bearish_breakout"):
+        guard = _domain_evaluate_breakout(
+            breakout_type=tech_indicators.trend_breakout,
+            breakout_confidence=float(tech_indicators.breakout_confidence or 0.0),
+            trend_direction=trend.direction.value,
+            strength_direction=strength.signal.value,
+        )
+        score = max(min(score + guard.score_delta, 100), -100)
+        breakout_trap = guard.is_trap
+        breakout_reason = guard.reason
+        if guard.reason:
+            reasons.append(guard.reason)
 
     if pullback_warning and pullback_warning.is_warning:
         if trend.direction == Signal.BULLISH:
@@ -454,6 +465,24 @@ def generate_trade_signal(
         tech_indicators=tech_indicators
     )
 
+    # Single decisive verdict: collapse score + conflict + breakout trap into ONE instruction.
+    verdict_result = _domain_compute_verdict(
+        recommendation=recommendation.value,
+        trade_worthy=trade_worthy,
+        score=score,
+        conflict_type=signal_conflict.conflict_type if signal_conflict else "none",
+        conflict_severity=signal_conflict.severity if signal_conflict else "none",
+        conflict_guidance=signal_conflict.guidance if signal_conflict else "",
+        breakout_trap=breakout_trap,
+        breakout_reason=breakout_reason,
+    )
+    trade_verdict = TradeVerdict(
+        verdict=verdict_result.verdict,
+        headline=verdict_result.headline,
+        detail=verdict_result.detail,
+        color=verdict_result.color,
+    )
+
     return TradeSignal(
         recommendation=recommendation,
         score=score,
@@ -468,7 +497,8 @@ def generate_trade_signal(
         pyramiding_plan=pyramiding_plan,
         scaling_plan=scaling_plan,
         executive_summary=executive_summary,
-        signal_conflict=signal_conflict
+        signal_conflict=signal_conflict,
+        trade_verdict=trade_verdict
     )
 
 

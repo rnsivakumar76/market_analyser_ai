@@ -286,31 +286,50 @@ def _scan_timeframe(
     bars: pd.DataFrame,
     bias_4h: str,
     bias_1h: str,
-) -> Optional[IntradaySignal]:
+) -> Tuple[Optional[IntradaySignal], str]:
     """
     Scan a single timeframe for entry signals.
-    Applies MTF filter: 15m requires 4H+1H agreement; 1H requires 4H agreement.
-    Returns an IntradaySignal if a trigger fires, else None.
+
+    Loosened MTF filter (graded confidence instead of hard skip):
+      - 15m: needs at least ONE higher timeframe directional; if both 4H and 1H
+             are directional they must agree. A neutral higher timeframe just
+             reduces confidence rather than blocking the signal.
+      - 1H:  follows 4H when directional; if 4H is neutral the 1H signal is still
+             allowed with a confidence penalty.
+      - 4H:  unfiltered.
+
+    Returns (IntradaySignal, "") on a trigger, or (None, skip_reason) explaining
+    why nothing fired so the UI can surface it.
     """
     if bars is None or len(bars) < _MIN_BARS:
-        return None
+        return None, f"{timeframe}: insufficient bar history"
 
     closes = bars["Close"].values.astype(float)
     highs  = bars["High"].values.astype(float)
     lows   = bars["Low"].values.astype(float)
     opens  = bars["Open"].values.astype(float) if "Open" in bars.columns else closes
 
-    # MTF bias filter
+    # MTF bias filter (loosened with graded confidence)
+    conf_penalty = 0
     if timeframe == "15m":
-        if bias_4h == "neutral" or bias_1h == "neutral":
-            return None
-        if bias_4h != bias_1h:
-            return None          # disagreement — stay out
-        required_dir = bias_4h
+        if bias_4h == "neutral" and bias_1h == "neutral":
+            return None, "15m: 4H and 1H bias both neutral (no directional context)"
+        if bias_4h != "neutral" and bias_1h != "neutral":
+            if bias_4h != bias_1h:
+                return None, f"15m: 4H ({bias_4h}) and 1H ({bias_1h}) disagree"
+            required_dir = bias_4h
+        elif bias_4h != "neutral":
+            required_dir = bias_4h
+            conf_penalty = 10   # 1H neutral — partial confirmation
+        else:
+            required_dir = bias_1h
+            conf_penalty = 15   # 4H neutral — weaker context
     elif timeframe == "1H":
         if bias_4h == "neutral":
-            return None
-        required_dir = bias_4h
+            required_dir = None  # allow self-directed 1H signal
+            conf_penalty = 15
+        else:
+            required_dir = bias_4h
     else:  # 4H — no filter, just detect
         required_dir = None
 
@@ -331,13 +350,16 @@ def _scan_timeframe(
         trigger    = "MACD_CROSS"
         confidence = 55
     else:
-        return None  # no trigger
+        return None, f"{timeframe}: no EMA/MACD crossover on last closed bar"
 
     # Apply MTF direction filter
     if required_dir and direction != required_dir:
-        return None
+        return None, f"{timeframe}: {direction} trigger fired but conflicts with {required_dir} bias"
 
-    # ── Quality boosters ────────────────────────────────────────────────────
+    # Apply graded confidence penalty for weaker MTF confirmation
+    confidence = max(confidence - conf_penalty, 20)
+
+    # ── Quality boosters ─────────────────────────────────────────────────────
     quality_tags: list = []
 
     # RSI divergence confirmation (+15 confidence)
@@ -409,23 +431,26 @@ def _scan_timeframe(
         expires_at  = (now + _EXPIRY[timeframe]).isoformat(),
         status      = "ACTIVE",
         notes       = " | ".join(notes_parts),
-    )
+    ), ""
 
 
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def detect_intraday_signals(
+def detect_intraday_signals_verbose(
     symbol: str,
     name: str,
     bars_4h: Optional[pd.DataFrame],
     bars_1h: Optional[pd.DataFrame],
     bars_15m: Optional[pd.DataFrame],
-) -> List[IntradaySignal]:
+) -> Tuple[List[IntradaySignal], dict]:
     """
-    Scan all three timeframes (4H → 1H → 15m) and return any new signals.
-    Caller is responsible for deduplication against already-stored signals.
+    Scan all three timeframes (4H → 1H → 15m).
+
+    Returns (signals, diagnostics) where diagnostics explains, per symbol, the
+    4H/1H bias and the reason each timeframe produced no signal — so the UI can
+    show WHY the panel is empty instead of looking broken.
     """
     signals: List[IntradaySignal] = []
 
@@ -440,16 +465,41 @@ def detect_intraday_signals(
 
     logger.info(f"[SIGNAL] {symbol} bias — 4H: {bias_4h}, 1H: {bias_1h}")
 
+    skip_reasons: List[str] = []
     for tf_name, bars in [("4H", bars_4h), ("1H", bars_1h), ("15m", bars_15m)]:
         try:
-            sig = _scan_timeframe(symbol, name, tf_name, bars, bias_4h, bias_1h)
+            sig, reason = _scan_timeframe(symbol, name, tf_name, bars, bias_4h, bias_1h)
             if sig:
                 signals.append(sig)
                 logger.info(
                     f"[SIGNAL] {symbol} {tf_name} {sig.signal_type} via {sig.trigger} "
                     f"@ {sig.entry_price} conf={sig.confidence}"
                 )
+            elif reason:
+                skip_reasons.append(reason)
         except Exception as exc:
             logger.warning(f"[SIGNAL] {symbol} {tf_name} scan error: {exc}")
+            skip_reasons.append(f"{tf_name}: scan error")
 
+    diagnostics = {
+        "symbol": symbol,
+        "bias_4h": bias_4h,
+        "bias_1h": bias_1h,
+        "skip_reasons": skip_reasons,
+    }
+    return signals, diagnostics
+
+
+def detect_intraday_signals(
+    symbol: str,
+    name: str,
+    bars_4h: Optional[pd.DataFrame],
+    bars_1h: Optional[pd.DataFrame],
+    bars_15m: Optional[pd.DataFrame],
+) -> List[IntradaySignal]:
+    """
+    Backward-compatible wrapper returning only the signals list.
+    Caller is responsible for deduplication against already-stored signals.
+    """
+    signals, _ = detect_intraday_signals_verbose(symbol, name, bars_4h, bars_1h, bars_15m)
     return signals

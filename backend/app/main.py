@@ -1505,7 +1505,7 @@ async def scan_signals(user_id: str = Depends(get_current_user)):
     persists new signals to DynamoDB, and returns what was found.
     Also called automatically by EventBridge every 5 minutes.
     """
-    from .analyzers.intraday_signal_generator import detect_intraday_signals
+    from .analyzers.intraday_signal_generator import detect_intraday_signals_verbose
     from .signal_store import save_signal, expire_old_signals, check_signal_outcomes
 
     from .config_loader import load_config, get_instruments
@@ -1531,17 +1531,19 @@ async def scan_signals(user_id: str = Depends(get_current_user)):
     batch_15m = f_15m.result()
 
     all_signals = []
+    diagnostics = []
     for inst in instruments:
         sym  = inst["symbol"].upper()
         name = inst.get("name", sym)
         try:
-            new_signals = detect_intraday_signals(
+            new_signals, diag = detect_intraday_signals_verbose(
                 symbol   = sym,
                 name     = name,
                 bars_4h  = batch_4h.get(sym),
                 bars_1h  = batch_1h.get(sym),
                 bars_15m = batch_15m.get(sym),
             )
+            diagnostics.append(diag)
             saved = 0
             for sig in new_signals:
                 if save_signal(sig):
@@ -1553,6 +1555,8 @@ async def scan_signals(user_id: str = Depends(get_current_user)):
                 logger.info(f"[SCAN] {sym}: {len(new_signals)} signals detected, {saved} new saved")
         except Exception as e:
             logger.warning(f"[SCAN] {sym} failed: {e}")
+            diagnostics.append({"symbol": sym, "bias_4h": "unknown", "bias_1h": "unknown",
+                                "skip_reasons": [f"scan failed: {e}"]})
 
     # ── TP / SL outcome tracking ──────────────────────────────────────────────
     # Extract current prices from the 1H batch (last closed bar)
@@ -1573,6 +1577,7 @@ async def scan_signals(user_id: str = Depends(get_current_user)):
         "scanned":     len(instruments),
         "new_signals": len(all_signals),
         "signals":     all_signals,
+        "diagnostics": diagnostics,
         "outcomes":    [{"symbol": o["signal"].symbol, "timeframe": o["signal"].timeframe,
                          "signal_type": o["signal"].signal_type, "status": o["new_status"]}
                         for o in outcomes],

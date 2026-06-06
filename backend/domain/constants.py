@@ -120,6 +120,9 @@ VOLATILITY_REGIME_ATR_MULTIPLIERS: dict = {
 # ── Breakout Detection ──────────────────────────────────────────────────────
 BREAKOUT_DONCHIAN_PERIOD: int = 20      # Donchian channel lookback
 BREAKOUT_MIN_BARS_REQUIRED: int = 21
+# Volume confidence (min(vol_ratio/2, 1)) required before a breakout adds score.
+# 0.75 == ~1.5x average volume — filters out thin-volume fakeouts.
+BREAKOUT_MIN_VOLUME_CONFIDENCE: float = 0.75
 
 # ── Pullback Detection ──────────────────────────────────────────────────────
 PULLBACK_THRESHOLD_PCT: float = 0.03   # 3% from recent high = pullback

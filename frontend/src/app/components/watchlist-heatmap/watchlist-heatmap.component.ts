@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyzer.service';
+import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../services/market-analyzer.service';
 
 @Component({
     selector: 'app-watchlist-heatmap',
@@ -80,6 +80,9 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
         <div class="signals-header">
           <span class="signals-title">⚡ LIVE SIGNALS</span>
           <span class="signals-count">{{ getActiveSignals().length }} active</span>
+          <button class="scan-btn" [disabled]="scanning" (click)="scan.emit()">
+            {{ scanning ? 'Scanning…' : 'Scan now' }}
+          </button>
         </div>
         @if (signals && signals.length > 0) {
           @for (sig of getRecentSignals(); track sig.signal_id) {
@@ -117,7 +120,25 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
           </div>
           }
         } @else {
-          <div class="signals-empty">No signals detected yet — scan runs every 15 min</div>
+          <div class="signals-empty">
+            <div class="se-title">No active signals right now</div>
+            @if (scanDiagnostics && scanDiagnostics.length > 0) {
+              <div class="se-sub">Why nothing fired (last scan):</div>
+              <div class="se-diag-list">
+                @for (d of scanDiagnostics; track d.symbol) {
+                  <div class="se-diag">
+                    <span class="se-sym">{{ d.symbol }}</span>
+                    <span class="se-bias">4H: {{ d.bias_4h }} · 1H: {{ d.bias_1h }}</span>
+                    @if (d.skip_reasons?.length) {
+                      <span class="se-reason">{{ d.skip_reasons[d.skip_reasons.length - 1] }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="se-sub">Auto-scan runs every 15 min. Click “Scan now” to check immediately.</div>
+            }
+          </div>
         }
 
         <!-- Performance stats bar -->
@@ -412,6 +433,18 @@ import { InstrumentAnalysis, IntradaySignal } from '../../services/market-analyz
     .status-hit_sl   { color: #f87171; }
     .status-expired  { color: #4e6480; }
     .signals-empty { font-size: 0.76rem; color: #4e6480; text-align: center; padding: 12px 0; }
+    .se-title { font-weight: 800; color: #94a3b8; margin-bottom: 4px; }
+    .se-sub { font-size: 0.70rem; color: #4e6480; margin-bottom: 8px; }
+    .se-diag-list { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+    .se-diag { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; padding: 5px 8px; background: rgba(255,255,255,0.02); border-radius: 4px; border: 1px solid rgba(255,255,255,0.04); }
+    .se-sym { font-weight: 900; color: #cbd5e1; font-size: 0.72rem; letter-spacing: 0.5px; }
+    .se-bias { font-size: 0.66rem; color: #6b8299; }
+    .se-reason { font-size: 0.66rem; color: #4e6480; flex-basis: 100%; }
+
+    /* Scan now button */
+    .scan-btn { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.5px; color: #60a5fa; background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.3); border-radius: 6px; padding: 3px 10px; cursor: pointer; transition: background 0.2s; }
+    .scan-btn:hover:not(:disabled) { background: rgba(96,165,250,0.22); }
+    .scan-btn:disabled { opacity: 0.5; cursor: default; }
 
     /* Signal performance stats bar */
     .sig-stats-bar { display: flex; gap: 0; margin-top: 10px; border: 1px solid #2c3d58; border-radius: 6px; overflow: hidden; }
@@ -428,7 +461,10 @@ export class WatchlistHeatmapComponent {
     @Input({ required: true }) instruments!: InstrumentAnalysis[];
     @Input() selectedSymbol: string | null = null;
     @Input() signals: IntradaySignal[] = [];
+    @Input() scanning = false;
+    @Input() scanDiagnostics: ScanDiagnostic[] = [];
     @Output() select = new EventEmitter<InstrumentAnalysis>();
+    @Output() scan = new EventEmitter<void>();
 
     getActiveSignals(): IntradaySignal[] {
         return (this.signals || []).filter(s => s.status === 'ACTIVE');

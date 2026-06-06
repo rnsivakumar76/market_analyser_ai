@@ -60,6 +60,14 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           }
         </div>
 
+        <!-- TRADE VERDICT — SINGLE DECISIVE INSTRUCTION (hero) -->
+        @if (analysis.trade_signal.trade_verdict; as verdict) {
+        <div class="trade-verdict" [class]="'tv-' + verdict.color">
+          <div class="tv-headline">{{ verdict.headline }}</div>
+          <div class="tv-detail">{{ verdict.detail }}</div>
+        </div>
+        }
+
         <!-- EXECUTION CHECK CARD — DECISION HERO (Zone B) -->
         <div class="exec-check-card">
           <div class="ec-header">
@@ -892,6 +900,19 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .eat-rvol { font-size: 0.80rem; font-weight: 900; color: #64748b; letter-spacing: 0.5px; }
     .eat-rvol.rvol-hot { color: #fb923c; }
     .eat-text { font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; margin: 0; font-weight: 500; white-space: pre-line; }
+
+    /* TRADE VERDICT HERO */
+    .trade-verdict { border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; border-left: 5px solid; }
+    .tv-headline { font-size: 1.02rem; font-weight: 950; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
+    .tv-detail { font-size: 0.82rem; line-height: 1.5; color: #cbd5e1; font-weight: 500; }
+    .tv-green { background: rgba(16,185,129,0.12); border-left-color: #10b981; }
+    .tv-green .tv-headline { color: #34d399; }
+    .tv-red { background: rgba(239,68,68,0.12); border-left-color: #ef4444; }
+    .tv-red .tv-headline { color: #f87171; }
+    .tv-amber { background: rgba(245,158,11,0.12); border-left-color: #f59e0b; }
+    .tv-amber .tv-headline { color: #fbbf24; }
+    .tv-slate { background: rgba(100,116,139,0.12); border-left-color: #64748b; }
+    .tv-slate .tv-headline { color: #94a3b8; }
 
     /* EXECUTION CHECK CARD */
     .exec-check-card { background: rgba(10,10,22,0.9); border: 1px solid rgba(137,180,250,0.18); border-left: 4px solid #60a5fa; padding: 12px 16px 10px; }
