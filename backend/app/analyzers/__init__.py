@@ -22,6 +22,7 @@ from .session_vwap_analyzer import calculate_session_vwap
 from .liquidity_map_analyzer import calculate_liquidity_map
 from .block_flow_analyzer import detect_block_flow
 from .blowoff_top_analyzer import analyze_blowoff_top
+from .position_exit_analyzer import analyze_position_exit
 from ..models import CandleAnalysis, PerformanceSummary, CorrelationData, PullbackWarningAnalysis
 
 __all__ = [
@@ -54,5 +55,6 @@ __all__ = [
     'calculate_session_vwap',
     'calculate_liquidity_map',
     'detect_block_flow',
-    'analyze_blowoff_top'
+    'analyze_blowoff_top',
+    'analyze_position_exit'
 ]

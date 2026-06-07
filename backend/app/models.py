@@ -426,6 +426,7 @@ class InstrumentAnalysis(BaseModel):
     geopolitical_risk: Optional[GeopoliticalRisk] = None
     blowoff_top: Optional[BlowOffTopAnalysis] = None
     oil_market_context: Optional[OilMarketContext] = None
+    position_exit: Optional[PositionExitAnalysis] = None
 
 
 class IntradaySignal(BaseModel):
@@ -499,5 +500,22 @@ class StrategySettings(BaseModel):
     portfolio_value: float
     risk_per_trade_percent: float
     aggressiveness_mode: str = "balanced"  # "conservative" | "balanced" | "aggressive"
+
+
+class PositionExitAnalysis(BaseModel):
+    """Systematic loss-cutting analysis for existing positions."""
+    should_exit: bool
+    exit_urgency: str  # "IMMEDIATE" | "HIGH" | "MODERATE" | "LOW" | "NONE"
+    exit_reason: str
+    position_health: str  # "CRITICAL" | "DAMAGED" | "WEAKENING" | "HEALTHY" | "STRONG"
+    divergence_detected: bool
+    divergence_type: str  # "trend_reversal" | "momentum_shift" | "support_break" | "none"
+    current_drawdown_pct: float
+    max_acceptable_drawdown_pct: float
+    time_in_position_bars: int
+    recommended_action: str
+    stop_loss_level: Optional[float] = None
+    recovery_probability: float  # 0 to 1
+    factors: List[str] = []
 
 

@@ -151,7 +151,7 @@ def analyze_instrument_lazy(
         analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength,
         analyze_intermarket_context, analyze_session_context,
         detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan,
-        analyze_blowoff_top,
+        analyze_blowoff_top, analyze_position_exit,
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode, IntermarketContext
@@ -428,6 +428,17 @@ def analyze_instrument_lazy(
         trade_signal=trade_signal,
     )
 
+    # P11: Position Exit Analysis - systematic loss-cutting mechanism
+    # This detects when short-term trends contradict long-term positions
+    position_exit = analyze_position_exit(
+        trend=trend,
+        strength=strength,
+        volatility=volatility,
+        technical_indicators=tech_indicators,
+        current_price=current_price,
+        execution_data=execution_data,
+    )
+
     return InstrumentAnalysis(
         symbol=symbol,
         name=name,
@@ -457,6 +468,7 @@ def analyze_instrument_lazy(
         block_flow=block_flow,
         geopolitical_risk=geopolitical_risk,
         blowoff_top=blowoff_top,
+        position_exit=position_exit,
     ), execution_data
 
 # In-memory store for sent alerts

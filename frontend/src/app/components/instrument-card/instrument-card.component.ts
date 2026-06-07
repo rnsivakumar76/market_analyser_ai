@@ -68,6 +68,31 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         </div>
         }
 
+        <!-- POSITION EXIT WARNING - Systematic Loss-Cutting Mechanism -->
+        @if (analysis.position_exit && analysis.position_exit.should_exit) {
+        <div class="position-exit-warning" [class]="'pe-' + analysis.position_exit.exit_urgency.toLowerCase()">
+          <div class="pew-header">
+            <span class="pew-icon">🚨</span>
+            <span class="pew-title">POSITION EXIT ALERT</span>
+            <span class="pew-urgency" [class]="'peu-' + analysis.position_exit.exit_urgency.toLowerCase()">{{ analysis.position_exit.exit_urgency }}</span>
+          </div>
+          <div class="pew-health">
+            <span class="pew-health-label">Position Health:</span>
+            <span class="pew-health-value" [class]="'ph-' + analysis.position_exit.position_health.toLowerCase()">{{ analysis.position_exit.position_health }}</span>
+            <span class="pew-drawdown">Drawdown: {{ analysis.position_exit.current_drawdown_pct.toFixed(2) }}%</span>
+          </div>
+          <div class="pew-reason">{{ analysis.position_exit.exit_reason }}</div>
+          <div class="pew-action">{{ analysis.position_exit.recommended_action }}</div>
+          @if (analysis.position_exit.factors && analysis.position_exit.factors.length > 0) {
+          <div class="pew-factors">
+            @for (factor of analysis.position_exit.factors; track factor) {
+              <div class="pew-factor">• {{ factor }}</div>
+            }
+          </div>
+          }
+        </div>
+        }
+
         <!-- EXECUTION CHECK CARD — DECISION HERO (Zone B) -->
         <div class="exec-check-card">
           <div class="ec-header">

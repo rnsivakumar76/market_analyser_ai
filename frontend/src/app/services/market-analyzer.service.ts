@@ -416,6 +416,22 @@ export interface ExpertTradePlan {
 
 export type StrategyMode = 'long_term' | 'short_term';
 
+export interface PositionExitAnalysis {
+  should_exit: boolean;
+  exit_urgency: 'IMMEDIATE' | 'HIGH' | 'MODERATE' | 'LOW' | 'NONE';
+  exit_reason: string;
+  position_health: 'CRITICAL' | 'DAMAGED' | 'WEAKENING' | 'HEALTHY' | 'STRONG';
+  divergence_detected: boolean;
+  divergence_type: 'trend_reversal' | 'momentum_shift' | 'support_break' | 'none';
+  current_drawdown_pct: number;
+  max_acceptable_drawdown_pct: number;
+  time_in_position_bars: number;
+  recommended_action: string;
+  stop_loss_level?: number;
+  recovery_probability: number;
+  factors: string[];
+}
+
 export interface InstrumentAnalysis {
   symbol: string;
   name: string;
@@ -449,6 +465,7 @@ export interface InstrumentAnalysis {
   geopolitical_risk?: GeopoliticalRisk;
   blowoff_top?: BlowOffTopAnalysis;
   oil_market_context?: OilMarketContext;
+  position_exit?: PositionExitAnalysis;
 }
 
 export interface VolumeProfileBucket {
