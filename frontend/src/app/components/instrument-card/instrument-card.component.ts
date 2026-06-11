@@ -117,7 +117,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         <div class="exec-check-card">
           <div class="ec-header">
             <span class="ec-title">⚡ EXECUTION CHECK</span>
-            <span class="ec-score">{{ getExecPassCount() }}/5 GATES PASSED</span>
+            <span class="ec-score">{{ getExecPassCount() }}/{{ analysis.strategy_mode === 'intraday' ? '7' : '5' }} GATES PASSED</span>
           </div>
           <div class="ec-rows">
             <div class="ec-row">
@@ -145,6 +145,18 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <span class="ec-gate-src">Stop + R:R ≥1.8 + Sizing</span>
               <span [class]="getExecChipClass(getExecRiskStatus())">{{ getExecRiskStatus() }}</span>
             </div>
+            @if (analysis.strategy_mode === 'intraday') {
+            <div class="ec-row intraday-gate">
+              <span class="ec-gate-label">SESSION</span>
+              <span class="ec-gate-src">London/NY Overlap Timing</span>
+              <span [class]="getExecChipClass(getExecSessionStatus())">{{ getExecSessionStatus() }}</span>
+            </div>
+            <div class="ec-row intraday-gate">
+              <span class="ec-gate-label">VOLUME</span>
+              <span class="ec-gate-src">Session Range Activity</span>
+              <span [class]="getExecChipClass(getExecVolumeStatus())">{{ getExecVolumeStatus() }}</span>
+            </div>
+            }
           </div>
           <div class="ec-decision" [class]="getExecDecision().cssClass">{{ getExecDecision().label }}</div>
           <div class="ec-microcopy">Verdict above = directional thesis · gates here = is it executable right now. Best entries have all 5 aligned.</div>
@@ -989,6 +1001,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .ec-score { font-size: 0.74rem; font-weight: 900; color: #475569; letter-spacing: 1px; }
     .ec-rows { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
     .ec-row { display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 10px; padding: 7px 10px; background: rgba(255,255,255,0.02); border-radius: 4px; border: 1px solid rgba(255,255,255,0.04); }
+    .ec-row.intraday-gate { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); }
     .ec-gate-label { font-size: 0.74rem; font-weight: 950; color: #e2e8f0; letter-spacing: 1px; text-transform: uppercase; }
     .ec-gate-src { font-size: 0.72rem; color: #334155; font-weight: 600; }
     .ec-chip { font-size: 0.72rem; font-weight: 900; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
@@ -2957,6 +2970,39 @@ export class InstrumentCardComponent implements OnChanges {
     return rr >= 1.8 ? 'YES' : 'NO';
   }
 
+  // Intraday-specific gate: Session timing
+  // Best sessions for day trading: London/NY overlap (13:00-16:00 UTC)
+  getExecSessionStatus(): 'YES' | 'WEAK' | 'NO' {
+    if (this.analysis.strategy_mode !== 'intraday') return 'YES'; // Not applicable for other modes
+    const sessionCtx = this.analysis.session_context;
+    if (!sessionCtx) return 'NO';
+
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+
+    // London/NY overlap (13:00-16:00 UTC) - highest liquidity
+    if (utcHour >= 13 && utcHour < 16) return 'YES';
+    // London open (8:00-12:00 UTC) - good liquidity
+    if (utcHour >= 8 && utcHour < 12) return 'WEAK';
+    // NY open (13:00-17:00 UTC) - good liquidity
+    if (utcHour >= 13 && utcHour < 17) return 'WEAK';
+    // Asian session (0:00-8:00 UTC) - lower liquidity, avoid for most instruments
+    if (utcHour >= 0 && utcHour < 8) return 'NO';
+
+    return 'NO';
+  }
+
+  // Intraday-specific gate: Volume confirmation
+  // Check if session range indicates sufficient activity
+  getExecVolumeStatus(): 'YES' | 'NO' {
+    if (this.analysis.strategy_mode !== 'intraday') return 'YES'; // Not applicable for other modes
+    const sessionCtx = this.analysis.session_context;
+    if (!sessionCtx) return 'NO';
+
+    // Session range > 0.5% indicates sufficient activity
+    return sessionCtx.current_session_range_pct >= 0.5 ? 'YES' : 'NO';
+  }
+
   getExecPassCount(): number {
     let count = 0;
     if (this.getExecBiasStatus() === 'YES') count++;
@@ -2966,6 +3012,13 @@ export class InstrumentCardComponent implements OnChanges {
     // on its chip but must not inflate the gates-passed tally.
     if (this.getExecConfirmationStatus() === 'YES') count++;
     if (this.getExecRiskStatus() === 'YES') count++;
+
+    // Intraday-specific gates
+    if (this.analysis.strategy_mode === 'intraday') {
+      if (this.getExecSessionStatus() === 'YES') count++;
+      if (this.getExecVolumeStatus() === 'YES') count++;
+    }
+
     return count;
   }
 
@@ -2995,12 +3048,15 @@ export class InstrumentCardComponent implements OnChanges {
     const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
     const rec = this.analysis?.trade_signal?.recommendation;
     const pass = this.getExecPassCount();
-    const pending = 5 - pass;
+    const totalGates = this.analysis.strategy_mode === 'intraday' ? 7 : 5;
+    const pending = totalGates - pass;
     const dir = rec === 'bullish' ? 'LONG' : rec === 'bearish' ? 'SHORT' : '';
 
     if (state === 'ready') {
-      if (pass >= 5) return { label: `EXECUTE ${dir} · FULL SIZE`, cssClass: 'ec-decision exec-go' };
-      if (pass === 4) return { label: `EXECUTE ${dir} · REDUCED SIZE`, cssClass: 'ec-decision exec-go' };
+      const fullSizeThreshold = this.analysis.strategy_mode === 'intraday' ? 6 : 5;
+      const reducedSizeThreshold = this.analysis.strategy_mode === 'intraday' ? 5 : 4;
+      if (pass >= fullSizeThreshold) return { label: `EXECUTE ${dir} · FULL SIZE`, cssClass: 'ec-decision exec-go' };
+      if (pass >= reducedSizeThreshold) return { label: `EXECUTE ${dir} · REDUCED SIZE`, cssClass: 'ec-decision exec-go' };
       return {
         label: `SETUP VALID · ${pending} GATE${pending !== 1 ? 'S' : ''} PENDING`,
         cssClass: 'ec-decision exec-tactical',
