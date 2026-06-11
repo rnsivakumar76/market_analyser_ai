@@ -558,4 +558,3 @@ def _detect_signal_conflict(
         trigger_price_up=result.trigger_price_up,
         trigger_price_down=result.trigger_price_down,
     )
-    )
