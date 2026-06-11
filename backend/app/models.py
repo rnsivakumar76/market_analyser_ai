@@ -426,7 +426,7 @@ class InstrumentAnalysis(BaseModel):
     geopolitical_risk: Optional[GeopoliticalRisk] = None
     blowoff_top: Optional[BlowOffTopAnalysis] = None
     oil_market_context: Optional[OilMarketContext] = None
-    position_exit: Optional[PositionExitAnalysis] = None
+    position_exit: Optional['PositionExitAnalysis'] = None
     intraday_signals: Optional[List['IntradaySignal']] = None
 
 
