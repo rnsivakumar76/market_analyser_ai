@@ -11,6 +11,7 @@ from domain.signals.scoring_engine import (
     compute_trend_score,
     compute_pullback_score,
     compute_strength_score,
+    compute_tactical_neutral_score,
     compute_composite_score,
     classify_recommendation,
     ScoreComponents,
@@ -252,6 +253,83 @@ class TestRegimeAdaptiveScoring:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Scoring Engine — neutral-trend tactical bias (WTI "trendy but neutral" fix)
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TestTacticalNeutralScore:
+
+    def test_neutral_neutral_has_no_tactical_edge(self):
+        score, reason = compute_tactical_neutral_score(
+            "neutral", False, False, pullback_weight=45, strength_weight=30
+        )
+        assert score == 0
+        assert "no tactical edge" in reason.lower()
+
+    def test_bearish_momentum_gives_negative_tactical_bias(self):
+        score, reason = compute_tactical_neutral_score(
+            "bearish", False, False, pullback_weight=45, strength_weight=30
+        )
+        assert score < 0
+        assert "bearish" in reason.lower()
+
+    def test_bullish_momentum_gives_positive_tactical_bias(self):
+        score, _ = compute_tactical_neutral_score(
+            "bullish", False, False, pullback_weight=45, strength_weight=30
+        )
+        assert score > 0
+
+    def test_support_location_strengthens_bias(self):
+        at_support, _ = compute_tactical_neutral_score(
+            "bullish", True, True, pullback_weight=45, strength_weight=30
+        )
+        no_location, _ = compute_tactical_neutral_score(
+            "bullish", False, False, pullback_weight=45, strength_weight=30
+        )
+        assert at_support > no_location
+
+    def test_tactical_bias_never_reaches_full_conviction(self):
+        """Even at best, a no-trend tactical play stays below trade-worthy threshold."""
+        score, _ = compute_tactical_neutral_score(
+            "bullish", True, True, pullback_weight=45, strength_weight=30
+        )
+        assert abs(score) < SIGNAL_CONVICTION_THRESHOLD
+
+
+class TestNeutralTrendCompositeFix:
+    """Regression for the WTI case: neutral monthly trend + clear daily bearish
+    momentum in a RANGING regime must register a directional lean, not collapse
+    to a misleading near-zero NEUTRAL score."""
+
+    def test_neutral_trend_bearish_daily_registers_directional(self):
+        # Old behaviour: trend(0) + pullback(0) + strength(-counter≈-10) ≈ -10
+        # New behaviour: dampened tactical bias crosses the ±20 developing line.
+        result = compute_composite_score("neutral", False, False, "bearish", adx=17.6)
+        assert result.composite < 0
+        rec, trade_worthy = classify_recommendation(
+            result.composite, SIGNAL_CONVICTION_THRESHOLD
+        )
+        assert rec == "bearish"
+        assert trade_worthy is False  # tactical lean only, not full conviction
+
+    def test_neutral_trend_decomposition_still_sums(self):
+        result = compute_composite_score("neutral", False, False, "bearish", adx=17.6)
+        assert result.composite == (
+            result.trend_score + result.pullback_score + result.strength_score
+        )
+
+    def test_neutral_neutral_still_three_reasons(self):
+        """Truly neutral (no daily momentum) keeps the original 3-reason output."""
+        result = compute_composite_score("neutral", False, False, "neutral")
+        assert len(result.reasons) == 3
+        assert result.composite == 0
+
+    def test_neutral_trend_adds_tactical_reason(self):
+        result = compute_composite_score("neutral", False, False, "bearish", adx=17.6)
+        tactical = [r for r in result.reasons if "tactical bias" in r.lower()]
+        assert len(tactical) == 1
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Scoring Engine — classify_recommendation
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -370,10 +448,12 @@ class TestCandleFilter:
 
 class TestMacroShield:
 
-    def test_high_impact_events_blocks_trade(self):
+    def test_high_impact_events_penalises_score_without_blocking(self):
+        # Macro shield is penalty-only (not a hard block) so high-conviction
+        # setups can still fire; the -20 score penalty is the control mechanism.
         result, score = apply_macro_shield(has_high_impact_events=True, trade_worthy=True, current_score=80)
-        assert result.blocked is True
-        assert "Macro Shield" in result.reason
+        assert result.blocked is False
+        assert "Macro Caution" in result.reason
         assert score < 80
 
     def test_no_events_passes(self):
@@ -451,12 +531,15 @@ class TestAllHardFilters:
         assert len(reasons) >= 1
         assert any("ADX" in r for r in reasons)
 
-    def test_macro_shield_blocks_and_adjusts_score(self):
+    def test_macro_shield_penalises_score_without_blocking(self):
+        # Penalty-only: trade stays worthy but score is reduced and a caution
+        # reason is surfaced.
         tw, score, reasons = apply_all_hard_filters(
             **self._base_kwargs(has_high_impact_events=True)
         )
-        assert tw is False
+        assert tw is True
         assert score < 80
+        assert any("Macro Caution" in r for r in reasons)
 
     def test_multiple_filters_all_reasons_collected(self):
         tw, score, reasons = apply_all_hard_filters(

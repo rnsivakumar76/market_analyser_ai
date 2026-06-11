@@ -67,6 +67,19 @@ SIGNAL_STRENGTH_COUNTER: int = 10      # Daily signal fights trend
 SIGNAL_BEARISH_CONT: int = 20          # Downtrend continuation
 SIGNAL_BEARISH_BOUNCE: int = 10        # Bounce in downtrend
 
+# ── Neutral-Trend Tactical Bias ──────────────────────────────────────────────
+# When the monthly trend is NEUTRAL the trend factor is 0 and the standard
+# pullback factor also returns 0 — wasting the largest weight in the RANGING
+# regime (pullback=45). In that case daily momentum becomes the *tactical* bias:
+# it earns the full strength weight (it is not "counter" to any trend) plus a
+# fraction of the otherwise-wasted pullback weight when price sits at a
+# mean-reversion location. The result is dampened to reflect lower conviction
+# (no long-term trend backing) and can never reach full trade-worthy conviction
+# on its own.
+SIGNAL_NEUTRAL_TREND_TACTICAL_DAMPEN: float = 0.7   # Conviction haircut, no trend backing
+SIGNAL_NEUTRAL_TREND_PB_SUPPORT_FRACTION: float = 0.5   # Pullback weight used when at support
+SIGNAL_NEUTRAL_TREND_PB_DETECTED_FRACTION: float = 0.25  # Pullback weight used when pulling back
+
 # ── Signal Thresholds ───────────────────────────────────────────────────────
 SIGNAL_CONVICTION_THRESHOLD: int = 70  # Minimum score for trade-worthy
 SIGNAL_DEVELOPING_THRESHOLD: int = 20  # Below this = truly neutral
