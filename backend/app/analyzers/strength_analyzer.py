@@ -54,8 +54,8 @@ def calculate_vwap(data: pd.DataFrame, period: int = INDICATOR_VWAP_PERIOD) -> t
 
 def calculate_adx(data: pd.DataFrame, period: int = INDICATOR_ADX_PERIOD) -> float:
     """
-    Calculate Average Directional Index (ADXY). Delegates to domain layer.
-    ADXY > 25 = Strong trend,  ADXY < 20 = Weak trend / Sideways
+    Calculate Average Directional Index (ADX). Delegates to domain layer.
+    ADX > 25 = Strong trend,  ADX < 20 = Weak trend / Sideways
     """
     return _domain_adx(
         data['High'].tolist(),

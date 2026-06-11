@@ -49,9 +49,36 @@ def analyze_position_exit(
     divergence_detected = False
     divergence_type = "none"
     
-    # If position side not provided, infer from long-term trend
+    # If position side not provided, infer from the long-term trend. A neutral
+    # trend has NO implied position — defaulting to "short" produced phantom exit
+    # alerts that contradicted the system's actual bias. In that case return a
+    # not-applicable result instead of guessing a side.
     if assumed_position_side is None:
-        assumed_position_side = "long" if trend.direction == Signal.BULLISH else "short"
+        if trend.direction == Signal.BULLISH:
+            assumed_position_side = "long"
+        elif trend.direction == Signal.BEARISH:
+            assumed_position_side = "short"
+        else:
+            max_acceptable = round(2.0 * volatility.atr if volatility.atr > 0 else 2.0, 2)
+            bars = len(execution_data) if execution_data is not None and not execution_data.empty else 0
+            return PositionExitAnalysis(
+                should_exit=False,
+                exit_urgency="NONE",
+                exit_reason=(
+                    "No directional position thesis — the system has no active bullish "
+                    "or bearish bias, so loss-cutting analysis does not apply."
+                ),
+                position_health="HEALTHY",
+                divergence_detected=False,
+                divergence_type="none",
+                current_drawdown_pct=0.0,
+                max_acceptable_drawdown_pct=max_acceptable,
+                time_in_position_bars=bars,
+                recommended_action="No position bias to manage. Wait for a directional setup.",
+                stop_loss_level=None,
+                recovery_probability=1.0,
+                factors=[],
+            )
     
     # If entry price not provided, assume it's at a reasonable level
     if assumed_entry_price is None:

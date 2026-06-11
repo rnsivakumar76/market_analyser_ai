@@ -429,13 +429,28 @@ def analyze_instrument_lazy(
     )
 
     # P11: Position Exit Analysis - systematic loss-cutting mechanism
-    # This detects when short-term trends contradict long-term positions
+    # This detects when short-term trends contradict long-term positions.
+    # Align the assumed position side with the system's actual directional view
+    # (trend first, then the composite recommendation) so the exit alert never
+    # contradicts the displayed bias. If neither is directional, leave it None
+    # and the analyzer reports "not applicable" instead of guessing a side.
+    exit_side = None
+    if trend.direction == Signal.BULLISH:
+        exit_side = "long"
+    elif trend.direction == Signal.BEARISH:
+        exit_side = "short"
+    elif trade_signal.recommendation == Signal.BULLISH:
+        exit_side = "long"
+    elif trade_signal.recommendation == Signal.BEARISH:
+        exit_side = "short"
+
     position_exit = analyze_position_exit(
         trend=trend,
         strength=strength,
         volatility=volatility,
         technical_indicators=tech_indicators,
         current_price=current_price,
+        assumed_position_side=exit_side,
         execution_data=execution_data,
     )
 
