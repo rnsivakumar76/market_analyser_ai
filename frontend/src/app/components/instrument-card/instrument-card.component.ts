@@ -127,7 +127,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
           </div>
           <div class="ec-decision" [class]="getExecDecision().cssClass">{{ getExecDecision().label }}</div>
-          <div class="ec-microcopy">Bullish count is context, not trigger — trade only when all gates pass.</div>
+          <div class="ec-microcopy">Verdict above = directional thesis · gates here = is it executable right now. Best entries have all 5 aligned.</div>
         </div>
 
         <!-- EXPERT BATTLE PLAN (Zone D — above drawers) -->
@@ -193,14 +193,17 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
                 @if (analysis.trade_signal.recommendation === 'neutral') {
                   <div class="levels-dormant">⏸ Two-sided conditional plan — directional levels activate once a side is confirmed (close above R1 for long, below S1 for short)</div>
-                } @else if (getExecPassCount() >= 3) {
+                } @else if (hasDirectionalPlan()) {
                 <div class="levels-stack">
                   <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
                   <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
                   <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
                 </div>
+                @if (getExecPassCount() < 5) {
+                  <div class="levels-pending">{{ 5 - getExecPassCount() }} execution gate{{ (5 - getExecPassCount()) !== 1 ? 's' : '' }} still pending ({{ getExecPassCount() }}/5) — size down until all align.</div>
+                }
                 } @else {
-                  <div class="levels-dormant">⏸ Trade levels appear once {{ 3 - getExecPassCount() }} more execution gate{{ (3 - getExecPassCount()) !== 1 ? 's' : '' }} pass ({{ getExecPassCount() }}/5 currently)</div>
+                  <div class="levels-dormant">⏸ No directional edge yet — trade levels activate once the bias is confirmed (currently stand-aside).</div>
                 }
 
                 @if (analysis.trade_signal.recommendation !== 'neutral') {
@@ -1235,6 +1238,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     /* Conditional levels — dormant state */
     .levels-dormant { padding: 10px 16px; font-size: 0.88rem; color: #334155; font-style: italic; background: rgba(243,139,168,0.03); border: 1px dashed rgba(243,139,168,0.15); border-radius: 6px; margin: 10px 0; }
+    /* Levels shown but execution gates still pending — size-down caution */
+    .levels-pending { padding: 6px 16px; font-size: 0.8rem; color: #b45309; background: rgba(234,179,8,0.08); border-left: 3px solid #eab308; border-radius: 4px; margin: 4px 0 10px; }
 
     /* Compact reason strip (top-3 only) */
     .signal-reasons-compact { flex-wrap: wrap; gap: 5px; padding: 6px 16px; }
@@ -2917,16 +2922,47 @@ export class InstrumentCardComponent implements OnChanges {
     if (this.getExecBiasStatus() === 'YES') count++;
     if (this.getExecLocationStatus() === 'YES') count++;
     if (this.getExecTriggerStatus() === 'YES') count++;
-    if (this.getExecConfirmationStatus() !== 'NO') count++;
+    // Only a full 'YES' counts as a passed gate. A 'WEAK' confirmation is shown
+    // on its chip but must not inflate the gates-passed tally.
+    if (this.getExecConfirmationStatus() === 'YES') count++;
     if (this.getExecRiskStatus() === 'YES') count++;
     return count;
   }
 
+  // True when the backend has an actual directional plan to manage (entry/stop/
+  // target exist). Used to keep trade levels and the exec decision in sync with
+  // the backend verdict instead of a frontend-only gate count.
+  hasDirectionalPlan(): boolean {
+    const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
+    const rec = this.analysis?.trade_signal?.recommendation;
+    return state !== 'stand_aside' && rec !== 'neutral';
+  }
+
+  // Blend model: the hero verdict carries the directional THESIS; this decision
+  // reports whether that thesis is EXECUTABLE right now. It defers to the backend
+  // execution_state so it can never flatly contradict the verdict banner.
   getExecDecision(): { label: string; cssClass: string } {
+    const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
+    const rec = this.analysis?.trade_signal?.recommendation;
     const pass = this.getExecPassCount();
-    if (pass === 5) return { label: 'EXECUTE · FULL SIZE', cssClass: 'ec-decision exec-go' };
-    if (pass === 4) return { label: 'TACTICAL ONLY · 0.5× SIZE', cssClass: 'ec-decision exec-tactical' };
-    return { label: 'WAIT', cssClass: 'ec-decision exec-wait' };
+    const pending = 5 - pass;
+    const dir = rec === 'bullish' ? 'LONG' : rec === 'bearish' ? 'SHORT' : '';
+
+    if (state === 'ready') {
+      if (pass >= 5) return { label: `EXECUTE ${dir} · FULL SIZE`, cssClass: 'ec-decision exec-go' };
+      if (pass === 4) return { label: `EXECUTE ${dir} · REDUCED SIZE`, cssClass: 'ec-decision exec-go' };
+      return {
+        label: `SETUP VALID · ${pending} GATE${pending !== 1 ? 'S' : ''} PENDING`,
+        cssClass: 'ec-decision exec-tactical',
+      };
+    }
+    if (state === 'conditional') {
+      return {
+        label: `CONDITIONAL ${dir} · WAIT FOR TRIGGER`,
+        cssClass: 'ec-decision exec-tactical',
+      };
+    }
+    return { label: 'STAND ASIDE · NO EDGE', cssClass: 'ec-decision exec-wait' };
   }
 
   getExecChipClass(status: string): string {
