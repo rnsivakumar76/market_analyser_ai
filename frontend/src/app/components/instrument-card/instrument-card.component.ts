@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem } from '../../services/market-analyzer.service';
+import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem, IntradaySignal } from '../../services/market-analyzer.service';
 import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
 import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi-timeframe-overlay.component';
 import { TradeJournalComponent } from '../trade-journal/trade-journal.component';
@@ -26,7 +26,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
             <div class="th-badges">
               <span class="th-badge strategy" [class]="analysis.strategy_mode">
-                {{ analysis.strategy_mode === 'long_term' ? '📈' : '⚡' }}
+                {{ analysis.strategy_mode === 'long_term' ? '📈' : analysis.strategy_mode === 'short_term' ? '⚡' : '🔥' }}
               </span>
               <div class="th-clocks">
                 <span class="th-clock session" [class]="getCurrentSession().toLowerCase().replace(' ', '-')">{{ getCurrentSession() }}</span>
@@ -65,6 +65,26 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         <div class="trade-verdict" [class]="'tv-' + verdict.color">
           <div class="tv-headline">{{ verdict.headline }}</div>
           <div class="tv-detail">{{ verdict.detail }}</div>
+        </div>
+        }
+
+        <!-- INTRADAY SIGNALS — Day trading specific signals (shown in intraday mode) -->
+        @if (analysis.strategy_mode === 'intraday' && getActiveIntradaySignals().length > 0) {
+        <div class="intraday-signals-panel">
+          <div class="isp-header">⚡ INTRADAY SIGNALS</div>
+          @for (signal of getActiveIntradaySignals(); track signal.signal_id) {
+          <div class="isp-signal" [class]="signal.signal_type.toLowerCase()">
+            <div class="isp-timeframe">{{ signal.timeframe }}</div>
+            <div class="isp-direction">{{ signal.signal_type }}</div>
+            <div class="isp-trigger">{{ signal.trigger }}</div>
+            <div class="isp-confidence" [class]="getIntradayConfClass(signal.confidence)">{{ signal.confidence }}%</div>
+            <div class="isp-entry">@ {{ formatPrice(signal.entry_price) }}</div>
+            <div class="isp-levels">
+              <span class="isp-tp">TP: {{ formatPrice(signal.take_profit_1) }}</span>
+              <span class="isp-sl">SL: {{ formatPrice(signal.stop_loss) }}</span>
+            </div>
+          </div>
+          }
         </div>
         }
 
@@ -941,6 +961,26 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .tv-amber .tv-headline { color: #fbbf24; }
     .tv-slate { background: rgba(100,116,139,0.12); border-left-color: #64748b; }
     .tv-slate .tv-headline { color: #94a3b8; }
+
+    /* INTRADAY SIGNALS PANEL */
+    .intraday-signals-panel { padding: 12px 16px; background: rgba(245,158,11,0.08); border-top: 1px solid rgba(245,158,11,0.3); border-bottom: 1px solid rgba(245,158,11,0.2); }
+    .isp-header { font-size: 0.72rem; font-weight: 950; letter-spacing: 1.2px; color: #fb923c; text-transform: uppercase; margin-bottom: 10px; }
+    .isp-signal { display: grid; grid-template-columns: 40px 50px 1fr 45px 1fr; gap: 8px 12px; align-items: center; padding: 8px 10px; border-radius: 6px; background: rgba(17,17,27,0.6); border: 1px solid #253348; margin-bottom: 6px; }
+    .isp-signal.long { border-left: 3px solid #86efac; }
+    .isp-signal.short { border-left: 3px solid #f87171; }
+    .isp-timeframe { font-size: 0.70rem; font-weight: 900; color: #64748b; background: #141f30; padding: 3px 6px; border-radius: 4px; text-align: center; }
+    .isp-direction { font-size: 0.72rem; font-weight: 950; text-transform: uppercase; }
+    .isp-signal.long .isp-direction { color: #86efac; }
+    .isp-signal.short .isp-direction { color: #f87171; }
+    .isp-trigger { font-size: 0.68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+    .isp-confidence { font-size: 0.70rem; font-weight: 900; text-align: center; padding: 2px 6px; border-radius: 4px; }
+    .isp-confidence.conf-high { background: rgba(134,239,172,0.15); color: #86efac; }
+    .isp-confidence.conf-medium { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .isp-confidence.conf-low { background: rgba(148,163,184,0.15); color: #94a3b8; }
+    .isp-entry { font-size: 0.72rem; font-weight: 800; color: #e2e8f0; }
+    .isp-levels { display: flex; gap: 10px; font-size: 0.68rem; font-weight: 700; }
+    .isp-tp { color: #86efac; }
+    .isp-sl { color: #f87171; }
 
     /* EXECUTION CHECK CARD */
     .exec-check-card { background: rgba(10,10,22,0.9); border: 1px solid rgba(137,180,250,0.18); border-left: 4px solid #60a5fa; padding: 12px 16px 10px; }
@@ -2542,7 +2582,7 @@ export class InstrumentCardComponent implements OnChanges {
     return out.slice(0, 5);
   }
 
-  private formatPrice(v: number | null | undefined): string {
+  formatPrice(v: number | null | undefined): string {
     return (v !== null && v !== undefined && Number.isFinite(v)) ? `$${v.toFixed(2)}` : 'N/A';
   }
 
@@ -2927,6 +2967,16 @@ export class InstrumentCardComponent implements OnChanges {
     if (this.getExecConfirmationStatus() === 'YES') count++;
     if (this.getExecRiskStatus() === 'YES') count++;
     return count;
+  }
+
+  getActiveIntradaySignals(): IntradaySignal[] {
+    return (this.analysis.intraday_signals || []).filter(s => s.status === 'ACTIVE');
+  }
+
+  getIntradayConfClass(confidence: number): string {
+    if (confidence >= 75) return 'conf-high';
+    if (confidence >= 60) return 'conf-medium';
+    return 'conf-low';
   }
 
   // True when the backend has an actual directional plan to manage (entry/stop/

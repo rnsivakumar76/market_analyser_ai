@@ -454,6 +454,22 @@ def analyze_instrument_lazy(
         execution_data=execution_data,
     )
 
+    # P12: Intraday Signals (for INTRADAY mode)
+    intraday_signals = None
+    if mode == StrategyMode.INTRADAY:
+        from .analyzers.intraday_signal_generator import detect_intraday_signals_verbose
+        # Fetch intraday timeframes: 4H, 1H, 15m
+        bars_4h = fetch_historical_data(symbol, days=30, interval="4h")
+        bars_1h = fetch_historical_data(symbol, days=14, interval="1h")
+        bars_15m = fetch_historical_data(symbol, days=3, interval="15m")
+        intraday_signals, _ = detect_intraday_signals_verbose(
+            symbol=symbol,
+            name=name,
+            bars_4h=bars_4h,
+            bars_1h=bars_1h,
+            bars_15m=bars_15m,
+        )
+
     return InstrumentAnalysis(
         symbol=symbol,
         name=name,
@@ -468,6 +484,7 @@ def analyze_instrument_lazy(
         fundamentals=fundamentals,
         backtest_results=backtest,
         candle_patterns=candle_model,
+        intraday_signals=intraday_signals,
         benchmark_direction=benchmark_direction,
         trade_signal=trade_signal,
         technical_indicators=tech_indicators,

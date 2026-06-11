@@ -44,9 +44,10 @@
       </div>
 
       <button class="mode-toggle-btn" (click)="toggleStrategyMode()"
-        [class.short-term]="strategyMode() === 'short_term'">
-        <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : 'Short Term' }}</span>
-        <span class="mode-icon">{{ strategyMode() === 'long_term' ? '📅' : '⏱️' }}</span>
+        [class.short-term]="strategyMode() === 'short_term'"
+        [class.intraday]="strategyMode() === 'intraday'">
+        <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : strategyMode() === 'short_term' ? 'Short Term' : 'Intraday' }}</span>
+        <span class="mode-icon">{{ strategyMode() === 'long_term' ? '📅' : strategyMode() === 'short_term' ? '⏱️' : '⚡' }}</span>
       </button>
 
       @if (lastUpdated()) {

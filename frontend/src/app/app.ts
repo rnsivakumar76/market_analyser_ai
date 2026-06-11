@@ -206,11 +206,13 @@ export class App implements OnInit, OnDestroy {
   }
 
   toggleStrategyMode() {
-    const newMode = this.strategyMode() === 'long_term' ? 'short_term' : 'long_term';
+    const modes: StrategyMode[] = ['long_term', 'short_term', 'intraday'];
+    const currentIndex = modes.indexOf(this.strategyMode());
+    const newMode = modes[(currentIndex + 1) % modes.length];
     this.switchStrategyMode(newMode);
   }
 
-  switchStrategyMode(mode: 'long_term' | 'short_term') {
+  switchStrategyMode(mode: StrategyMode) {
     if (this.strategyMode() === mode) return; // already in this mode
     this.strategyMode.set(mode);
     this.savePreference('strategy_mode', mode);

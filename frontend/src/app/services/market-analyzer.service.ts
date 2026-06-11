@@ -414,7 +414,7 @@ export interface ExpertTradePlan {
   or_broken: 'bullish' | 'bearish' | 'none';
 }
 
-export type StrategyMode = 'long_term' | 'short_term';
+export type StrategyMode = 'long_term' | 'short_term' | 'intraday';
 
 export interface PositionExitAnalysis {
   should_exit: boolean;
@@ -466,6 +466,7 @@ export interface InstrumentAnalysis {
   blowoff_top?: BlowOffTopAnalysis;
   oil_market_context?: OilMarketContext;
   position_exit?: PositionExitAnalysis;
+  intraday_signals?: IntradaySignal[];
 }
 
 export interface VolumeProfileBucket {

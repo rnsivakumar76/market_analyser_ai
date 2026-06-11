@@ -414,7 +414,7 @@ class InstrumentAnalysis(BaseModel):
     news_sentiment: Optional[NewsSentiment] = None
     pullback_warning: Optional[PullbackWarningAnalysis] = None
     relative_strength: Optional[RelativeStrengthAnalysis] = None
-    expert_trade_plan: Optional[Dict[str, Any]] = None 
+    expert_trade_plan: Optional[Dict[str, Any]] = None
     strategy_mode: StrategyMode = StrategyMode.LONG_TERM
     intermarket_context: Optional['IntermarketContext'] = None
     session_context: Optional[SessionContext] = None
@@ -427,6 +427,7 @@ class InstrumentAnalysis(BaseModel):
     blowoff_top: Optional[BlowOffTopAnalysis] = None
     oil_market_context: Optional[OilMarketContext] = None
     position_exit: Optional[PositionExitAnalysis] = None
+    intraday_signals: Optional[List['IntradaySignal']] = None
 
 
 class IntradaySignal(BaseModel):

@@ -21,6 +21,8 @@ type DirectionFilter = 'all' | 'long' | 'short' | 'range';
                   (click)="modeChange.emit('short_term')">⏱️ Short-Term</button>
           <button class="ovw-mode-btn" [class.active]="strategyMode === 'long_term'"
                   (click)="modeChange.emit('long_term')">📅 Long-Term</button>
+          <button class="ovw-mode-btn" [class.active]="strategyMode === 'intraday'"
+                  (click)="modeChange.emit('intraday')">⚡ Intraday</button>
         </div>
       </div>
 
@@ -62,7 +64,7 @@ type DirectionFilter = 'all' | 'long' | 'short' | 'range';
             </div>
 
             <!-- Direction tag -->
-            <div class="ovw-tags">
+            <div class="ovw-tags">strategyMode === 'intraday' ? 'Intraday' : 
               <span class="ovw-dir-tag" [class]="'dir-' + direction(inst)">{{ directionLabel(inst) }}</span>
               <span class="ovw-horizon">{{ strategyMode === 'short_term' ? 'Short-Term' : 'Long-Term' }}</span>
             </div>
