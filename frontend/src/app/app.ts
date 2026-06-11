@@ -239,6 +239,14 @@ export class App implements OnInit, OnDestroy {
       next: (response: AnalysisResponse) => {
         let newInstruments = [...response.instruments];
 
+        // Filter for intraday mode: only show instruments with active intraday signals
+        if (this.strategyMode() === 'intraday') {
+          newInstruments = newInstruments.filter(inst => {
+            const activeSignals = (inst.intraday_signals || []).filter(s => s.status === 'ACTIVE');
+            return activeSignals.length > 0;
+          });
+        }
+
         // Sort instruments: Highest magnitude score at the top
         const sortedInstruments = newInstruments.sort((a, b) => {
           return Math.abs(b.trade_signal.score) - Math.abs(a.trade_signal.score);
