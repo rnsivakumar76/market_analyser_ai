@@ -20,12 +20,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+from domain.constants import SIGNAL_TACTICAL_THRESHOLD
+
 BULLISH = "bullish"
 BEARISH = "bearish"
 NEUTRAL = "neutral"
 
 TRADE_LONG = "TRADE_LONG"
 TRADE_SHORT = "TRADE_SHORT"
+TACTICAL_LONG = "TACTICAL_LONG"
+TACTICAL_SHORT = "TACTICAL_SHORT"
 WAIT = "WAIT"
 STAND_ASIDE = "STAND_ASIDE"
 
@@ -55,8 +59,9 @@ def compute_verdict(
       1. Breakout trap → WAIT (do not chase the trap), unless a real trade is confirmed.
       2. MTF / ADX conflict while not trade-worthy → WAIT with the conflict guidance.
       3. Trade-worthy + directional → TRADE_LONG / TRADE_SHORT.
-      4. Directional bias but not trade-worthy → WAIT (conditional, await trigger).
-      5. Otherwise → STAND_ASIDE.
+      4. Strong conditional setup (score >= tactical threshold) → TACTICAL_LONG / TACTICAL_SHORT (reduced size).
+      5. Directional bias but weak → WAIT (conditional, await trigger).
+      6. Otherwise → STAND_ASIDE.
     """
     # 3. A fully confirmed trade overrides softer cautions.
     if trade_worthy and recommendation == BULLISH:
@@ -92,7 +97,25 @@ def compute_verdict(
             color="amber",
         )
 
-    # 4. Directional bias but unconfirmed.
+    # 4. Strong conditional setup: tactical reduced-size entry.
+    # Score meets tactical threshold (50) but not full conviction (70).
+    # Actionable for traders willing to take smaller positions on strong bias.
+    if not trade_worthy and recommendation == BULLISH and abs(score) >= SIGNAL_TACTICAL_THRESHOLD:
+        return VerdictResult(
+            verdict=TACTICAL_LONG,
+            headline="TACTICAL LONG — reduced size",
+            detail="Strong bullish bias but missing full conviction. Consider a smaller position with tight stops.",
+            color="green",
+        )
+    if not trade_worthy and recommendation == BEARISH and abs(score) >= SIGNAL_TACTICAL_THRESHOLD:
+        return VerdictResult(
+            verdict=TACTICAL_SHORT,
+            headline="TACTICAL SHORT — reduced size",
+            detail="Strong bearish bias but missing full conviction. Consider a smaller position with tight stops.",
+            color="red",
+        )
+
+    # 5. Directional bias but weak.
     if recommendation == BULLISH:
         return VerdictResult(
             verdict=WAIT,
@@ -108,7 +131,7 @@ def compute_verdict(
             color="amber",
         )
 
-    # 5. No edge.
+    # 6. No edge.
     return VerdictResult(
         verdict=STAND_ASIDE,
         headline="STAND ASIDE — no edge",

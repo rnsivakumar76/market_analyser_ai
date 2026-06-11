@@ -2902,7 +2902,7 @@ export class InstrumentCardComponent implements OnChanges {
     const adx = this.analysis.daily_strength?.adx ?? 0;
     const rsi = this.analysis.daily_strength?.rsi ?? 50;
     const rec = this.analysis.trade_signal?.recommendation;
-    if (adx >= 30) {
+    if (adx >= 25) {
       if (rec === 'bullish' && rsi > 45 && rsi < 72) return 'YES';
       if (rec === 'bearish' && rsi < 55 && rsi > 28) return 'YES';
     }

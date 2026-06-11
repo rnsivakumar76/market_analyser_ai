@@ -73,16 +73,19 @@ def _derive_execution_profile(
     score_abs = abs(score)
     macro_caution = any("Macro Caution" in reason for reason in reasons)
 
+    # Check if this qualifies as a tactical setup (strong bias but not full conviction)
+    is_tactical = not trade_worthy and recommendation != Signal.NEUTRAL and score_abs >= SIGNAL_TACTICAL_THRESHOLD
+
     if aggressiveness_mode == "aggressive":
         conditional_min_score = 12
     elif aggressiveness_mode == "conservative":
         conditional_min_score = 28
     else:
-        conditional_min_score = 20
+        conditional_min_score = 15  # Balanced: more active (was 20)
 
     if trade_worthy and not blocked:
         execution_state = "ready"
-    elif recommendation != Signal.NEUTRAL and score_abs >= conditional_min_score:
+    elif is_tactical or (recommendation != Signal.NEUTRAL and score_abs >= conditional_min_score):
         execution_state = "conditional"
     else:
         execution_state = "stand_aside"
@@ -94,8 +97,8 @@ def _derive_execution_profile(
         ready_a_cutoff = 95
         conditional_b_cutoff = 62
     else:
-        ready_a_cutoff = 85
-        conditional_b_cutoff = 50
+        ready_a_cutoff = 80  # Balanced: more active (was 85)
+        conditional_b_cutoff = 45  # Balanced: more active (was 50)
 
     if execution_state == "ready" and score_abs >= ready_a_cutoff:
         opportunity_grade = "A"
@@ -111,7 +114,15 @@ def _derive_execution_profile(
     if execution_state == "stand_aside":
         suggested_size_text = "0.0x (no entry)"
     elif execution_state == "conditional":
-        if aggressiveness_mode == "aggressive":
+        if is_tactical:
+            # Tactical setups get reduced size
+            if aggressiveness_mode == "aggressive":
+                suggested_size_text = "0.5x (tactical reduced size)"
+            elif aggressiveness_mode == "conservative":
+                suggested_size_text = "0.25x (tactical reduced size)"
+            else:
+                suggested_size_text = "0.35x (tactical reduced size)"
+        elif aggressiveness_mode == "aggressive":
             suggested_size_text = "0.65x (aggressive starter on trigger close)"
         elif aggressiveness_mode == "conservative":
             suggested_size_text = "0.35x (conservative starter on trigger close)"
@@ -546,4 +557,5 @@ def _detect_signal_conflict(
         guidance=result.guidance,
         trigger_price_up=result.trigger_price_up,
         trigger_price_down=result.trigger_price_down,
+    )
     )

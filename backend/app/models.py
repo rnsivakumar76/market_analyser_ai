@@ -201,7 +201,7 @@ class InstrumentCorrelations(BaseModel):
 
 
 class TradeVerdict(BaseModel):
-    verdict: str        # "TRADE_LONG" | "TRADE_SHORT" | "WAIT" | "STAND_ASIDE"
+    verdict: str        # "TRADE_LONG" | "TRADE_SHORT" | "TACTICAL_LONG" | "TACTICAL_SHORT" | "WAIT" | "STAND_ASIDE"
     headline: str       # short, bold instruction shown as the hero element
     detail: str         # one-line supporting explanation
     color: str          # "green" | "red" | "amber" | "slate"

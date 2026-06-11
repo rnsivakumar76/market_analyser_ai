@@ -83,6 +83,7 @@ SIGNAL_NEUTRAL_TREND_PB_DETECTED_FRACTION: float = 0.25  # Pullback weight used 
 # ── Signal Thresholds ───────────────────────────────────────────────────────
 SIGNAL_CONVICTION_THRESHOLD: int = 70  # Minimum score for trade-worthy
 SIGNAL_DEVELOPING_THRESHOLD: int = 20  # Below this = truly neutral
+SIGNAL_TACTICAL_THRESHOLD: int = 50    # Minimum score for a tactical reduced-size entry
 
 # ── ADX Regime Boundaries (for adaptive scoring) ─────────────────────────────
 SIGNAL_ADX_RANGING: float = 20.0   # ADX < 20  → no clear trend (mean-reversion valid)
@@ -101,7 +102,7 @@ SIGNAL_ADX_REGIME_WEIGHTS: dict = {
 }
 
 # ── Hard Filters ────────────────────────────────────────────────────────────
-FILTER_ADX_THRESHOLD: float = 25.0     # ADX must exceed this for trade-worthy
+FILTER_ADX_THRESHOLD: float = 20.0     # ADX must exceed this for trade-worthy
 FILTER_MACRO_SCORE_PENALTY: int = 20   # Score reduction when macro shield active
 
 # ── Volatility Regimes ──────────────────────────────────────────────────────

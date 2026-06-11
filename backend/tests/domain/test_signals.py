@@ -373,7 +373,7 @@ class TestClassifyRecommendation:
 class TestADXFilter:
 
     def test_adx_below_threshold_blocks_trade(self):
-        result = apply_adx_filter(adx=20.0, trade_worthy=True)
+        result = apply_adx_filter(adx=19.0, trade_worthy=True)
         assert result.blocked is True
         assert "ADX" in result.reason
 
