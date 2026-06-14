@@ -763,7 +763,16 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         with ThreadPoolExecutor(max_workers=10) as executor:
             future_to_inst = {executor.submit(process_instrument, inst): inst for inst in instruments}
             for future in as_completed(future_to_inst):
-                sym, analysis, hist_data = future.result()
+                # Isolate each instrument so a single failure (including a fallback
+                # construction error) can NEVER abort the whole scan and empty the list.
+                inst_cfg = future_to_inst[future]
+                try:
+                    sym, analysis, hist_data = future.result()
+                except Exception as inst_exc:
+                    sym = (inst_cfg.get('symbol') if isinstance(inst_cfg, dict) else None) or 'UNKNOWN'
+                    logger.error(f"Instrument task failed for {sym}: {inst_exc}", exc_info=True)
+                    sym, analysis, hist_data = sym, None, None
+
                 if analysis:
                     results.append(analysis)
                     data_map[sym] = hist_data
@@ -787,53 +796,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                                     SENT_ALERTS.add(expert_key)
                 else:
                     logger.warning(f"Analysis produced no result for {sym}")
-                    # Create fallback analysis for failed instruments so they still appear in monitoring
-                    from .models import InstrumentAnalysis, Signal, TradeSignal
-                    
-                    # Find the original instrument config
-                    original_inst = next((inst for inst in instruments if inst['symbol'].upper() == sym), None)
-                    if original_inst:
-                        fallback_analysis = InstrumentAnalysis(
-                            symbol=sym,
-                            name=original_inst.get('name', sym),
-                            current_price=0.0,
-                            analysis_date=date.today(),
-                            last_updated=datetime.now(timezone.utc).isoformat(),
-                            monthly_trend=None,  # Will show as "No data"
-                            weekly_pullback=None,
-                            daily_strength=None,
-                            market_phase=None,
-                            volatility_risk=None,
-                            fundamentals=None,
-                            backtest_results=None,
-                            candle_patterns=None,
-                            benchmark_direction=Signal.NEUTRAL,
-                            trade_signal=TradeSignal(
-                                score=0,
-                                recommendation='neutral',
-                                confidence=0.0,
-                                reasons=['Analysis failed - data unavailable'],
-                                trade_worthy=False,
-                                signal_conflict=None
-                            ),
-                            technical_indicators=None,
-                            news_sentiment=None,
-                            relative_strength=None,
-                            expert_trade_plan=None,
-                            strategy_mode=mode,
-                            intermarket_context=None,
-                            session_context=None,
-                            volume_profile=None,
-                            session_vwap=None,
-                            liquidity_map=None,
-                            block_flow=None,
-                            geopolitical_risk=None,
-                            blowoff_top=None,
-                        )
-                        results.append(fallback_analysis)
-                        logger.info(f"Created fallback analysis for failed instrument {sym}")
     except Exception as e:
-        logger.error(f"Parallel analysis loop failed: {e}")
+        logger.error(f"Parallel analysis loop failed: {e}", exc_info=True)
         # Continue with whatever results we have (possibly empty)
 
     perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC": btc_bench}, strategy_settings)

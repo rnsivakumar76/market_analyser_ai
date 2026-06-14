@@ -52,7 +52,7 @@ def _apply_aggressiveness_to_threshold(mode: str, threshold: int) -> int:
 
 def _normalize_strategy_mode(mode: Optional[str]) -> str:
     normalized = (mode or "long_term").strip().lower()
-    if normalized not in {"long_term", "short_term"}:
+    if normalized not in {"long_term", "short_term", "intraday"}:
         return "long_term"
     return normalized
 
