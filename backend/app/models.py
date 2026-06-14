@@ -393,6 +393,27 @@ class BlockFlowDetection(BaseModel):
                         "Cross-reference with Level 2 / tape data before acting.")
 
 
+class IntradaySignal(BaseModel):
+    signal_id: str
+    symbol: str
+    name: str
+    timeframe: str            # "15m" | "1H" | "4H"
+    signal_type: str          # "LONG" | "SHORT"
+    trigger: str              # "EMA_CROSS" | "MACD_CROSS" | "EMA_MACD_CONFLUENCE"
+    entry_price: float
+    stop_loss: float
+    take_profit_1: float      # 1R target
+    take_profit_2: float      # 2R target
+    risk_reward: float
+    mtf_bias: str             # 4H direction backing this signal
+    confidence: int           # 0-100
+    generated_at: str         # ISO datetime
+    bar_time: str             # Bar that triggered the signal
+    expires_at: str           # ISO datetime
+    status: str = "ACTIVE"    # "ACTIVE" | "EXPIRED" | "HIT_TP1" | "HIT_TP2" | "HIT_SL"
+    notes: str = ""
+
+
 class InstrumentAnalysis(BaseModel):
     symbol: str
     name: str
@@ -427,28 +448,7 @@ class InstrumentAnalysis(BaseModel):
     blowoff_top: Optional[BlowOffTopAnalysis] = None
     oil_market_context: Optional[OilMarketContext] = None
     position_exit: Optional['PositionExitAnalysis'] = None
-    intraday_signals: Optional[List['IntradaySignal']] = None
-
-
-class IntradaySignal(BaseModel):
-    signal_id: str
-    symbol: str
-    name: str
-    timeframe: str            # "15m" | "1H" | "4H"
-    signal_type: str          # "LONG" | "SHORT"
-    trigger: str              # "EMA_CROSS" | "MACD_CROSS" | "EMA_MACD_CONFLUENCE"
-    entry_price: float
-    stop_loss: float
-    take_profit_1: float      # 1R target
-    take_profit_2: float      # 2R target
-    risk_reward: float
-    mtf_bias: str             # 4H direction backing this signal
-    confidence: int           # 0-100
-    generated_at: str         # ISO datetime
-    bar_time: str             # Bar that triggered the signal
-    expires_at: str           # ISO datetime
-    status: str = "ACTIVE"    # "ACTIVE" | "EXPIRED" | "HIT_TP1" | "HIT_TP2" | "HIT_SL"
-    notes: str = ""
+    intraday_signals: Optional[List[IntradaySignal]] = None
 
 
 class PerformanceSummary(BaseModel):
