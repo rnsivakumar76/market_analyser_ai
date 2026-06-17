@@ -162,6 +162,95 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           <div class="ec-microcopy">Verdict above = directional thesis · gates here = is it executable right now. Best entries have all 5 aligned.</div>
         </div>
 
+        <!-- ZONE C: THE PLAN — always visible (entry/stop/target, R:R, scaling) -->
+        <div class="tech-section action-section plan-zone">
+          <div class="tile-header">
+            🎯 STRATEGIC ACTION & SCALING
+          </div>
+          <div class="action-hero">
+             <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
+          </div>
+
+          @if (analysis.trade_signal.recommendation === 'neutral') {
+            <div class="levels-dormant">⏸ Two-sided conditional plan — directional levels activate once a side is confirmed (close above R1 for long, below S1 for short)</div>
+          } @else if (hasDirectionalPlan()) {
+          <div class="levels-stack">
+            <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
+            <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
+            <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
+          </div>
+          @if (getExecPassCount() < 5) {
+            <div class="levels-pending">{{ 5 - getExecPassCount() }} execution gate{{ (5 - getExecPassCount()) !== 1 ? 's' : '' }} still pending ({{ getExecPassCount() }}/5) — size down until all align.</div>
+          }
+          } @else {
+            <div class="levels-dormant">⏸ No directional edge yet — trade levels activate once the bias is confirmed (currently stand-aside).</div>
+          }
+
+          @if (analysis.trade_signal.recommendation !== 'neutral') {
+          <div class="rr-visual-diagram">
+            <div class="rrd-header">VISUAL R/R DIAGRAM</div>
+            <div class="rrd-chart">
+              <div class="rrd-row">
+                <span class="rrd-tag tp-tag">TARGET</span>
+                <div class="rrd-bar tp-bar"></div>
+                <span class="rrd-price bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
+              </div>
+              <div class="rrd-row reward-row">
+                <span class="rrd-amount bullish">▲ +\${{ getRRReward() }} REWARD</span>
+              </div>
+              <div class="rrd-row">
+                <span class="rrd-tag entry-tag">ENTRY ●</span>
+                <div class="rrd-bar entry-bar"></div>
+                <span class="rrd-price">\${{ getEntryZone() }}</span>
+              </div>
+              <div class="rrd-row risk-row">
+                <span class="rrd-amount bearish">▼ -\${{ getRRRisk() }} RISK</span>
+              </div>
+              <div class="rrd-row">
+                <span class="rrd-tag sl-tag">STOP</span>
+                <div class="rrd-bar sl-bar"></div>
+                <span class="rrd-price bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
+              </div>
+            </div>
+            <div class="rrd-stats">
+              <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
+              <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
+              <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
+              <div class="rrd-stat"><span>SIGNAL SCORE</span><strong [class]="getSignalClass()">{{ analysis.trade_signal.score }}</strong></div>
+            </div>
+          </div>
+          }
+
+          <div class="terminal-gauge">
+             <div class="tg-track">
+                <div class="tg-fill" [style.left.%]="getPricePositionPercent()"></div>
+                <div class="tg-marker pivot" style="left: 50%"></div>
+             </div>
+             <div class="tg-labels"><span>S1</span><span>PIVOT</span><span>R1</span></div>
+          </div>
+
+          <div class="scaling-zone">
+              <div class="sz-header">📊 PROFIT TARGETS (T1 / T2 / T3)</div>
+              <div class="sz-grid">
+                  @for (step of getScalingStrategy(); track step.stage) {
+                    <div class="sz-item" [class.sz-item--hit]="isTargetHit(step.target)" [class.sz-item--next]="isNextTarget(step.target)">
+                       <div class="sz-top"><span>{{ step.percent }}% ALLOC</span><strong>{{ step.stage }}</strong></div>
+                       <div class="sz-val">{{ step.target }}</div>
+                       <div class="sz-dist">{{ getTargetDistance(step.target) }}</div>
+                    </div>
+                  }
+              </div>
+              <div class="sz-interpretation">
+                <p class="sz-action-read">{{ getScalingActionRead() }}</p>
+              </div>
+          </div>
+
+          <div class="mm-footer">
+             <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
+             <div class="mmf-item"><span>ENTRY</span><strong>\${{ (analysis.position_sizing?.entry_price ?? analysis.current_price)?.toFixed(2) }}</strong></div>
+          </div>
+        </div>
+
         <!-- EXPERT BATTLE PLAN (Zone D — above drawers) -->
         @if (analysis.expert_trade_plan) {
         <div class="expert-above-tabs" [class.high-intent]="analysis.expert_trade_plan.is_high_intent">
@@ -201,97 +290,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                    the MTF overlay shows the timeframe directions and the scenario
                    blocks below show the trigger levels — so no inline conflict box. -->
 
-              <!-- SECTION 1: STRATEGIC ACTION & SCALING -->
-              <div class="tech-section action-section">
-                <div class="tile-header">
-                  🎯 STRATEGIC ACTION & SCALING
-                </div>
-                <div class="action-hero">
-                   <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
-                </div>
-
-                @if (analysis.trade_signal.recommendation === 'neutral') {
-                  <div class="levels-dormant">⏸ Two-sided conditional plan — directional levels activate once a side is confirmed (close above R1 for long, below S1 for short)</div>
-                } @else if (hasDirectionalPlan()) {
-                <div class="levels-stack">
-                  <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
-                  <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
-                  <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
-                </div>
-                @if (getExecPassCount() < 5) {
-                  <div class="levels-pending">{{ 5 - getExecPassCount() }} execution gate{{ (5 - getExecPassCount()) !== 1 ? 's' : '' }} still pending ({{ getExecPassCount() }}/5) — size down until all align.</div>
-                }
-                } @else {
-                  <div class="levels-dormant">⏸ No directional edge yet — trade levels activate once the bias is confirmed (currently stand-aside).</div>
-                }
-
-                @if (analysis.trade_signal.recommendation !== 'neutral') {
-                <div class="rr-visual-diagram">
-                  <div class="rrd-header">VISUAL R/R DIAGRAM</div>
-                  <div class="rrd-chart">
-                    <div class="rrd-row">
-                      <span class="rrd-tag tp-tag">TARGET</span>
-                      <div class="rrd-bar tp-bar"></div>
-                      <span class="rrd-price bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
-                    </div>
-                    <div class="rrd-row reward-row">
-                      <span class="rrd-amount bullish">▲ +\${{ getRRReward() }} REWARD</span>
-                    </div>
-                    <div class="rrd-row">
-                      <span class="rrd-tag entry-tag">ENTRY ●</span>
-                      <div class="rrd-bar entry-bar"></div>
-                      <span class="rrd-price">\${{ getEntryZone() }}</span>
-                    </div>
-                    <div class="rrd-row risk-row">
-                      <span class="rrd-amount bearish">▼ -\${{ getRRRisk() }} RISK</span>
-                    </div>
-                    <div class="rrd-row">
-                      <span class="rrd-tag sl-tag">STOP</span>
-                      <div class="rrd-bar sl-bar"></div>
-                      <span class="rrd-price bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
-                    </div>
-                  </div>
-                  <div class="rrd-stats">
-                    <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
-                    <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
-                    <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
-                    <div class="rrd-stat"><span>SIGNAL SCORE</span><strong [class]="getSignalClass()">{{ analysis.trade_signal.score }}</strong></div>
-                  </div>
-                </div>
-                }
-
-                <div class="terminal-gauge">
-                   <div class="tg-track">
-                      <div class="tg-fill" [style.left.%]="getPricePositionPercent()"></div>
-                      <div class="tg-marker pivot" style="left: 50%"></div>
-                   </div>
-                   <div class="tg-labels"><span>S1</span><span>PIVOT</span><span>R1</span></div>
-                </div>
-
-                <div class="scaling-zone">
-                    <div class="sz-header">📊 PROFIT TARGETS (T1 / T2 / T3)</div>
-                    <div class="sz-grid">
-                        @for (step of getScalingStrategy(); track step.stage) {
-                          <div class="sz-item" [class.sz-item--hit]="isTargetHit(step.target)" [class.sz-item--next]="isNextTarget(step.target)">
-                             <div class="sz-top"><span>{{ step.percent }}% ALLOC</span><strong>{{ step.stage }}</strong></div>
-                             <div class="sz-val">{{ step.target }}</div>
-                             <div class="sz-dist">{{ getTargetDistance(step.target) }}</div>
-                          </div>
-                        }
-                    </div>
-                    <!-- Scaling Interpretation -->
-                    <div class="sz-interpretation">
-                      <p class="sz-action-read">{{ getScalingActionRead() }}</p>
-                    </div>
-                </div>
-
-                <div class="mm-footer">
-                   <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
-                   <div class="mmf-item"><span>ENTRY</span><strong>\${{ (analysis.position_sizing?.entry_price ?? analysis.current_price)?.toFixed(2) }}</strong></div>
-                </div>
-
-              </div>
-
+              <!-- The Plan (Strategic Action & Scaling) is promoted to the
+                   always-visible Zone C below the Execution Check card. -->
 
               <!-- MARKET MOMENTUM READ -->
               <div class="tech-section momentum-read-section">
@@ -1518,6 +1518,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .tech-section { padding: 20px 24px; border-bottom: 1px solid #192642; }
     .tech-section:last-child { border-bottom: none; }
     .action-section { background: transparent; }
+    .plan-zone { border-left: 4px solid #60a5fa; background: rgba(96,165,250,0.03); }
     .pivot-section .pm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
     .pivot-section .pm-v { font-size: 0.90rem; font-weight: 800; color: #c0cad8; padding: 8px 6px; background: #070d1c; border-radius: 4px; text-align: center; }
     .pivot-section .pm-v.res { color: #f87171; }
@@ -1956,7 +1957,7 @@ export class InstrumentCardComponent implements OnChanges {
   alertToastVisible = false;
   activeLevelAlerts = new Set<string>();
   showMoreIntel = false;
-  drawerOpen: Record<string, boolean> = { signal: true, risk: false, performance: false };
+  drawerOpen: Record<string, boolean> = { signal: false, risk: false, performance: false };
   toggleDrawer(name: string): void { this.drawerOpen[name] = !this.drawerOpen[name]; }
   getTopReasons(): string[] { return (this.analysis.trade_signal.reasons ?? []).slice(0, 3); }
   getRemainingReasonCount(): number { return Math.max(0, (this.analysis.trade_signal.reasons ?? []).length - 3); }
@@ -2043,18 +2044,33 @@ export class InstrumentCardComponent implements OnChanges {
     return action.includes('wait') || action.includes('observe') || action.includes('sideline') || action.includes('neutral') || executionState === 'conditional' || executionState === 'stand_aside';
   }
 
-  getExecutionStateLabel(): string {
+  // Single source of truth for the state word, derived from the backend verdict
+  // so the header pill, the Execution Check decision and the Verdict hero never
+  // use three different words for the same situation.
+  getVerdictState(): 'EXECUTE' | 'TACTICAL' | 'WAIT' | 'STAND ASIDE' {
+    const v = (this.analysis?.trade_signal?.trade_verdict?.verdict ?? '').toUpperCase();
+    if (v.startsWith('TRADE')) return 'EXECUTE';
+    if (v.startsWith('TACTICAL')) return 'TACTICAL';
+    if (v === 'WAIT') return 'WAIT';
+    if (v === 'STAND_ASIDE') return 'STAND ASIDE';
+    // Fallback for older payloads without a verdict.
     const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
-    if (state === 'ready') return 'READY';
-    if (state === 'conditional') return 'CONDITIONAL';
+    if (state === 'ready') return 'EXECUTE';
+    if (state === 'conditional') return 'WAIT';
     return 'STAND ASIDE';
   }
 
+  getExecutionStateLabel(): string {
+    return this.getVerdictState();
+  }
+
   getExecutionStateClass(): string {
-    const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
-    if (state === 'ready') return 'none';
-    if (state === 'conditional') return 'medium';
-    return 'high';
+    switch (this.getVerdictState()) {
+      case 'EXECUTE': return 'none';
+      case 'TACTICAL': return 'medium';
+      case 'WAIT': return 'medium';
+      default: return 'high';
+    }
   }
 
   getGeoImpactClass(impact: string): string {
@@ -3054,6 +3070,15 @@ export class InstrumentCardComponent implements OnChanges {
         label: `CONDITIONAL ${dir} · WAIT FOR TRIGGER`,
         cssClass: 'ec-decision exec-tactical',
       };
+    }
+    // execution_state is stand_aside — but defer to the verdict vocabulary so we
+    // don't say "STAND ASIDE" while the hero verdict says "WAIT".
+    if (this.getVerdictState() === 'WAIT') {
+      const conflict = this.analysis?.trade_signal?.signal_conflict;
+      if (conflict?.conflict_type && conflict.conflict_type !== 'none') {
+        return { label: 'WAIT · TIMEFRAMES DISAGREE', cssClass: 'ec-decision exec-wait' };
+      }
+      return { label: 'WAIT · BIAS UNCONFIRMED', cssClass: 'ec-decision exec-wait' };
     }
     return { label: 'STAND ASIDE · NO EDGE', cssClass: 'ec-decision exec-wait' };
   }
