@@ -132,7 +132,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
             <div class="ec-row">
               <span class="ec-gate-label">CONFIRM</span>
-              <span class="ec-gate-src">Technical Heat / Volume</span>
+              <span class="ec-gate-src">Volume</span>
               <span [class]="getExecChipClass(getExecConfirmationStatus())">{{ getExecConfirmationStatus() }}</span>
             </div>
             <div class="ec-row">
@@ -303,14 +303,14 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     <span class="mmr-interp" [class]="getRSIClass()">{{ getRSIInterpretation() }}</span>
                   </div>
                   <div class="mmr-item">
+                    <span class="mmr-lbl">ATR</span>
+                    <strong class="mmr-val">{{ analysis.volatility_risk?.atr?.toFixed(2) || '0.00' }}</strong>
+                    <span class="mmr-interp">{{ getATRInterpretation() }}</span>
+                  </div>
+                  <div class="mmr-item">
                     <span class="mmr-lbl">IMPACT</span>
                     <strong class="mmr-val" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</strong>
                     <span class="mmr-interp">{{ getTechnicalRecommendation() }}</span>
-                  </div>
-                  <div class="mmr-item">
-                    <span class="mmr-lbl">VWAP DIST</span>
-                    <strong class="mmr-val" [class]="getVWAPClass()">{{ getVwapDistDisplay() }}</strong>
-                    <span class="mmr-interp" [class]="getVWAPClass()">{{ getVWAPDistLabel() }}</span>
                   </div>
                 </div>
                 <div class="mmr-combined-read">{{ getMarketMomentumRead() }}</div>
@@ -457,10 +457,6 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   <div class="ch-item" [class]="getTrendCheck()">
                      <div class="ch-left-data"><span class="ch-i">Trend Structure</span><span class="ch-v">{{ analysis.monthly_trend.direction | uppercase }}</span></div>
                      <div class="ch-correlation">{{ getTrendCorrelation() }}</div>
-                  </div>
-                  <div class="ch-item" [class]="getMomentumCheck()">
-                     <div class="ch-left-data"><span class="ch-i">Momentum (ADX)</span><span class="ch-v">{{ analysis.daily_strength.adx.toFixed(1) }}</span></div>
-                     <div class="ch-correlation">{{ getMomentumCorrelation() }}</div>
                   </div>
                   <div class="ch-item" [class]="getVolatilityCheck()">
                      <div class="ch-left-data"><span class="ch-i">Volatility Risk</span><span class="ch-v">{{ getVolatilityLevel() }}</span></div>
@@ -2295,6 +2291,15 @@ export class InstrumentCardComponent implements OnChanges {
     if (rsi < 30) return 'Oversold';
     if (rsi < 40) return 'Weak';
     return 'Neutral';
+  }
+
+  getATRInterpretation(): string {
+    const atr = this.analysis.volatility_risk?.atr || 0;
+    const price = this.analysis.current_price;
+    const atrPct = (atr / price) * 100;
+    if (atrPct > 2) return 'High Vol';
+    if (atrPct > 1) return 'Moderate';
+    return 'Low Vol';
   }
 
   getTechnicalHeatImpact(): string {
