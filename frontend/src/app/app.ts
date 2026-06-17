@@ -239,12 +239,17 @@ export class App implements OnInit, OnDestroy {
       next: (response: AnalysisResponse) => {
         let newInstruments = [...response.instruments];
 
-        // Filter for intraday mode: only show instruments with active intraday signals
+        // Intraday mode: surface instruments with active signals first, but NEVER
+        // blank the list. Quiet markets / off-hours / weekends frequently have zero
+        // active signals — hiding everything made the dashboard look broken. Only
+        // narrow to active-signal instruments when at least one exists.
         if (this.strategyMode() === 'intraday') {
-          newInstruments = newInstruments.filter(inst => {
-            const activeSignals = (inst.intraday_signals || []).filter(s => s.status === 'ACTIVE');
-            return activeSignals.length > 0;
-          });
+          const withActive = newInstruments.filter(inst =>
+            (inst.intraday_signals || []).some(s => s.status === 'ACTIVE')
+          );
+          if (withActive.length > 0) {
+            newInstruments = withActive;
+          }
         }
 
         // Sort instruments: Highest magnitude score at the top
