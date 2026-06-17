@@ -205,9 +205,19 @@ def analyze_position_exit(
     # Calculate recovery probability (inverse of urgency)
     recovery_probability = max(0.0, 1.0 - (exit_urgency_score / 100.0))
     
-    # Generate exit reason
+    # Generate exit reason — humanised, and deliberately NOT a restatement of the
+    # MTF conflict (the WAIT verdict already explains that). This line speaks to an
+    # EXISTING position: what risk has emerged and why it matters for holders.
+    _divergence_label = {
+        "trend_reversal": "Trend-reversal risk",
+        "momentum_shift": "Momentum shift",
+        "support_break": "Structure break",
+    }.get(divergence_type, "Risk building")
     if divergence_detected:
-        exit_reason = f"Multi-timeframe divergence detected: {divergence_type}. Short-term momentum ({strength.signal.value}) conflicts with long-term trend ({trend.direction.value})."
+        exit_reason = (
+            f"{_divergence_label} — short-term momentum has turned against the "
+            f"longer-term position. Tighten risk on open exposure."
+        )
     elif current_drawdown_pct > max_acceptable_drawdown:
         exit_reason = f"Drawdown exceeded acceptable threshold: {current_drawdown_pct:.2f}% vs {max_acceptable_drawdown:.2f}% max."
     else:

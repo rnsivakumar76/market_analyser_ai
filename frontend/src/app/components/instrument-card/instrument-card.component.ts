@@ -36,15 +36,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           </div>
 
           <div class="th-right-compact">
-            <div class="th-status-pill" [class]="getSignalClass()">
-               <span class="th-s-val">{{ analysis.trade_signal.score }}</span>
-               <span class="th-s-rec">{{ analysis.trade_signal.recommendation }}</span>
-               <span class="th-conflict-badge" [class]="'sev-' + getExecutionStateClass()">
-                 {{ getExecutionStateLabel() }} · {{ analysis.trade_signal.opportunity_grade }}
-               </span>
-               @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
-                 <span class="th-conflict-badge" [class]="'sev-' + analysis.trade_signal.signal_conflict!.severity">⚡ CONFLICT</span>
-               }
+            <div class="th-status-pill" [class]="getVerdictState().toLowerCase()">
+               <span class="th-verdict">{{ getVerdictState() }}</span>
+               <span class="th-score">{{ analysis.trade_signal.score }}</span>
+               <span class="th-grade">{{ analysis.trade_signal.opportunity_grade }}</span>
             </div>
             <button class="btn-refresh-circle" (click)="onRefresh()">🔄</button>
           </div>
@@ -949,7 +944,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .eat-text { font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; margin: 0; font-weight: 500; white-space: pre-line; }
 
     /* TRADE VERDICT HERO */
-    .trade-verdict { border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; border-left: 5px solid; }
+    .trade-verdict { border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; border-left: 5px solid; }
     .tv-headline { font-size: 1.02rem; font-weight: 950; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
     .tv-detail { font-size: 0.82rem; line-height: 1.5; color: #cbd5e1; font-weight: 500; }
     .tv-green { background: rgba(16,185,129,0.12); border-left-color: #10b981; }
@@ -982,15 +977,42 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .isp-sl { color: #f87171; }
 
     /* EXECUTION CHECK CARD */
-    .exec-check-card { background: rgba(10,10,22,0.9); border: 1px solid rgba(137,180,250,0.18); border-left: 4px solid #60a5fa; padding: 12px 16px 10px; }
+    .exec-check-card { background: rgba(10,10,22,0.9); border: 1px solid rgba(137,180,250,0.18); border-left: 4px solid #60a5fa; padding: 14px 18px 12px; margin-bottom: 16px; }
     .ec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .ec-title { font-size: 0.80rem; font-weight: 950; letter-spacing: 1.5px; color: #60a5fa; text-transform: uppercase; }
+
+    /* POSITION EXIT WARNING CARD */
+    .position-exit-warning { background: rgba(10,10,22,0.9); border: 1px solid rgba(243,139,168,0.25); border-left: 4px solid #f38ba8; padding: 14px 18px 12px; margin-bottom: 16px; }
+    .position-exit-warning.pe-immediate { border-color: rgba(248,113,113,0.45); border-left-color: #f87171; background: rgba(248,113,113,0.04); }
+    .position-exit-warning.pe-high { border-color: rgba(243,139,168,0.35); border-left-color: #f38ba8; background: rgba(243,139,168,0.03); }
+    .position-exit-warning.pe-moderate { border-color: rgba(249,226,175,0.35); border-left-color: #f9e2af; background: rgba(249,226,175,0.02); }
+    .pew-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .pew-icon { font-size: 1.05rem; }
+    .pew-title { font-size: 0.82rem; font-weight: 950; letter-spacing: 1.2px; color: #e2e8f0; text-transform: uppercase; }
+    .pew-urgency { font-size: 0.72rem; font-weight: 900; letter-spacing: 1px; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
+    .pew-urgency.peu-immediate { background: rgba(248,113,113,0.2); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+    .pew-urgency.peu-high { background: rgba(243,139,168,0.15); color: #f38ba8; border: 1px solid rgba(243,139,168,0.25); }
+    .pew-urgency.peu-moderate { background: rgba(249,226,175,0.12); color: #f9e2af; border: 1px solid rgba(249,226,175,0.25); }
+    .pew-health { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.78rem; }
+    .pew-health-label { color: #7f8fa6; font-weight: 600; }
+    .pew-health-value { font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
+    .pew-health-value.ph-critical { color: #f87171; }
+    .pew-health-value.ph-damaged { color: #f38ba8; }
+    .pew-health-value.ph-weakening { color: #f9e2af; }
+    .pew-health-value.ph-healthy { color: #86efac; }
+    .pew-health-value.ph-strong { color: #60a5fa; }
+    .pew-drawdown { color: #e2e8f0; font-weight: 700; }
+    .pew-reason { font-size: 0.88rem; line-height: 1.5; color: #c0cad8; margin-bottom: 8px; }
+    .pew-action { font-size: 0.85rem; line-height: 1.45; color: #e2e8f0; font-weight: 600; margin-bottom: 10px; }
+    .pew-factors { display: flex; flex-direction: column; gap: 4px; }
+    .pew-factor { font-size: 0.78rem; color: #94a3b8; line-height: 1.4; padding-left: 12px; position: relative; }
+    .pew-factor::before { content: '•'; position: absolute; left: 0; color: #64748b; }
     .ec-score { font-size: 0.74rem; font-weight: 900; color: #475569; letter-spacing: 1px; }
     .ec-rows { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
     .ec-row { display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 10px; padding: 7px 10px; background: rgba(255,255,255,0.02); border-radius: 4px; border: 1px solid rgba(255,255,255,0.04); }
     .ec-row.intraday-gate { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); }
     .ec-gate-label { font-size: 0.74rem; font-weight: 950; color: #e2e8f0; letter-spacing: 1px; text-transform: uppercase; }
-    .ec-gate-src { font-size: 0.72rem; color: #334155; font-weight: 600; }
+    .ec-gate-src { font-size: 0.72rem; color: #64748b; font-weight: 600; }
     .ec-chip { font-size: 0.72rem; font-weight: 900; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
     .ec-yes { background: rgba(166,227,161,0.15); color: #86efac; border: 1px solid rgba(166,227,161,0.3); }
     .ec-weak { background: rgba(249,226,175,0.12); color: #fcd34d; border: 1px solid rgba(249,226,175,0.3); }
@@ -1016,20 +1038,24 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .th-badges { display: flex; gap: 6px; align-items: center; }
     .th-clock { font-size: 0.74rem; padding: 1px 4px; }
     .th-status-pill { padding: 4px 10px; border-radius: 4px; display: flex; align-items: center; gap: 8px; border: 1px solid; }
-    .th-status-pill.bullish { border-color: #86efac; color: #86efac; background: rgba(166, 227, 161, 0.1); }
-    .th-status-pill.bearish { border-color: #f87171; color: #f87171; background: rgba(243, 139, 168, 0.1); }
-    .th-status-pill.neutral { border-color: #fcd34d; color: #fcd34d; background: rgba(249, 226, 175, 0.1); }
+    .th-status-pill.execute { border-color: #86efac; color: #86efac; background: rgba(166, 227, 161, 0.1); }
+    .th-status-pill.tactical { border-color: #fcd34d; color: #fcd34d; background: rgba(249, 226, 175, 0.1); }
+    .th-status-pill.wait { border-color: #f9e2af; color: #f9e2af; background: rgba(249, 226, 175, 0.08); }
+    .th-status-pill.stand aside { border-color: #64748b; color: #94a3b8; background: rgba(100, 116, 139, 0.08); }
+    .th-verdict { font-size: 0.80rem; font-weight: 950; letter-spacing: 1px; text-transform: uppercase; }
+    .th-score { font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
+    .th-grade { font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
     .btn-refresh-circle { background: #141f30; border: 1px solid #253348; color: #64748b; padding: 6px; border-radius: 50%; cursor: pointer; }
 
     /* 3-COLUMN COMMAND CENTER (BALANCED UX) */
     .terminal-grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 0; background: #070d1c; align-items: stretch; border-bottom: 2px solid #192642; }
     .t-tile { padding: 30px; border-right: 1px solid #192642; }
     .t-tile:last-child { border-right: none; }
-    .tile-header { font-size: 0.86rem; font-weight: 950; color: #475569; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1.5px; display: flex; align-items: center; gap: 8px; }
+    .tile-header { font-size: 0.82rem; font-weight: 950; color: #64748b; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1.2px; display: flex; align-items: center; gap: 8px; }
 
     /* Action Column CSS */
     .scaling-zone { margin: 24px 0; background: #0f172a; border: 1px dashed #253348; padding: 16px; border-radius: 8px; }
-    .sz-header { font-size: 0.76rem; color: #334155; font-weight: 950; margin-bottom: 16px; }
+    .sz-header { font-size: 0.76rem; color: #64748b; font-weight: 950; margin-bottom: 16px; }
     .sz-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .sz-item { background: #070d1c; padding: 10px; border-radius: 6px; border: 1px solid #192642; text-align: center; transition: all 0.2s; }
     .sz-top { font-size: 0.70rem; color: #475569; display: block; margin-bottom: 4px; }
@@ -1045,7 +1071,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .sz-action-read:first-letter { font-size: 1rem; }
     .mm-footer { display: flex; gap: 10px; margin-bottom: 24px; }
     .mmf-item { flex: 1; padding: 12px; background: #0d1526; border-radius: 6px; text-align: center; }
-    .mmf-item span { font-size: 0.74rem; color: #334155; display: block; margin-bottom: 4px; }
+    .mmf-item span { font-size: 0.74rem; color: #64748b; display: block; margin-bottom: 4px; }
     .mmf-item strong { font-size: 0.9rem; color: #e2e8f0; }
 
     /* Validation Column CSS */
@@ -1067,7 +1093,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .pic-metric-value.moderate { color: #fb923c; }
     .pic-metric-value.low { color: #86efac; }
     .probability-box-v2 { padding: 20px; background: #0f172a; border-radius: 8px; margin-bottom: 24px; border: 1px solid #192642; }
-    .pb2-header { font-size: 0.76rem; color: #334155; font-weight: 950; margin-bottom: 12px; }
+    .pb2-header { font-size: 0.76rem; color: #64748b; font-weight: 950; margin-bottom: 12px; }
     .pb2-grid { display: flex; gap: 20px; margin-bottom: 12px; }
     .pb2-stat span { font-size: 0.74rem; color: #475569; display: block; }
     .pb2-stat strong { font-size: 1.1rem; font-weight: 950; color: #e2e8f0; }
@@ -1191,7 +1217,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     /* RISK CALCULATOR RESTORED */
     .position-calculator { background: #0f172a; border: 1px solid #192642; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
-    .pc-header { font-size: 0.76rem; color: #334155; font-weight: 950; margin-bottom: 12px; }
+    .pc-header { font-size: 0.76rem; color: #64748b; font-weight: 950; margin-bottom: 12px; }
     .pc-toggles { display: flex; gap: 6px; margin-bottom: 16px; }
     .pc-toggles button { flex: 1; background: #1e293b; border: 1px solid #253348; color: #64748b; padding: 8px; border-radius: 6px; font-size: 0.90rem; font-weight: 900; cursor: pointer; }
     .pc-toggles button.active { background: #60a5fa; color: #0f172a; border-color: #60a5fa; }
@@ -1236,7 +1262,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .verdict-banner-pro.no-go { background: rgba(243, 139, 168, 0.1); color: #f87171; border: 1px solid #f87171; }
 
     .probability-mini { padding-top: 20px; border-top: 1px solid #192642; margin-bottom: 24px; }
-    .prob-header { font-size: 0.76rem; color: #334155; font-weight: 950; margin-bottom: 16px; }
+    .prob-header { font-size: 0.76rem; color: #64748b; font-weight: 950; margin-bottom: 16px; }
     .bt-stats { display: flex; justify-content: space-between; margin-bottom: 12px; }
     .bt-s { display: flex; flex-direction: column; }
     .bt-s span { font-size: 0.70rem; color: #334155; }
@@ -1476,17 +1502,17 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     /* MARKET MOMENTUM READ */
     .momentum-read-section { background: rgba(137,180,250,0.02); }
-    .mmr-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
-    .mmr-item { display: flex; flex-direction: column; gap: 4px; background: #070d1c; border-radius: 6px; padding: 10px; border: 1px solid #192642; }
-    .mmr-lbl { font-size: 0.70rem; font-weight: 950; color: #334155; letter-spacing: 1px; text-transform: uppercase; }
-    .mmr-val { font-size: 1.1rem; font-weight: 950; color: #e2e8f0; line-height: 1; }
+    .mmr-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; min-width: 0; }
+    .mmr-item { display: flex; flex-direction: column; gap: 4px; background: #070d1c; border-radius: 6px; padding: 10px; border: 1px solid #192642; min-width: 0; overflow: hidden; }
+    .mmr-lbl { font-size: 0.70rem; font-weight: 950; color: #64748b; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mmr-val { font-size: 1.1rem; font-weight: 950; color: #e2e8f0; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mmr-val.strong { color: #fb923c; }
     .mmr-val.trending { color: #60a5fa; }
     .mmr-val.weak { color: #64748b; }
     .mmr-val.high { color: #f87171; }
     .mmr-val.medium { color: #fcd34d; }
     .mmr-val.low { color: #64748b; }
-    .mmr-interp { font-size: 0.74rem; font-weight: 900; letter-spacing: 0.3px; }
+    .mmr-interp { font-size: 0.74rem; font-weight: 900; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mmr-interp.strong { color: #fb923c; }
     .mmr-interp.trending { color: #60a5fa; }
     .mmr-interp.weak { color: #64748b; }
@@ -1519,8 +1545,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .tech-section:last-child { border-bottom: none; }
     .action-section { background: transparent; }
     .plan-zone { border-left: 4px solid #60a5fa; background: rgba(96,165,250,0.03); }
-    .pivot-section .pm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
-    .pivot-section .pm-v { font-size: 0.90rem; font-weight: 800; color: #c0cad8; padding: 8px 6px; background: #070d1c; border-radius: 4px; text-align: center; }
+    .pivot-section .pm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; min-width: 0; }
+    .pivot-section .pm-v { font-size: 0.90rem; font-weight: 800; color: #c0cad8; padding: 8px 6px; background: #070d1c; border-radius: 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pivot-section .pm-v.res { color: #f87171; }
     .pivot-section .pm-v.sup { color: #86efac; }
     .pivot-section .pm-v.center { background: rgba(137,180,250,0.1); border: 1px solid #60a5fa; color: #60a5fa; }
@@ -1640,10 +1666,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .pea-multiplier strong { color: #a78bfa; }
 
     /* VOLUME PROFILE */
-    .vp-key-levels { display: flex; gap: 8px; margin-bottom: 14px; }
-    .vp-lvl { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px; background: #070d1c; border-radius: 6px; border: 1px solid #192642; }
-    .vp-lvl span { font-size: 0.74rem; color: #334155; font-weight: 900; text-transform: uppercase; }
-    .vp-lvl strong { font-size: 0.75rem; font-weight: 950; margin-top: 3px; color: #e2e8f0; }
+    .vp-key-levels { display: flex; gap: 8px; margin-bottom: 14px; min-width: 0; }
+    .vp-lvl { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px; background: #070d1c; border-radius: 6px; border: 1px solid #192642; min-width: 0; overflow: hidden; }
+    .vp-lvl span { font-size: 0.74rem; color: #64748b; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vp-lvl strong { font-size: 0.75rem; font-weight: 950; margin-top: 3px; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .vp-lvl.poc { border-color: #a78bfa; }
     .vp-lvl.poc strong { color: #a78bfa; }
     .vp-sparkline { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; max-height: 140px; overflow-y: auto; }
@@ -1655,10 +1681,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .vp-interpretation { font-size: 0.82rem; color: #64748b; line-height: 1.4; margin: 0; }
 
     /* SESSION VWAP */
-    .vwap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
-    .vwap-cell { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; background: #070d1c; border-radius: 6px; border: 1px solid #192642; }
-    .vwap-cell span { font-size: 0.70rem; color: #334155; font-weight: 900; text-transform: uppercase; }
-    .vwap-cell strong { font-size: 0.90rem; font-weight: 950; margin-top: 3px; }
+    .vwap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; min-width: 0; }
+    .vwap-cell { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; background: #070d1c; border-radius: 6px; border: 1px solid #192642; min-width: 0; overflow: hidden; }
+    .vwap-cell span { font-size: 0.70rem; color: #64748b; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vwap-cell strong { font-size: 0.90rem; font-weight: 950; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .vwap-position-badge { display: inline-block; font-size: 0.76rem; font-weight: 900; padding: 3px 10px; border-radius: 4px; margin-bottom: 8px; letter-spacing: 1px; }
     .vwap-position-badge.above { background: rgba(166,227,161,0.1); color: #86efac; border: 1px solid rgba(166,227,161,0.3); }
     .vwap-position-badge.below { background: rgba(243,139,168,0.1); color: #f87171; border: 1px solid rgba(243,139,168,0.3); }
