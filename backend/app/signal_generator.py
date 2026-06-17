@@ -12,6 +12,7 @@ from domain.signals.breakout_guard import evaluate_breakout as _domain_evaluate_
 from domain.signals.verdict import compute_verdict as _domain_compute_verdict
 from domain.constants import (
     SIGNAL_CONVICTION_THRESHOLD,
+    SIGNAL_TACTICAL_THRESHOLD,
     FILTER_ADX_THRESHOLD,
     SIGNAL_ADX_TRENDING,
     SIGNAL_ADX_STRONG,

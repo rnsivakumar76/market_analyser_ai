@@ -643,8 +643,10 @@ class TestAggressivenessMode:
 
         assert sig_conservative.execution_state == "conditional"
         assert sig_aggressive.execution_state == "conditional"
-        assert "0.35x" in sig_conservative.suggested_size_text
-        assert "0.65x" in sig_aggressive.suggested_size_text
+        # Score 63 >= SIGNAL_TACTICAL_THRESHOLD (50) → tactical reduced-size path.
+        # Intent preserved: conservative sizing stays smaller than aggressive.
+        assert "0.25x" in sig_conservative.suggested_size_text
+        assert "0.5x" in sig_aggressive.suggested_size_text
 
 
 # ---------------------------------------------------------------------------
