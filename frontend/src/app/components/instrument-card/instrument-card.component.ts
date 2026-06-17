@@ -197,27 +197,14 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           <section class="t-tile intel-tile tab-content-tile">
             <div class="intel-column-stack">
 
-              <!-- CONFLICT DETAIL (inline, compact) -->
-              @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
-              <div class="conflict-inline" [class]="'ci-' + analysis.trade_signal.signal_conflict!.severity">
-                @if (analysis.trade_signal.signal_conflict!.headline) {
-                  <span class="ci-headline">{{ analysis.trade_signal.signal_conflict!.headline }}</span>
-                }
-                <span class="ci-text">{{ analysis.trade_signal.signal_conflict!.guidance }}</span>
-                @if (analysis.trade_signal.signal_conflict!.trigger_price_up) {
-                  <span class="ci-trigger bullish">▲ \${{ analysis.trade_signal.signal_conflict!.trigger_price_up?.toFixed(2) }}</span>
-                }
-                @if (analysis.trade_signal.signal_conflict!.trigger_price_down) {
-                  <span class="ci-trigger bearish">▼ \${{ analysis.trade_signal.signal_conflict!.trigger_price_down?.toFixed(2) }}</span>
-                }
-              </div>
-              }
+              <!-- Conflict narrative now lives once in the Trade Verdict hero;
+                   the MTF overlay shows the timeframe directions and the scenario
+                   blocks below show the trigger levels — so no inline conflict box. -->
 
               <!-- SECTION 1: STRATEGIC ACTION & SCALING -->
               <div class="tech-section action-section">
                 <div class="tile-header">
                   🎯 STRATEGIC ACTION & SCALING
-                  <span class="action-rec-badge" [class]="isWaitAction() ? 'badge-wait' : getSignalClass()">{{ analysis.trade_signal.action_plan }}</span>
                 </div>
                 <div class="action-hero">
                    <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
@@ -1969,7 +1956,7 @@ export class InstrumentCardComponent implements OnChanges {
   alertToastVisible = false;
   activeLevelAlerts = new Set<string>();
   showMoreIntel = false;
-  drawerOpen: Record<string, boolean> = { signal: false, risk: false, performance: false };
+  drawerOpen: Record<string, boolean> = { signal: true, risk: false, performance: false };
   toggleDrawer(name: string): void { this.drawerOpen[name] = !this.drawerOpen[name]; }
   getTopReasons(): string[] { return (this.analysis.trade_signal.reasons ?? []).slice(0, 3); }
   getRemainingReasonCount(): number { return Math.max(0, (this.analysis.trade_signal.reasons ?? []).length - 3); }
