@@ -253,6 +253,7 @@ export interface VolatilityAnalysis {
   take_profit: number;
   take_profit_level1?: number;
   take_profit_level2?: number;
+  entry_price?: number;
   risk_reward_ratio: number;
   description: string;
   atr_percentile_rank: number;

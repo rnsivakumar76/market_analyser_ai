@@ -2765,15 +2765,12 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   getEntryZone(): string {
-    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
-    const s1 = this.analysis.technical_indicators?.pivot_points?.s1;
-    const ret382 = this.analysis.technical_indicators?.fibonacci?.ret_382;
-    if (this.isBullish && s1 && ret382) {
-      const low = Math.min(s1, ret382);
-      const high = Math.max(s1, ret382);
-      return `${low.toFixed(2)} – ${high.toFixed(2)}`;
-    }
-    return entry.toFixed(2);
+    // Anchor shown to the SAME level the backend used to compute SL/TP
+    // (ideal bounce/pullback entry) so ENTRY/STOP/TARGET stay consistent.
+    const anchor = this.analysis.volatility_risk?.entry_price
+      ?? this.analysis.position_sizing?.entry_price
+      ?? this.analysis.current_price;
+    return anchor.toFixed(2);
   }
 
   getEntryType(): string {
@@ -3222,7 +3219,7 @@ export class InstrumentCardComponent implements OnChanges {
   getRRReward(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
-    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
+    const entry = vr.entry_price ?? this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
     const reward = this.isShortTrade()
       ? entry - vr.take_profit
       : vr.take_profit - entry;
@@ -3232,7 +3229,7 @@ export class InstrumentCardComponent implements OnChanges {
   getRRRisk(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
-    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
+    const entry = vr.entry_price ?? this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
     const risk = this.isShortTrade()
       ? vr.stop_loss - entry
       : entry - vr.stop_loss;

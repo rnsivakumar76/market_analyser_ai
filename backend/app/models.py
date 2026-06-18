@@ -65,6 +65,7 @@ class VolatilityAnalysis(BaseModel):
     take_profit: float  # Final target
     take_profit_level1: Optional[float] = None  # Scale out 1
     take_profit_level2: Optional[float] = None  # Scale out 2
+    entry_price: Optional[float] = None  # Anchor used for SL/TP (ideal entry or current price)
     risk_reward_ratio: float
     description: str
     atr_percentile_rank: float = 50.0

@@ -47,6 +47,7 @@ def analyze_volatility_and_risk(
             atr=0.0,
             stop_loss=0.0,
             take_profit=0.0,
+            entry_price=float(round(entry_price if (entry_price and entry_price > 0) else current_price, 4)),
             risk_reward_ratio=0.0,
             description="Insufficient data for Volatility/ATR calculation."
         )
@@ -107,6 +108,7 @@ def analyze_volatility_and_risk(
         take_profit=float(round(tp3, 4)),
         take_profit_level1=float(round(tp1, 4)),
         take_profit_level2=float(round(tp2, 4)),
+        entry_price=float(round(anchor, 4)),
         risk_reward_ratio=float(round(rr_ratio, 2)),
         description=desc,
         atr_percentile_rank=atr_pct_rank,

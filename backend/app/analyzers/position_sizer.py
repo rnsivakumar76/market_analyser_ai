@@ -52,7 +52,9 @@ def apply_position_sizing(
             logger.warning(f"[{symbol}] Skipping — ATR is 0")
             continue
 
-        entry = float(analysis.current_price)
+        # Anchor entry to the same level SL/TP were computed from (ideal bounce/
+        # pullback entry when present); fall back to current price otherwise.
+        entry = float(analysis.volatility_risk.entry_price or analysis.current_price)
         sl = float(analysis.volatility_risk.stop_loss)
         tp = float(analysis.volatility_risk.take_profit)
 
