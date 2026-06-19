@@ -328,7 +328,7 @@ def analyze_instrument_lazy(
         if dxy_df is not None and not dxy_df.empty:
             bench_data = dxy_df
         else:
-            bench_data = fetch_historical_data("DXY", days=60, interval="1day")
+            bench_data = _fetch_via_yfinance("DX-Y.NYB", 60)
     elif _is_crypto_rs:
         bench_sym = "BTC"
         bench_data = benchmark_data_df if benchmark_data_df is not None else fetch_historical_data(
@@ -622,7 +622,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         # the TwelveData batch above.  If yfinance is unavailable or returns empty
         # data, intermarket analysis degrades gracefully to None.
         with ThreadPoolExecutor(max_workers=2) as _yfin_pool:
-            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DXY",  60)
+            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DX-Y.NYB",  60)
             _f_us10y = _yfin_pool.submit(_fetch_via_yfinance, "^TNX",  60)
             _dxy_df   = _f_dxy.result()
             _us10y_df = _f_us10y.result()
