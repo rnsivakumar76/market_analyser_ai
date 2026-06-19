@@ -58,7 +58,11 @@ class TwelveDataFetcher:
         '1w':  '1week',
         '1wk': '1week',
         '1mo': '1month',
-        '1m':  '1month',
+        '1m':  '1min',
+        '5m':  '5min',
+        '15m': '15min',
+        '30m': '30min',
+        '45m': '45min',
         'd':   '1day',
         'w':   '1week',
     }
