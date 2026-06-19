@@ -384,7 +384,9 @@ def analyze_instrument_lazy(
         elif pp.s1 and fib.ret_382:
             ideal_entry_for_signal = min(pp.s1, fib.ret_382)
     
+    logger.info(f"[{symbol}] Volatility recalc: recommendation={trade_signal.recommendation.value}, ideal_entry={ideal_entry_for_signal}, current_price={current_price}")
     volatility = analyze_volatility_and_risk(execution_data, current_price, trade_signal.recommendation.value, entry_price=ideal_entry_for_signal)
+    logger.info(f"[{symbol}] Volatility result: anchor={volatility.entry_price}, sl={volatility.stop_loss}, tp={volatility.take_profit}")
 
     # Build expert plan now that trade_signal.recommendation is final and volatility.atr is available
     if _expert_or_data is not None:

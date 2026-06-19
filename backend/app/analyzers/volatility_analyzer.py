@@ -77,6 +77,9 @@ def analyze_volatility_and_risk(
 
     # ── 4. SL / TP levels ───────────────────────────────────────────────────
     regime_note = f" [{regime_label} vol, {sl_mult}×/{tp3_mult}× ATR]"
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Volatility calc: signal_direction={signal_direction}, anchor={anchor}, atr={atr}, sl_mult={sl_mult}, tp3_mult={tp3_mult}")
 
     if signal_direction == "bullish":
         sl  = anchor - (atr * sl_mult)
@@ -101,6 +104,8 @@ def analyze_volatility_and_risk(
                 f"Expect daily swings between {sl:.2f} and {tp3:.2f}.")
 
     rr_ratio = tp3_mult / sl_mult if sl_mult > 0 else 0
+
+    logger.info(f"Volatility result: sl={sl}, tp3={tp3}, branch={'bearish' if signal_direction=='bearish' else 'bullish/neutral'}")
 
     return VolatilityAnalysis(
         atr=float(round(atr, 4)),
