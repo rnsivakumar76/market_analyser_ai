@@ -39,6 +39,26 @@ _HISTORY_CACHE = {} # { "SYMBOL_TIME": {"timestamp": 0, "df": df} }
 _HISTORY_TTL = 14400
 
 
+def _sane_entry(ideal_entry, current_price, max_dev_pct: float = 0.05):
+    """Reject entry anchors that sit unrealistically far from the current price.
+
+    Fibonacci swing levels computed over a long lookback (FIB_LOOKBACK_BARS) can
+    land far from the live price (e.g. an old swing high). Anchoring stop/target
+    there produces nonsensical levels (entry $99 when price is $71). If the
+    candidate entry deviates more than ``max_dev_pct`` from current price, return
+    None so the volatility analyzer falls back to anchoring on current price.
+    """
+    if ideal_entry is None or current_price is None or current_price <= 0:
+        return None
+    if abs(ideal_entry - current_price) / current_price > max_dev_pct:
+        logger.info(
+            f"[ENTRY] Rejecting ideal_entry={ideal_entry} (>{max_dev_pct:.0%} from "
+            f"current_price={current_price}); anchoring to current price instead."
+        )
+        return None
+    return ideal_entry
+
+
 def _fetch_via_yfinance(ticker: str, days: int = 30):
     """Fetch daily OHLCV data via yfinance as a free alternative for DXY / US10Y.
 
@@ -304,6 +324,8 @@ def analyze_instrument_lazy(
             ideal_entry = max(pp.r1, fib.ret_618)
         elif pp.s1 and fib.ret_382:
             ideal_entry = min(pp.s1, fib.ret_382)
+        # Guard against far-away swing levels producing unreachable entries.
+        ideal_entry = _sane_entry(ideal_entry, current_price)
 
     # Initial volatility calculation using trend direction (may be updated after trade signal)
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value, entry_price=ideal_entry)
@@ -383,6 +405,8 @@ def analyze_instrument_lazy(
             ideal_entry_for_signal = max(pp.r1, fib.ret_618)
         elif pp.s1 and fib.ret_382:
             ideal_entry_for_signal = min(pp.s1, fib.ret_382)
+        # Guard against far-away swing levels producing unreachable entries.
+        ideal_entry_for_signal = _sane_entry(ideal_entry_for_signal, current_price)
     
     logger.info(f"[{symbol}] Volatility recalc: recommendation={trade_signal.recommendation.value}, ideal_entry={ideal_entry_for_signal}, current_price={current_price}")
     volatility = analyze_volatility_and_risk(execution_data, current_price, trade_signal.recommendation.value, entry_price=ideal_entry_for_signal)
