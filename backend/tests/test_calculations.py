@@ -675,7 +675,7 @@ class TestGeopoliticalRiskAnalyzer:
         ]
         result = _scan_keywords(news_items)
         assert 'conflict' in result
-        assert 'middle_east' in result
+        assert 'middle_east' in result['conflict']
 
     def test_scan_keywords_sanctions(self):
         """Test keyword scanning for sanctions-related terms."""
@@ -1010,7 +1010,7 @@ class TestTradePlanBuilder:
 
         assert plan is not None
         assert plan.invalidation == 5250.0
-        assert 'below 5250.00' in plan.stop_basis
+        assert 'close below $5250.00' in plan.stop_basis
 
     def test_build_trade_plan_market_entry(self):
         """Test entry basis label for market entry."""
