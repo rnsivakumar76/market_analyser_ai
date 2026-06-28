@@ -1807,5 +1807,222 @@ async def get_swing_reversal(symbol: str, user_id: str = Depends(get_current_use
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PYRAMID POSITION MANAGEMENT
+# ══════════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/pyramid/position")
+async def create_pyramid_position(
+    position_data: dict,
+    user_id: str = Depends(get_current_user)
+):
+    """Create a new pyramid position."""
+    from app.models import PyramidPosition
+    from app.db import save_trade
+    import uuid
+    from datetime import datetime, timezone
+    
+    try:
+        position_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        
+        position = PyramidPosition(
+            id=position_id,
+            user_id=user_id,
+            symbol=position_data['symbol'].upper(),
+            direction=position_data['direction'],
+            entry_price=float(position_data['entry_price']),
+            initial_lots=int(position_data['initial_lots']),
+            current_lots=int(position_data['initial_lots']),
+            current_stop_loss=float(position_data['stop_loss']),
+            current_price=float(position_data['entry_price']),
+            unrealized_pnl=0.0,
+            created_at=now,
+            updated_at=now,
+            pyramid_level=1,
+            status='active'
+        )
+        
+        # Save to DynamoDB
+        save_trade(user_id, {
+            'id': position_id,
+            'symbol': position.symbol,
+            'direction': position.direction,
+            'entry_price': position.entry_price,
+            'lots': position.current_lots,
+            'stop_loss': position.current_stop_loss,
+            'type': 'pyramid',
+            'created_at': now
+        })
+        
+        return position.model_dump()
+        
+    except Exception as e:
+        logger.error(f"Error creating pyramid position: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pyramid/positions")
+async def get_pyramid_positions(user_id: str = Depends(get_current_user)):
+    """Get all pyramid positions for user."""
+    from app.db import get_trades
+    
+    try:
+        trades = get_trades(user_id)
+        pyramid_trades = [t for t in trades if t.get('type') == 'pyramid' and t.get('status') != 'closed']
+        
+        # Update current prices
+        from app.data_fetcher import get_current_price
+        for trade in pyramid_trades:
+            try:
+                current_price = get_current_price(trade['symbol'])
+                trade['current_price'] = current_price
+                
+                # Calculate unrealized PnL
+                if trade['direction'] == 'long':
+                    trade['unrealized_pnl'] = (current_price - trade['entry_price']) * trade['lots']
+                else:
+                    trade['unrealized_pnl'] = (trade['entry_price'] - current_price) * trade['lots']
+            except Exception as e:
+                logger.warning(f"Failed to get current price for {trade['symbol']}: {e}")
+        
+        return {"positions": pyramid_trades, "count": len(pyramid_trades)}
+        
+    except Exception as e:
+        logger.error(f"Error getting pyramid positions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pyramid/position/{position_id}/plan")
+async def get_pyramid_plan(
+    position_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    """Get pyramid plan and recommendations for a position."""
+    from app.analyzers.pyramid_calculator import calculate_pyramid_plan
+    from app.db import get_trades
+    from app.data_fetcher import get_current_price, fetch_historical_data
+    from app.analyzers.volatility_analyzer import calculate_atr
+    import pandas as pd
+    
+    try:
+        # Get position from DynamoDB
+        trades = get_trades(user_id)
+        position_data = next((t for t in trades if t['id'] == position_id), None)
+        
+        if not position_data:
+            raise HTTPException(status_code=404, detail="Position not found")
+        
+        # Get current price
+        current_price = get_current_price(position_data['symbol'])
+        
+        # Get ATR for volatility
+        df = fetch_historical_data(position_data['symbol'], interval='1day', outputsize=50)
+        atr = calculate_atr(df['Close'], df['High'], df['Low'], period=14)
+        
+        # Create PyramidPosition model
+        from app.models import PyramidPosition
+        position = PyramidPosition(
+            id=position_data['id'],
+            user_id=user_id,
+            symbol=position_data['symbol'],
+            direction=position_data['direction'],
+            entry_price=position_data['entry_price'],
+            initial_lots=position_data['lots'],
+            current_lots=position_data.get('current_lots', position_data['lots']),
+            current_stop_loss=position_data['stop_loss'],
+            current_price=current_price,
+            unrealized_pnl=position_data.get('unrealized_pnl', 0),
+            created_at=position_data['created_at'],
+            updated_at=position_data.get('updated_at', position_data['created_at']),
+            pyramid_level=position_data.get('pyramid_level', 1),
+            status=position_data.get('status', 'active')
+        )
+        
+        # Calculate pyramid plan
+        plan = calculate_pyramid_plan(position, atr, current_price)
+        
+        return plan.model_dump()
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting pyramid plan: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/pyramid/position/{position_id}")
+async def update_pyramid_position(
+    position_id: str,
+    update_data: dict,
+    user_id: str = Depends(get_current_user)
+):
+    """Update pyramid position (add lots, move stop, etc.)."""
+    from app.db import get_trades, save_trade
+    from datetime import datetime, timezone
+    
+    try:
+        trades = get_trades(user_id)
+        position = next((t for t in trades if t['id'] == position_id), None)
+        
+        if not position:
+            raise HTTPException(status_code=404, detail="Position not found")
+        
+        # Update fields
+        if 'current_lots' in update_data:
+            position['current_lots'] = update_data['current_lots']
+        if 'current_stop_loss' in update_data:
+            position['current_stop_loss'] = update_data['current_stop_loss']
+        if 'pyramid_level' in update_data:
+            position['pyramid_level'] = update_data['pyramid_level']
+        if 'status' in update_data:
+            position['status'] = update_data['status']
+        
+        position['updated_at'] = datetime.now(timezone.utc).isoformat()
+        
+        # Save updated position
+        save_trade(user_id, position)
+        
+        return position
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating pyramid position: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/pyramid/position/{position_id}")
+async def close_pyramid_position(
+    position_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    """Close a pyramid position."""
+    from app.db import delete_trade, get_trades
+    from datetime import datetime, timezone
+    
+    try:
+        trades = get_trades(user_id)
+        position = next((t for t in trades if t['id'] == position_id), None)
+        
+        if not position:
+            raise HTTPException(status_code=404, detail="Position not found")
+        
+        # Mark as closed
+        position['status'] = 'closed'
+        position['closed_at'] = datetime.now(timezone.utc).isoformat()
+        
+        # Delete from active trades
+        delete_trade(user_id, position_id)
+        
+        return {"message": "Position closed successfully", "position_id": position_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error closing pyramid position: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Handler for AWS Lambda
 handler = Mangum(app)

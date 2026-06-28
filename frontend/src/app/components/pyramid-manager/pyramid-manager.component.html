@@ -1,0 +1,208 @@
+<div class="pyramid-manager">
+  <div class="header">
+    <h2>📊 Pyramid Position Manager</h2>
+    <p class="subtitle">Jesse Livermore's Pyramid Technique for Swing Trading</p>
+  </div>
+
+  <!-- Position List -->
+  <div class="positions-panel">
+    <div class="panel-header">
+      <h3>Active Positions</h3>
+      <button class="btn-primary" (click)="showNewPositionForm = true">
+        + New Position
+      </button>
+    </div>
+    
+    <div class="positions-list" *ngIf="positions.length > 0">
+      <div 
+        class="position-card" 
+        *ngFor="let position of positions"
+        [class.active]="selectedPosition?.id === position.id"
+        (click)="selectPosition(position)"
+      >
+        <div class="position-header">
+          <span class="symbol">{{ position.symbol }}</span>
+          <span class="direction" [style.color]="getDirectionColor()">
+            {{ position.direction.toUpperCase() }}
+          </span>
+        </div>
+        <div class="position-details">
+          <div class="detail">
+            <span class="label">Entry:</span>
+            <span class="value">${{ formatPrice(position.entry_price) }}</span>
+          </div>
+          <div class="detail">
+            <span class="label">Lots:</span>
+            <span class="value">{{ position.current_lots }}</span>
+          </div>
+          <div class="detail">
+            <span class="label">PnL:</span>
+            <span class="value" [style.color]="getPnlColor()">
+              {{ formatPnl(position.unrealized_pnl) }}
+            </span>
+          </div>
+        </div>
+        <div class="position-level">
+          Level {{ position.pyramid_level }}/5
+        </div>
+      </div>
+    </div>
+    
+    <div class="empty-state" *ngIf="positions.length === 0 && !isLoading">
+      <p>No active pyramid positions</p>
+      <button class="btn-primary" (click)="showNewPositionForm = true">
+        Create First Position
+      </button>
+    </div>
+  </div>
+
+  <!-- New Position Form Modal -->
+  <div class="modal" *ngIf="showNewPositionForm" (click)="showNewPositionForm = false">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Create New Pyramid Position</h3>
+        <button class="close-btn" (click)="showNewPositionForm = false">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Instrument</label>
+          <select [(ngModel)]="newPosition.symbol">
+            <option *ngFor="let instrument of instruments" [value]="instrument">
+              {{ instrument }}
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Direction</label>
+          <select [(ngModel)]="newPosition.direction">
+            <option value="long">Long</option>
+            <option value="short">Short</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Entry Price</label>
+          <input type="number" [(ngModel)]="newPosition.entry_price" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Initial Lots</label>
+          <input type="number" [(ngModel)]="newPosition.initial_lots" min="1">
+        </div>
+        <div class="form-group">
+          <label>Stop Loss</label>
+          <input type="number" [(ngModel)]="newPosition.stop_loss" step="0.01">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="showNewPositionForm = false">Cancel</button>
+        <button class="btn-primary" (click)="createPosition()">Create Position</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pyramid Plan & Timeline -->
+  <div class="pyramid-plan-panel" *ngIf="selectedPosition && pyramidPlan">
+    <div class="panel-header">
+      <h3>{{ pyramidPlan.symbol }} Pyramid Plan</h3>
+      <div class="plan-stats">
+        <div class="stat">
+          <span class="label">Risk/Reward:</span>
+          <span class="value">{{ pyramidPlan.overall_risk_reward.toFixed(2) }}:1</span>
+        </div>
+        <div class="stat">
+          <span class="label">Total Risk:</span>
+          <span class="value">${{ pyramidPlan.total_risk.toFixed(2) }}</span>
+        </div>
+        <div class="stat">
+          <span class="label">Total Reward:</span>
+          <span class="value">${{ pyramidPlan.total_reward.toFixed(2) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Recommendation -->
+    <div class="recommendation-card" [class.action]="pyramidPlan.current_recommendation.action !== 'HOLD'">
+      <div class="rec-header">
+        <span class="rec-action">{{ pyramidPlan.current_recommendation.action }}</span>
+        <span class="rec-stage">{{ pyramidPlan.current_recommendation.pyramid_stage }}</span>
+      </div>
+      <p class="rec-reason">{{ pyramidPlan.current_recommendation.reason }}</p>
+      <div class="rec-details" *ngIf="pyramidPlan.current_recommendation.action !== 'HOLD'">
+        <div class="rec-detail" *ngIf="pyramidPlan.current_recommendation.target_add_price">
+          <span class="label">Target Price:</span>
+          <span class="value">${{ formatPrice(pyramidPlan.current_recommendation.target_add_price) }}</span>
+        </div>
+        <div class="rec-detail" *ngIf="pyramidPlan.current_recommendation.target_add_lots">
+          <span class="label">Lots to Add:</span>
+          <span class="value">{{ pyramidPlan.current_recommendation.target_add_lots }}</span>
+        </div>
+        <div class="rec-detail" *ngIf="pyramidPlan.current_recommendation.new_stop_loss">
+          <span class="label">New Stop Loss:</span>
+          <span class="value">${{ formatPrice(pyramidPlan.current_recommendation.new_stop_loss) }}</span>
+        </div>
+      </div>
+      <button 
+        class="btn-execute" 
+        *ngIf="pyramidPlan.current_recommendation.action !== 'HOLD'"
+        (click)="executeRecommendation()"
+      >
+        Execute Recommendation
+      </button>
+    </div>
+
+    <!-- Timeline Visualization -->
+    <div class="timeline-container">
+      <h4>Pyramid Timeline</h4>
+      <div class="timeline">
+        <div 
+          class="timeline-level"
+          *ngFor="let level of pyramidPlan.levels"
+          [class.completed]="getLevelStatus(level.level) === 'completed'"
+          [class.current]="getLevelStatus(level.level) === 'current'"
+          [class.future]="getLevelStatus(level.level) === 'future'"
+        >
+          <div class="level-marker">
+            <div class="level-number">{{ level.level }}</div>
+            <div class="level-connector"></div>
+          </div>
+          <div class="level-content">
+            <div class="level-header">
+              <span class="level-title">{{ level.description }}</span>
+              <span class="level-status">{{ getLevelStatus(level.level) }}</span>
+            </div>
+            <div class="level-details">
+              <div class="level-detail">
+                <span class="label">Price Target:</span>
+                <span class="value">${{ formatPrice(level.price_target) }}</span>
+              </div>
+              <div class="level-detail">
+                <span class="label">Lots to Add:</span>
+                <span class="value">{{ level.lots_to_add }}</span>
+              </div>
+              <div class="level-detail">
+                <span class="label">Cumulative:</span>
+                <span class="value">{{ level.cumulative_lots }}</span>
+              </div>
+              <div class="level-detail">
+                <span class="label">Stop Loss:</span>
+                <span class="value">${{ formatPrice(level.stop_loss_adjustment) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Position Actions -->
+    <div class="position-actions">
+      <button class="btn-danger" (click)="closePosition()">
+        Close Position
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+</div>

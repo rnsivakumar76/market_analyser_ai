@@ -557,3 +557,59 @@ class SwingReversalAnalysis(BaseModel):
     risk_level: str = "LOW"
 
 
+class PyramidPosition(BaseModel):
+    """Active position being managed with pyramid technique."""
+    id: str
+    user_id: str
+    symbol: str
+    direction: str  # 'long' or 'short'
+    entry_price: float
+    initial_lots: int
+    current_lots: int
+    current_stop_loss: float
+    current_price: float
+    unrealized_pnl: float
+    created_at: str
+    updated_at: str
+    pyramid_level: int = 1  # Current pyramid level (1-5)
+    status: str = "active"  # 'active', 'partial_exit', 'closed'
+
+
+class PyramidRecommendation(BaseModel):
+    """Recommendation for pyramid position management."""
+    position_id: str
+    action: str  # 'HOLD', 'ADD_POSITION', 'MOVE_STOP', 'PARTIAL_EXIT', 'CLOSE_ALL'
+    current_price: float
+    target_add_price: Optional[float] = None
+    target_add_lots: Optional[int] = None
+    new_stop_loss: Optional[float] = None
+    reason: str = ""
+    risk_reward: Optional[float] = None
+    confidence: float = 0.0
+    pyramid_stage: str = ""  # 'BASE', 'BUILD_1', 'BUILD_2', 'BUILD_3', 'PEAK'
+
+
+class PyramidLevel(BaseModel):
+    """Individual pyramid level configuration."""
+    level: int
+    price_target: float
+    lots_to_add: int
+    cumulative_lots: int
+    stop_loss_adjustment: float
+    description: str
+
+
+class PyramidPlan(BaseModel):
+    """Complete pyramid plan for a position."""
+    position_id: str
+    symbol: str
+    direction: str
+    current_level: int
+    max_levels: int = 5
+    levels: List[PyramidLevel] = []
+    current_recommendation: PyramidRecommendation
+    total_risk: float
+    total_reward: float
+    overall_risk_reward: float
+
+
