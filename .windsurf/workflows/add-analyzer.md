@@ -1,5 +1,6 @@
 ---
 description: Add a new analyzer/feature following the layered architecture
+auto_execution_mode: 2
 ---
 
 1. Decide the layer: pure math → `domain/<area>/`; orchestration/adapter → `app/analyzers/`.
