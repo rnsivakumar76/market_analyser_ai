@@ -33,6 +33,7 @@
         <div class="ctx-overlay" (click)="showContextMenu.set(false)"></div>
         <div class="ctx-dropdown">
           <button class="ctx-item" (click)="showCorrelationModal.set(true); showContextMenu.set(false)">&#128202; Market Correlation</button>
+          <button class="ctx-item" (click)="showPyramidManager.set(true); showContextMenu.set(false)">&#128336; Pyramid Manager</button>
           <button class="ctx-item" (click)="showUserManual.set(true); showContextMenu.set(false)">&#128214; Intelligence Manual</button>
           <button class="ctx-item" (click)="showStrategySettings.set(true); showContextMenu.set(false)">&#9889; Strategy Settings</button>
           <button class="ctx-item" (click)="showSettings.set(true); showContextMenu.set(false)">&#9881; Manage Symbols</button>
@@ -630,6 +631,10 @@
 
   @if (showGeopoliticalAnalysis()) {
   <app-geopolitical-analysis (close)="showGeopoliticalAnalysis.set(false)"></app-geopolitical-analysis>
+  }
+
+  @if (showPyramidManager()) {
+  <app-pyramid-manager (close)="showPyramidManager.set(false)"></app-pyramid-manager>
   }
 </div>
 } @else {

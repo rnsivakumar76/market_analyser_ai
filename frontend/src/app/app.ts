@@ -15,6 +15,7 @@ import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component
 import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
 import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
 import { GeopoliticalAnalysisComponent } from './components/geopolitical-analysis/geopolitical-analysis.component';
+import { PyramidManagerComponent } from './components/pyramid-manager/pyramid-manager.component';
 import { ThemeService } from './services/theme.service';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { interval, Subscription, timer } from 'rxjs';
@@ -22,7 +23,7 @@ import { interval, Subscription, timer } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, OrbDashboardComponent, OpportunitiesOverviewComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, ThemeToggleComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, OrbDashboardComponent, OpportunitiesOverviewComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, PyramidManagerComponent, ThemeToggleComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -44,6 +45,7 @@ export class App implements OnInit, OnDestroy {
   showTradeJournal = signal(false);
   showSmartAlerts = signal(false);
   showGeopoliticalAnalysis = signal(false);
+  showPyramidManager = signal(false);
   showContextMenu = signal(false);
   lastUpdatedTime = signal<string>('');
   weeklyPerformance = signal<WeeklyPerformance | null>(null);
