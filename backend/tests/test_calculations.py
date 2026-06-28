@@ -675,7 +675,8 @@ class TestGeopoliticalRiskAnalyzer:
         ]
         result = _scan_keywords(news_items)
         assert 'conflict' in result
-        assert 'middle_east' in result['conflict']
+        assert 'war' in result['conflict']
+        assert 'escalation' in result['conflict']
 
     def test_scan_keywords_sanctions(self):
         """Test keyword scanning for sanctions-related terms."""
