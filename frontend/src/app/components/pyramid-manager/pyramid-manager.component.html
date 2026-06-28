@@ -4,8 +4,117 @@
     <p class="subtitle">Jesse Livermore's Pyramid Technique for Swing Trading</p>
   </div>
 
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button 
+      class="tab-btn" 
+      [class.active]="showOpportunities"
+      (click)="showOpportunities = true"
+    >
+      🔍 Opportunities
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="!showOpportunities"
+      (click)="showOpportunities = false"
+    >
+      📋 My Positions
+    </button>
+  </div>
+
+  <!-- Opportunities Section -->
+  <div class="opportunities-panel" *ngIf="showOpportunities">
+    <div class="panel-header">
+      <h3>Pyramid Trading Opportunities</h3>
+      <button class="btn-secondary" (click)="loadOpportunities()">
+        🔄 Refresh
+      </button>
+    </div>
+    
+    <div class="opportunities-grid" *ngIf="opportunities.length > 0">
+      <div 
+        class="opportunity-card" 
+        *ngFor="let opp of opportunities"
+      >
+        <div class="opp-header">
+          <div class="opp-symbol">
+            <span class="symbol">{{ opp.symbol }}</span>
+            <span class="name">{{ opp.name }}</span>
+          </div>
+          <span class="direction" [style.color]="getDirectionColor()">
+            {{ opp.direction.toUpperCase() }}
+          </span>
+        </div>
+        
+        <div class="opp-metrics">
+          <div class="metric">
+            <span class="label">Confidence:</span>
+            <span class="value" [style.color]="getConfidenceColor(opp.confidence)">
+              {{ (opp.confidence * 100).toFixed(0) }}%
+            </span>
+          </div>
+          <div class="metric">
+            <span class="label">Risk/Reward:</span>
+            <span class="value">{{ opp.pyramid_plan.risk_reward.toFixed(2) }}:1</span>
+          </div>
+          <div class="metric">
+            <span class="label">Risk Level:</span>
+            <span class="value" [style.color]="getRiskLevelColor(opp.risk_level)">
+              {{ opp.risk_level }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="opp-price-info">
+          <div class="price-row">
+            <span class="label">Current:</span>
+            <span class="value">${{ formatPrice(opp.current_price) }}</span>
+          </div>
+          <div class="price-row">
+            <span class="label">Entry Range:</span>
+            <span class="value">${{ formatPrice(opp.entry_range.low) }} - ${{ formatPrice(opp.entry_range.high) }}</span>
+          </div>
+          <div class="price-row">
+            <span class="label">Stop Loss:</span>
+            <span class="value" style="color: #ef4444">${{ formatPrice(opp.stop_loss) }}</span>
+          </div>
+        </div>
+        
+        <div class="opp-divergence">
+          <span class="label">Divergence Sources:</span>
+          <div class="sources">
+            <span class="source-tag" *ngFor="let source of opp.divergence_sources">
+              {{ source }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="opp-pyramid-preview">
+          <span class="label">Pyramid Plan (5 levels):</span>
+          <div class="pyramid-levels-mini">
+            <div class="mini-level" *ngFor="let level of opp.pyramid_plan.levels">
+              <span class="level-num">{{ level.level }}</span>
+              <span class="level-lots">+{{ level.lots_to_add }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="opp-actions">
+          <button class="btn-primary" (click)="createPositionFromOpportunity(opp)">
+            Create Position
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="empty-state" *ngIf="opportunities.length === 0 && !isLoading">
+      <p>No pyramid opportunities detected</p>
+      <p class="subtitle">Check back later for new swing reversal signals</p>
+    </div>
+  </div>
+
   <!-- Position List -->
-  <div class="positions-panel">
+  <div class="positions-panel" *ngIf="!showOpportunities">
     <div class="panel-header">
       <h3>Active Positions</h3>
       <button class="btn-primary" (click)="showNewPositionForm = true">

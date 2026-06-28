@@ -1992,6 +1992,96 @@ async def update_pyramid_position(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/pyramid/opportunities")
+async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
+    """Get potential pyramid trading opportunities based on swing reversal detection."""
+    from app.analyzers.swing_reversal_analyzer import analyze_swing_reversal
+    from app.analyzers.pyramid_calculator import calculate_pyramid_plan
+    from app.data_fetcher import fetch_historical_data, get_current_price
+    from app.analyzers.volatility_analyzer import calculate_atr
+    from app.config_loader import get_instruments, load_config
+    import pandas as pd
+    
+    try:
+        config = load_config(user_id=user_id)
+        instruments = get_instruments(config)
+        opportunities = []
+        
+        for inst in instruments:
+            symbol = inst['symbol']
+            
+            try:
+                # Get swing reversal analysis
+                df_daily = fetch_historical_data(symbol, interval='1day', outputsize=200)
+                df_4h = fetch_historical_data(symbol, interval='4h', outputsize=100)
+                
+                reversal = analyze_swing_reversal(symbol, df_daily, df_4h)
+                
+                # Only consider if reversal detected with good confidence
+                if reversal['reversal_detected'] and reversal.get('primary_signal'):
+                    primary_signal = reversal['primary_signal']
+                    
+                    if primary_signal.get('confidence', 0) >= 0.6:
+                        current_price = get_current_price(symbol)
+                        atr = calculate_atr(df_daily['Close'], df_daily['High'], df_daily['Low'], period=14)
+                        
+                        # Calculate hypothetical pyramid plan
+                        from app.models import PyramidPosition
+                        hypothetical_position = PyramidPosition(
+                            id="hypothetical",
+                            user_id=user_id,
+                            symbol=symbol,
+                            direction=primary_signal['direction'],
+                            entry_price=current_price,
+                            initial_lots=1,  # Base calculation on 1 lot
+                            current_lots=1,
+                            current_stop_loss=current_price - (2 * atr) if primary_signal['direction'] == 'long' else current_price + (2 * atr),
+                            current_price=current_price,
+                            unrealized_pnl=0.0,
+                            created_at="",
+                            updated_at="",
+                            pyramid_level=1,
+                            status='active'
+                        )
+                        
+                        plan = calculate_pyramid_plan(hypothetical_position, atr, current_price)
+                        
+                        opportunities.append({
+                            'symbol': symbol,
+                            'name': inst.get('name', symbol),
+                            'direction': primary_signal['direction'],
+                            'current_price': current_price,
+                            'entry_range': {
+                                'low': current_price - (0.5 * atr),
+                                'high': current_price + (0.5 * atr)
+                            },
+                            'stop_loss': hypothetical_position.current_stop_loss,
+                            'confidence': primary_signal['confidence'],
+                            'divergence_sources': primary_signal.get('sources', []),
+                            'pyramid_plan': {
+                                'levels': plan.levels,
+                                'total_risk': plan.total_risk,
+                                'total_reward': plan.total_reward,
+                                'risk_reward': plan.overall_risk_reward
+                            },
+                            'multi_timeframe': reversal.get('multi_timeframe', {}),
+                            'risk_level': reversal.get('risk_level', 'MODERATE')
+                        })
+                        
+            except Exception as e:
+                logger.warning(f"Failed to analyze {symbol} for pyramid opportunities: {e}")
+                continue
+        
+        # Sort by confidence and risk/reward
+        opportunities.sort(key=lambda x: (x['confidence'], x['pyramid_plan']['risk_reward']), reverse=True)
+        
+        return {"opportunities": opportunities, "count": len(opportunities)}
+        
+    except Exception as e:
+        logger.error(f"Error getting pyramid opportunities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.delete("/api/pyramid/position/{position_id}")
 async def close_pyramid_position(
     position_id: str,

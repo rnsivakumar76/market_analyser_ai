@@ -40,6 +40,25 @@ interface PyramidPlan {
   overall_risk_reward: number;
 }
 
+interface PyramidOpportunity {
+  symbol: string;
+  name: string;
+  direction: string;
+  current_price: number;
+  entry_range: { low: number; high: number };
+  stop_loss: number;
+  confidence: number;
+  divergence_sources: string[];
+  pyramid_plan: {
+    levels: PyramidLevel[];
+    total_risk: number;
+    total_reward: number;
+    risk_reward: number;
+  };
+  multi_timeframe: any;
+  risk_level: string;
+}
+
 @Component({
   selector: 'app-pyramid-manager',
   standalone: true,
@@ -51,6 +70,8 @@ export class PyramidManagerComponent implements OnInit {
   positions: PyramidPosition[] = [];
   selectedPosition: PyramidPosition | null = null;
   pyramidPlan: PyramidPlan | null = null;
+  opportunities: PyramidOpportunity[] = [];
+  showOpportunities = true;
   
   // New position form
   newPosition = {
@@ -71,6 +92,21 @@ export class PyramidManagerComponent implements OnInit {
   
   ngOnInit() {
     this.loadPositions();
+    this.loadOpportunities();
+  }
+  
+  loadOpportunities() {
+    this.isLoading = true;
+    this.http.get<any>('/api/pyramid/opportunities').subscribe({
+      next: (response) => {
+        this.opportunities = response.opportunities || [];
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading opportunities:', error);
+        this.isLoading = false;
+      }
+    });
   }
   
   loadPositions() {
@@ -212,5 +248,31 @@ export class PyramidManagerComponent implements OnInit {
   getPnlColor(): string {
     if (!this.selectedPosition) return '#64748b';
     return this.selectedPosition.unrealized_pnl >= 0 ? '#10b981' : '#ef4444';
+  }
+  
+  createPositionFromOpportunity(opportunity: PyramidOpportunity) {
+    this.newPosition = {
+      symbol: opportunity.symbol,
+      direction: opportunity.direction,
+      entry_price: opportunity.current_price,
+      initial_lots: 1,
+      stop_loss: opportunity.stop_loss
+    };
+    this.showNewPositionForm = true;
+  }
+  
+  getConfidenceColor(confidence: number): string {
+    if (confidence >= 0.8) return '#10b981';
+    if (confidence >= 0.6) return '#f59e0b';
+    return '#ef4444';
+  }
+  
+  getRiskLevelColor(riskLevel: string): string {
+    switch (riskLevel) {
+      case 'LOW': return '#10b981';
+      case 'MODERATE': return '#f59e0b';
+      case 'HIGH': return '#ef4444';
+      default: return '#64748b';
+    }
   }
 }
