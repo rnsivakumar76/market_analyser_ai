@@ -45,8 +45,11 @@ test.describe('Market Analyser - Critical Flows', () => {
         });
 
         test('Trade Journal Flow: should be able to open and interact with journal', async ({ page }) => {
-            // Open the journal modal
-            await page.click('.journal-btn');
+            // Open the context menu
+            await page.click('.ctx-menu-btn');
+
+            // Click the journal option
+            await page.click('.ctx-item', { hasText: 'Trade Journal' });
 
             // Modal should be visible
             await expect(page.locator('.journal-modal')).toBeVisible();
@@ -57,8 +60,11 @@ test.describe('Market Analyser - Critical Flows', () => {
         });
 
         test('Settings Flow: should be able to open settings modal', async ({ page }) => {
-            // Open settings
-            await page.click('.settings-btn');
+            // Open the context menu
+            await page.click('.ctx-menu-btn');
+
+            // Click the settings option
+            await page.click('.ctx-item', { hasText: 'Manage Symbols' });
 
             // Should see "Manage Symbols"
             await expect(page.locator('.settings-modal')).toBeVisible();
@@ -71,6 +77,7 @@ test.describe('Market Analyser - Critical Flows', () => {
 
         test('Theme/UI Toggle Flow: should persist strategy mode toggle', async ({ page }) => {
             const modeBtn = page.locator('.mode-toggle-btn');
+            await expect(modeBtn).toBeVisible();
             const initialText = await modeBtn.innerText();
 
             // Toggle it
