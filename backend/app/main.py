@@ -1781,19 +1781,19 @@ async def get_swing_reversal(symbol: str, user_id: str = Depends(get_current_use
     
     try:
         # Fetch daily data (primary timeframe)
-        df_daily = fetch_historical_data(symbol, interval='1day', outputsize=200)
+        df_daily = fetch_historical_data(symbol, interval='1day', days=200)
         
         # Fetch 4H data for confirmation (optional)
         df_4h = None
         try:
-            df_4h = fetch_historical_data(symbol, interval='4h', outputsize=100)
+            df_4h = fetch_historical_data(symbol, interval='4h', days=100)
         except Exception as e:
             logger.warning(f"Failed to fetch 4H data for {symbol}: {e}")
         
         # Fetch weekly data for major signals (optional)
         df_weekly = None
         try:
-            df_weekly = fetch_historical_data(symbol, interval='1week', outputsize=100)
+            df_weekly = fetch_historical_data(symbol, interval='1week', days=100)
         except Exception as e:
             logger.warning(f"Failed to fetch weekly data for {symbol}: {e}")
         
@@ -1917,7 +1917,7 @@ async def get_pyramid_plan(
         current_price = get_current_price(position_data['symbol'])
         
         # Get ATR for volatility
-        df = fetch_historical_data(position_data['symbol'], interval='1day', outputsize=50)
+        df = fetch_historical_data(position_data['symbol'], interval='1day', days=50)
         atr = calculate_atr(df['Close'], df['High'], df['Low'], period=14)
         
         # Create PyramidPosition model
