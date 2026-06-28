@@ -4,6 +4,7 @@ from typing import Optional
 import logging
 
 from ..models import SessionVWAP
+from domain.indicators.vwap import calculate_vwap as _domain_vwap, calculate_vwap_distance_pct
 
 logger = logging.getLogger(__name__)
 
@@ -40,24 +41,28 @@ def calculate_session_vwap(
         if len(session_bars) < 2:
             return None
 
-        # Typical price
-        typical = (session_bars['High'] + session_bars['Low'] + session_bars['Close']) / 3
+        # Use domain layer for VWAP calculation (SSOT)
         volume = session_bars.get('Volume', pd.Series(np.ones(len(session_bars)), index=session_bars.index))
         volume = volume.replace(0, 1)
 
-        cumulative_tpv = (typical * volume).cumsum()
-        cumulative_vol = volume.cumsum()
-        vwap_series = cumulative_tpv / cumulative_vol
+        vwap = _domain_vwap(
+            session_bars['High'].tolist(),
+            session_bars['Low'].tolist(),
+            session_bars['Close'].tolist(),
+            volume.tolist(),
+            period=len(session_bars),
+        )
+        if vwap == 0.0:
+            return None
 
-        vwap = round(float(vwap_series.iloc[-1]), 4)
-
-        # Upper/Lower bands (±1 std dev of (typical - vwap))
-        diff = typical - vwap_series
-        std = float(diff.std()) if len(diff) > 1 else float(typical.std())
+        # Upper/Lower bands (±1 std dev of typical price)
+        typical = (session_bars['High'] + session_bars['Low'] + session_bars['Close']) / 3
+        typical_values = typical.tolist()
+        std = float(np.std(typical_values)) if len(typical_values) > 1 else 0.0
         upper_band = round(vwap + std, 4)
         lower_band = round(vwap - std, 4)
 
-        dist_pct = round((current_price - vwap) / vwap * 100, 2)
+        dist_pct = calculate_vwap_distance_pct(current_price, vwap)
 
         if dist_pct > 1.5:
             position = "EXTENDED ABOVE"
