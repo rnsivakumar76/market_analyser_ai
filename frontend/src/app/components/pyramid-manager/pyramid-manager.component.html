@@ -67,8 +67,18 @@
         
         <div class="opp-price-info">
           <div class="price-row">
-            <span class="label">Current:</span>
+            <span class="label">Current (Local):</span>
             <span class="value">${{ formatPrice(opp.current_price) }}</span>
+          </div>
+          <div class="price-row" *ngIf="opp.price_offset !== 0">
+            <span class="label">US Reference:</span>
+            <span class="value" style="color: #64748b">${{ formatPrice(opp.original_price) }}</span>
+          </div>
+          <div class="price-row" *ngIf="opp.price_offset !== 0">
+            <span class="label">Price Offset:</span>
+            <span class="value" [style.color]="opp.price_offset > 0 ? '#10b981' : '#ef4444'">
+              {{ opp.price_offset > 0 ? '+' : '' }}{{ opp.price_offset.toFixed(2) }}
+            </span>
           </div>
           <div class="price-row">
             <span class="label">Entry Range:</span>

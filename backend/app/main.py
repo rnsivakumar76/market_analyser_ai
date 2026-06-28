@@ -1999,7 +1999,7 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
     from app.analyzers.pyramid_calculator import calculate_pyramid_plan
     from app.data_fetcher import fetch_historical_data, get_current_price
     from app.analyzers.volatility_analyzer import calculate_atr
-    from app.config_loader import get_instruments, load_config
+    from app.config_loader import get_instruments, load_config, get_price_offset
     import pandas as pd
     
     try:
@@ -2025,18 +2025,22 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
                         current_price = get_current_price(symbol)
                         atr = calculate_atr(df_daily['Close'], df_daily['High'], df_daily['Low'], period=14)
                         
-                        # Calculate hypothetical pyramid plan
+                        # Apply price offset for local market
+                        price_offset = get_price_offset(config, symbol)
+                        adjusted_price = current_price + price_offset
+                        
+                        # Calculate hypothetical pyramid plan with adjusted price
                         from app.models import PyramidPosition
                         hypothetical_position = PyramidPosition(
                             id="hypothetical",
                             user_id=user_id,
                             symbol=symbol,
                             direction=primary_signal['direction'],
-                            entry_price=current_price,
+                            entry_price=adjusted_price,
                             initial_lots=1,  # Base calculation on 1 lot
                             current_lots=1,
-                            current_stop_loss=current_price - (2 * atr) if primary_signal['direction'] == 'long' else current_price + (2 * atr),
-                            current_price=current_price,
+                            current_stop_loss=adjusted_price - (2 * atr) if primary_signal['direction'] == 'long' else adjusted_price + (2 * atr),
+                            current_price=adjusted_price,
                             unrealized_pnl=0.0,
                             created_at="",
                             updated_at="",
@@ -2044,16 +2048,18 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
                             status='active'
                         )
                         
-                        plan = calculate_pyramid_plan(hypothetical_position, atr, current_price)
+                        plan = calculate_pyramid_plan(hypothetical_position, atr, adjusted_price)
                         
                         opportunities.append({
                             'symbol': symbol,
                             'name': inst.get('name', symbol),
                             'direction': primary_signal['direction'],
-                            'current_price': current_price,
+                            'current_price': adjusted_price,
+                            'original_price': current_price,  # Show US reference price
+                            'price_offset': price_offset,
                             'entry_range': {
-                                'low': current_price - (0.5 * atr),
-                                'high': current_price + (0.5 * atr)
+                                'low': adjusted_price - (0.5 * atr),
+                                'high': adjusted_price + (0.5 * atr)
                             },
                             'stop_loss': hypothetical_position.current_stop_loss,
                             'confidence': primary_signal['confidence'],

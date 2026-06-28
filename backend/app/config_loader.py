@@ -162,6 +162,31 @@ def get_strategy_config(config: Dict[str, Any]) -> Dict[str, Any]:
     return merged
 
 
+def get_price_offset(config: Dict[str, Any], symbol: str) -> float:
+    """Get price offset for a specific instrument from config.
+    
+    This allows users to adjust for local market pricing differences.
+    For example, WTI in Singapore market may have a $1 difference from US prices.
+    """
+    instruments = config.get('instruments', [])
+    for inst in instruments:
+        if inst.get('symbol', '').upper() == symbol.upper():
+            return inst.get('price_offset', 0.0)
+    return 0.0
+
+
+def get_market_region(config: Dict[str, Any]) -> str:
+    """Get the configured market region."""
+    market = config.get('market', {})
+    return market.get('region', 'US')
+
+
+def get_market_currency(config: Dict[str, Any]) -> str:
+    """Get the configured market currency."""
+    market = config.get('market', {})
+    return market.get('currency', 'USD')
+
+
 def save_strategy_config(strategy: Dict[str, Any], user_id: str = DEFAULT_USER_ID, config_path: str = None) -> None:
     """Save strategy settings back to S3 or YAML file for a user."""
     config = load_config(user_id, config_path)

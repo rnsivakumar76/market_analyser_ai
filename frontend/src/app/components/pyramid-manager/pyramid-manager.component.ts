@@ -45,6 +45,8 @@ interface PyramidOpportunity {
   name: string;
   direction: string;
   current_price: number;
+  original_price: number;
+  price_offset: number;
   entry_range: { low: number; high: number };
   stop_loss: number;
   confidence: number;

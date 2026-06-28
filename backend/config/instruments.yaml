@@ -9,12 +9,22 @@ newsapi:
 instruments:
 - symbol: XAU
   name: Gold
+  price_offset: 0.0  # Adjust for local market pricing difference (e.g., Singapore vs US)
 - symbol: XAG
   name: Silver
+  price_offset: 0.0
 - symbol: WTI
   name: Crude Oil
+  price_offset: 0.0  # Set to 1.0 if trading in Singapore market (approx $1 difference)
 - symbol: BTC
   name: Bitcoin
+  price_offset: 0.0
+
+# Market region configuration
+market:
+  region: US  # Options: US, SG, EU, UK, AU
+  currency: USD  # Your trading currency
+  timezone: UTC
 analysis:
   monthly:
     fast_ma_period: 20
