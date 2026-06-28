@@ -2012,8 +2012,8 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
             
             try:
                 # Get swing reversal analysis
-                df_daily = fetch_historical_data(symbol, interval='1day', outputsize=200)
-                df_4h = fetch_historical_data(symbol, interval='4h', outputsize=100)
+                df_daily = fetch_historical_data(symbol, interval='1day', days=200)
+                df_4h = fetch_historical_data(symbol, interval='4h', days=100)
                 
                 reversal = analyze_swing_reversal(symbol, df_daily, df_4h)
                 
