@@ -64,9 +64,7 @@ def _load_local_config(user_id: str = DEFAULT_USER_ID, config_path: str = None) 
         return {"instruments": [], "strategy": {}, "alerts": {}}
 
 
-ALLOWED_SYMBOLS = {'XAU', 'XAG', 'WTI', 'BTC'}
-BENCHMARK_ONLY_SYMBOLS = {'SPX', 'DXY', 'TNX'}  # Used internally as benchmarks, not user instruments
-
+# Core default instruments that are always available
 DEFAULT_INSTRUMENTS = [
     {'symbol': 'XAU', 'name': 'Gold'},
     {'symbol': 'XAG', 'name': 'Silver'},
@@ -74,18 +72,35 @@ DEFAULT_INSTRUMENTS = [
     {'symbol': 'BTC', 'name': 'Bitcoin'},
 ]
 
-def get_instruments(config: Dict[str, Any]) -> List[Dict[str, str]]:
-    """Extract instruments list from config, filtered to allowed symbols.
+# Benchmark symbols used internally for analysis (not user instruments)
+BENCHMARK_ONLY_SYMBOLS = {'SPX', 'DXY', 'TNX'}
 
-    Always backfills any missing ALLOWED_SYMBOLS from DEFAULT_INSTRUMENTS so
-    that a stale / partial user S3 config never results in a subset of instruments.
+# Legacy ALLOWED_SYMBOLS kept for backward compatibility but no longer enforced
+# Instruments are now validated against data provider support instead
+ALLOWED_SYMBOLS = {'XAU', 'XAG', 'WTI', 'BTC'}
+
+def get_instruments(config: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Extract instruments list from config.
+
+    Returns stored instruments with DEFAULT_INSTRUMENTS backfilled if missing.
+    No longer filters by ALLOWED_SYMBOLS - validation happens at add-time.
     """
     stored = config.get('instruments', [])
-    filtered = [inst for inst in stored if inst.get('symbol', '').upper() in ALLOWED_SYMBOLS]
-    present = {inst['symbol'].upper() for inst in filtered}
+    # Ensure all stored instruments have proper symbol format
+    filtered = []
+    seen_symbols = set()
+    for inst in stored:
+        symbol = inst.get('symbol', '').upper()
+        if symbol and symbol not in seen_symbols:
+            filtered.append({'symbol': symbol, 'name': inst.get('name', symbol)})
+            seen_symbols.add(symbol)
+    
+    # Backfill any missing default instruments
     for default in DEFAULT_INSTRUMENTS:
-        if default['symbol'] not in present:
+        if default['symbol'] not in seen_symbols:
             filtered.append(default)
+            seen_symbols.add(default['symbol'])
+    
     return filtered
 
 

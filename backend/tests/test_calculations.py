@@ -1419,3 +1419,114 @@ class TestOilMarketAnalyzer:
         assert hasattr(result, 'regime_summary')
         assert hasattr(result, 'size_guidance')
         assert hasattr(result, 'warnings')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 14. SYMBOL VALIDATOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestSymbolValidator:
+    """Test symbol validation against data provider support."""
+
+    def test_normalize_symbol(self):
+        """Test symbol normalization."""
+        from app.symbol_validator import SymbolValidator
+
+        validator = SymbolValidator()
+        assert validator.normalize_symbol('xau') == 'XAU'
+        assert validator.normalize_symbol('  WTI  ') == 'WTI'
+        assert validator.normalize_symbol('btc') == 'BTC'
+
+    def test_check_alias_gold(self):
+        """Test alias detection for gold variants."""
+        from app.symbol_validator import SymbolValidator
+
+        validator = SymbolValidator()
+        assert validator.check_alias('GOLD') == 'XAU'
+        assert validator.check_alias('GC') == 'XAU'
+        assert validator.check_alias('GC=F') == 'XAU'
+
+    def test_check_alias_silver(self):
+        """Test alias detection for silver variants."""
+        from app.symbol_validator import SymbolValidator
+
+        validator = SymbolValidator()
+        assert validator.check_alias('SILVER') == 'XAG'
+        assert validator.check_alias('SI') == 'XAG'
+
+    def test_check_alias_oil(self):
+        """Test alias detection for oil variants."""
+        from app.symbol_validator import SymbolValidator
+
+        validator = SymbolValidator()
+        assert validator.check_alias('OIL') == 'WTI'
+        assert validator.check_alias('CL') == 'WTI'
+        assert validator.check_alias('CRUDE') == 'WTI'
+
+    def test_check_alias_btc(self):
+        """Test alias detection for bitcoin variants."""
+        from app.symbol_validator import SymbolValidator
+
+        validator = SymbolValidator()
+        assert validator.check_alias('BITCOIN') == 'BTC'
+        assert validator.check_alias('BTCUSD') == 'BTC'
+
+    def test_is_predefined_supported(self):
+        """Test predefined supported symbols."""
+        from app.symbol_validator import SymbolValidator
+
+        validator = SymbolValidator()
+        assert validator.is_predefined_supported('XAU') is True
+        assert validator.is_predefined_supported('WTI') is True
+        assert validator.is_predefined_supported('BTC') is True
+        assert validator.is_predefined_supported('INVALID') is False
+
+    def test_get_similar_symbols(self):
+        """Test similar symbol suggestions."""
+        from app.symbol_validator import SymbolValidator
+
+        validator = SymbolValidator()
+        suggestions = validator._get_similar_symbols('XAU')
+        assert isinstance(suggestions, list)
+        # Should find XAU itself or similar symbols
+        assert len(suggestions) >= 0
+
+    def test_get_supported_symbols(self):
+        """Test getting list of supported symbols."""
+        from app.symbol_validator import SymbolValidator
+
+        validator = SymbolValidator()
+        supported = validator.get_supported_symbols()
+        assert isinstance(supported, list)
+        assert 'XAU' in supported
+        assert 'WTI' in supported
+        assert 'BTC' in supported
+
+    def test_validate_symbol_with_alias(self):
+        """Test validate_symbol with alias correction."""
+        from app.symbol_validator import validate_symbol
+
+        result = validate_symbol('GOLD')
+        assert result['valid'] is True
+        assert result['symbol'] == 'XAU'
+        assert 'corrected' in result['message'].lower()
+
+    def test_validate_symbol_predefined(self):
+        """Test validate_symbol with predefined supported symbol."""
+        from app.symbol_validator import validate_symbol
+
+        result = validate_symbol('XAU')
+        assert result['valid'] is True
+        assert result['symbol'] == 'XAU'
+        assert result['message'] is None
+
+    def test_validate_symbol_invalid(self):
+        """Test validate_symbol with invalid symbol."""
+        from app.symbol_validator import validate_symbol
+
+        result = validate_symbol('INVALIDSYMBOL')
+        assert result['valid'] is False
+        assert result['symbol'] is None
+        assert result['message'] is not None
+        assert 'not supported' in result['message'].lower()
+

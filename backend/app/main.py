@@ -1107,7 +1107,8 @@ async def list_instruments(user_id: str = Depends(get_current_user)):
 
 @app.post("/api/instruments")
 async def add_instrument(instrument_data: Dict[str, str], user_id: str = Depends(get_current_user)):
-    from .config_loader import load_config, get_instruments, save_instruments
+    from .config_loader import load_config, get_instruments, save_instruments, BENCHMARK_ONLY_SYMBOLS
+    from .symbol_validator import validate_symbol
     config = load_config(user_id=user_id)
     instruments = get_instruments(config)
     
@@ -1117,18 +1118,61 @@ async def add_instrument(instrument_data: Dict[str, str], user_id: str = Depends
     symbol = instrument_data.get("symbol", "").upper()
     name = instrument_data.get("name", "")
 
-    from .config_loader import ALLOWED_SYMBOLS, BENCHMARK_ONLY_SYMBOLS
+    # Check if symbol is a benchmark (internal use only)
     if symbol in BENCHMARK_ONLY_SYMBOLS:
         raise HTTPException(status_code=400, detail=f"{symbol} is a benchmark used internally and cannot be added as a user instrument.")
-    if symbol not in ALLOWED_SYMBOLS:
-        raise HTTPException(status_code=400, detail=f"{symbol} is not a supported instrument. Allowed: {', '.join(sorted(ALLOWED_SYMBOLS))}")
-
+    
+    # Check for duplicates
     if any(i['symbol'].upper() == symbol for i in instruments):
         raise HTTPException(status_code=400, detail=f"Symbol {symbol} already exists")
     
-    instruments.append({"symbol": symbol, "name": name})
+    # Validate symbol against data provider
+    validation = validate_symbol(symbol)
+    if not validation['valid']:
+        raise HTTPException(
+            status_code=400, 
+            detail=validation['message']
+        )
+    
+    # Use the corrected symbol if validation suggested one
+    final_symbol = validation['symbol']
+    final_name = name or final_symbol
+    
+    # Add the instrument
+    instruments.append({"symbol": final_symbol, "name": final_name})
     save_instruments(instruments, user_id=user_id)
-    return {"message": f"Instrument {symbol} added successfully", "instruments": instruments}
+    
+    response = {
+        "message": f"Instrument {final_symbol} added successfully",
+        "instruments": instruments
+    }
+    
+    # Include correction message if symbol was auto-corrected
+    if validation['message']:
+        response['note'] = validation['message']
+    
+    return response
+
+@app.get("/api/instruments/validate/{symbol}")
+async def validate_instrument_symbol(symbol: str):
+    """Validate a symbol against the data provider before adding."""
+    from .symbol_validator import validate_symbol
+    from .config_loader import BENCHMARK_ONLY_SYMBOLS
+    
+    symbol_upper = symbol.upper()
+    
+    # Check if symbol is a benchmark
+    if symbol_upper in BENCHMARK_ONLY_SYMBOLS:
+        return {
+            "valid": False,
+            "symbol": symbol_upper,
+            "message": f"{symbol_upper} is a benchmark used internally and cannot be added as a user instrument.",
+            "suggestions": []
+        }
+    
+    # Validate against data provider
+    validation = validate_symbol(symbol_upper)
+    return validation
 
 @app.post("/api/instruments/reset")
 async def reset_instruments(user_id: str = Depends(get_current_user)):
