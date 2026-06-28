@@ -21,6 +21,7 @@ import numpy as np
 from app.analyzers.volatility_analyzer import analyze_volatility_and_risk, calculate_atr
 from app.analyzers.liquidity_map_analyzer import calculate_liquidity_map, _cluster_levels
 from app.analyzers.day_trading_expert import generate_expert_trade_plan
+from app.models import NewsItem, NewsSentiment, StrengthAnalysis, VolatilityAnalysis, TradeSignal, Recommendation, TradePlan, TechnicalAnalysis, Signal, StrategySettings
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -619,3 +620,581 @@ class TestRRCalculationLogic:
         assert reward_new > 0, "New: reward must be positive"
         assert risk_new > 0, "New: risk must be positive"
         assert reward_new / risk_new == pytest.approx(2.0, rel=0.05)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 6. GEOPOLITICAL RISK ANALYZER
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestGeopoliticalRiskAnalyzer:
+    """Test geopolitical risk detection and analysis."""
+
+    def test_get_symbol_group_crude(self):
+        """Test symbol group detection for crude oil instruments."""
+        from app.analyzers.geo_risk_analyzer import _get_symbol_group
+        assert _get_symbol_group('WTI') == 'crude'
+        assert _get_symbol_group('CL') == 'crude'
+        assert _get_symbol_group('OIL') == 'crude'
+        assert _get_symbol_group('BRENT') == 'crude'
+
+    def test_get_symbol_group_gold(self):
+        """Test symbol group detection for gold/silver instruments."""
+        from app.analyzers.geo_risk_analyzer import _get_symbol_group
+        assert _get_symbol_group('XAU') == 'gold'
+        assert _get_symbol_group('GOLD') == 'gold'
+        assert _get_symbol_group('XAG') == 'gold'
+        assert _get_symbol_group('SILVER') == 'gold'
+
+    def test_get_symbol_group_crypto(self):
+        """Test symbol group detection for crypto instruments."""
+        from app.analyzers.geo_risk_analyzer import _get_symbol_group
+        assert _get_symbol_group('BTC') == 'crypto'
+        assert _get_symbol_group('ETH') == 'crypto'
+        assert _get_symbol_group('CRYPTO') == 'crypto'
+
+    def test_get_symbol_group_equity(self):
+        """Test symbol group detection for equity instruments."""
+        from app.analyzers.geo_risk_analyzer import _get_symbol_group
+        assert _get_symbol_group('SPX') == 'equity'
+        assert _get_symbol_group('SPY') == 'equity'
+        assert _get_symbol_group('QQQ') == 'equity'
+
+    def test_get_symbol_group_forex(self):
+        """Test symbol group detection for forex instruments."""
+        from app.analyzers.geo_risk_analyzer import _get_symbol_group
+        assert _get_symbol_group('DXY') == 'forex'
+        assert _get_symbol_group('EUR') == 'forex'
+        assert _get_symbol_group('USD') == 'forex'
+
+    def test_scan_keywords_conflict(self):
+        """Test keyword scanning for conflict-related terms."""
+        from app.analyzers.geo_risk_analyzer import _scan_keywords
+
+        news_items = [
+            NewsItem(title="War escalation in middle east", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+        ]
+        result = _scan_keywords(news_items)
+        assert 'conflict' in result
+        assert 'middle_east' in result
+
+    def test_scan_keywords_sanctions(self):
+        """Test keyword scanning for sanctions-related terms."""
+        from app.analyzers.geo_risk_analyzer import _scan_keywords
+
+        news_items = [
+            NewsItem(title="New sanctions imposed on oil exports", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+        ]
+        result = _scan_keywords(news_items)
+        assert 'sanctions' in result
+
+    def test_scan_keywords_no_match(self):
+        """Test keyword scanning with no geopolitical keywords."""
+        from app.analyzers.geo_risk_analyzer import _scan_keywords
+
+        news_items = [
+            NewsItem(title="Stock market rally continues", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+        ]
+        result = _scan_keywords(news_items)
+        assert len(result) == 0
+
+    def test_indicator_checks_high_atr(self):
+        """Test indicator checks with high ATR (confirming)."""
+        from app.analyzers.geo_risk_analyzer import _indicator_checks
+
+        checks = _indicator_checks(adx=25, rsi=55, volume_ratio=1.5, atr_percentile=75,
+                                   expected_direction='bullish', trade_direction='bullish')
+        assert len(checks) == 4
+        assert checks[0].status == 'confirming'  # ATR
+
+    def test_indicator_checks_low_atr(self):
+        """Test indicator checks with low ATR (diverging)."""
+        from app.analyzers.geo_risk_analyzer import _indicator_checks
+
+        checks = _indicator_checks(adx=25, rsi=55, volume_ratio=1.5, atr_percentile=30,
+                                   expected_direction='bullish', trade_direction='bullish')
+        assert len(checks) == 4
+        assert checks[0].status == 'diverging'  # ATR
+
+    def test_indicator_checks_strong_adx_aligned(self):
+        """Test indicator checks with strong ADX aligned with expected direction."""
+        from app.analyzers.geo_risk_analyzer import _indicator_checks
+
+        checks = _indicator_checks(adx=35, rsi=55, volume_ratio=1.5, atr_percentile=50,
+                                   expected_direction='bullish', trade_direction='bullish')
+        assert len(checks) == 4
+        assert checks[1].status == 'confirming'  # ADX
+
+    def test_indicator_checks_strong_adx_opposed(self):
+        """Test indicator checks with strong ADX opposed to expected direction."""
+        from app.analyzers.geo_risk_analyzer import _indicator_checks
+
+        checks = _indicator_checks(adx=35, rsi=55, volume_ratio=1.5, atr_percentile=50,
+                                   expected_direction='bullish', trade_direction='bearish')
+        assert len(checks) == 4
+        assert checks[1].status == 'diverging'  # ADX
+
+    def test_indicator_checks_high_volume(self):
+        """Test indicator checks with high volume (confirming)."""
+        from app.analyzers.geo_risk_analyzer import _indicator_checks
+
+        checks = _indicator_checks(adx=25, rsi=55, volume_ratio=2.0, atr_percentile=50,
+                                   expected_direction='bullish', trade_direction='bullish')
+        assert len(checks) == 4
+        assert checks[2].status == 'confirming'  # Volume
+
+    def test_indicator_checks_rsi_bullish_confirming(self):
+        """Test RSI check with bullish momentum confirming expected direction."""
+        from app.analyzers.geo_risk_analyzer import _indicator_checks
+
+        checks = _indicator_checks(adx=25, rsi=60, volume_ratio=1.5, atr_percentile=50,
+                                   expected_direction='bullish', trade_direction='bullish')
+        assert len(checks) == 4
+        assert checks[3].status == 'confirming'  # RSI
+
+    def test_indicator_checks_rsi_bearish_confirming(self):
+        """Test RSI check with bearish momentum confirming expected direction."""
+        from app.analyzers.geo_risk_analyzer import _indicator_checks
+
+        checks = _indicator_checks(adx=25, rsi=40, volume_ratio=1.5, atr_percentile=50,
+                                   expected_direction='bearish', trade_direction='bearish')
+        assert len(checks) == 4
+        assert checks[3].status == 'confirming'  # RSI
+
+    def test_analyze_geopolitical_risk_no_news(self):
+        """Test geopolitical analysis with no news data."""
+        from app.analyzers.geo_risk_analyzer import analyze_geopolitical_risk
+
+        strength = StrengthAnalysis(adx=25, rsi=55, volume_ratio=1.5)
+        volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=50)
+        trade_signal = TradeSignal(recommendation=Recommendation(value='neutral'))
+
+        result = analyze_geopolitical_risk('XAU', None, strength, volatility, trade_signal)
+        assert result.detected is False
+        assert result.risk_score == 0
+        assert result.risk_level == 'NONE'
+
+    def test_analyze_geopolitical_risk_no_keywords(self):
+        """Test geopolitical analysis with news but no geopolitical keywords."""
+        from app.analyzers.geo_risk_analyzer import analyze_geopolitical_risk
+
+        news = NewsSentiment(
+            label='neutral',
+            score=0,
+            sentiment_summary='No geopolitical news',
+            news_items=[
+                NewsItem(title="Stock market rally", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+            ]
+        )
+        strength = StrengthAnalysis(adx=25, rsi=55, volume_ratio=1.5)
+        volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=50)
+        trade_signal = TradeSignal(recommendation=Recommendation(value='neutral'))
+
+        result = analyze_geopolitical_risk('XAU', news, strength, volatility, trade_signal)
+        assert result.detected is False
+        assert result.risk_score == 0
+
+    def test_analyze_geopolitical_risk_detected(self):
+        """Test geopolitical analysis with detected geopolitical risk."""
+        from app.analyzers.geo_risk_analyzer import analyze_geopolitical_risk
+
+        news = NewsSentiment(
+            label='neutral',
+            score=0,
+            sentiment_summary='Geopolitical tension',
+            news_items=[
+                NewsItem(title="War escalation in middle east", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+            ]
+        )
+        strength = StrengthAnalysis(adx=35, rsi=60, volume_ratio=2.0)
+        volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=75)
+        trade_signal = TradeSignal(recommendation=Recommendation(value='bullish'))
+
+        result = analyze_geopolitical_risk('XAU', news, strength, volatility, trade_signal)
+        assert result.detected is True
+        assert result.risk_score > 0
+        assert len(result.event_categories) > 0
+        assert len(result.keywords_found) > 0
+        assert result.ai_narrative is not None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 7. TRADE PLAN BUILDER
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestTradePlanBuilder:
+    """Test trade plan builder as single source of truth for trade levels."""
+
+    def test_direction_label_bullish(self):
+        """Test direction label mapping for bullish signal."""
+        from app.analyzers.trade_plan_builder import _direction_label
+        assert _direction_label('bullish') == 'long'
+
+    def test_direction_label_bearish(self):
+        """Test direction label mapping for bearish signal."""
+        from app.analyzers.trade_plan_builder import _direction_label
+        assert _direction_label('bearish') == 'short'
+
+    def test_direction_label_neutral(self):
+        """Test direction label mapping for neutral signal."""
+        from app.analyzers.trade_plan_builder import _direction_label
+        assert _direction_label('neutral') == 'neutral'
+
+    def test_build_trade_plan_bullish(self):
+        """Test building a bullish trade plan."""
+        from app.analyzers.trade_plan_builder import build_trade_plan
+
+        volatility = VolatilityAnalysis(
+            atr=10.0,
+            atr_percentile_rank=50,
+            stop_loss=5265.0,
+            entry_price=5277.66,
+            take_profit=5408.31,
+            take_profit_level1=5303.00,
+            take_profit_level2=5355.00,
+            risk_reward_ratio=2.0
+        )
+
+        plan = build_trade_plan(
+            signal_direction='bullish',
+            current_price=5382.97,
+            volatility=volatility,
+            is_actionable=True
+        )
+
+        assert plan is not None
+        assert plan.direction == 'long'
+        assert plan.entry == 5277.66
+        assert plan.stop_loss == 5265.0
+        assert plan.take_profit_1 == 5303.00
+        assert plan.take_profit_2 == 5355.00
+        assert plan.take_profit_3 == 5408.31
+        assert plan.risk_reward == 2.0
+        assert plan.is_actionable is True
+
+    def test_build_trade_plan_bearish(self):
+        """Test building a bearish trade plan."""
+        from app.analyzers.trade_plan_builder import build_trade_plan
+
+        volatility = VolatilityAnalysis(
+            atr=10.0,
+            atr_percentile_rank=50,
+            stop_loss=5400.0,
+            entry_price=5385.0,
+            take_profit=5260.0,
+            take_profit_level1=5340.0,
+            take_profit_level2=5300.0,
+            risk_reward_ratio=2.0
+        )
+
+        plan = build_trade_plan(
+            signal_direction='bearish',
+            current_price=5382.97,
+            volatility=volatility,
+            is_actionable=False
+        )
+
+        assert plan is not None
+        assert plan.direction == 'short'
+        assert plan.entry == 5385.0
+        assert plan.stop_loss == 5400.0
+        assert plan.is_actionable is False
+
+    def test_build_trade_plan_neutral(self):
+        """Test building a neutral trade plan."""
+        from app.analyzers.trade_plan_builder import build_trade_plan
+
+        volatility = VolatilityAnalysis(
+            atr=10.0,
+            atr_percentile_rank=50,
+            stop_loss=5265.0,
+            entry_price=5277.66,
+            take_profit=5408.31,
+            take_profit_level1=5303.00,
+            take_profit_level2=5355.00,
+            risk_reward_ratio=2.0
+        )
+
+        plan = build_trade_plan(
+            signal_direction='neutral',
+            current_price=5382.97,
+            volatility=volatility
+        )
+
+        assert plan is not None
+        assert plan.direction == 'neutral'
+        assert 'no directional edge' in plan.narrative
+
+    def test_build_trade_plan_no_volatility(self):
+        """Test building trade plan with no volatility data returns None."""
+        from app.analyzers.trade_plan_builder import build_trade_plan
+
+        plan = build_trade_plan(
+            signal_direction='bullish',
+            current_price=5382.97,
+            volatility=None
+        )
+
+        assert plan is None
+
+    def test_build_trade_plan_zero_atr(self):
+        """Test building trade plan with zero ATR returns None."""
+        from app.analyzers.trade_plan_builder import build_trade_plan
+
+        volatility = VolatilityAnalysis(
+            atr=0.0,
+            atr_percentile_rank=50,
+            stop_loss=5265.0,
+            entry_price=5277.66,
+            take_profit=5408.31,
+            risk_reward_ratio=2.0
+        )
+
+        plan = build_trade_plan(
+            signal_direction='bullish',
+            current_price=5382.97,
+            volatility=volatility
+        )
+
+        assert plan is None
+
+    def test_build_trade_plan_zero_price(self):
+        """Test building trade plan with zero price returns None."""
+        from app.analyzers.trade_plan_builder import build_trade_plan
+
+        volatility = VolatilityAnalysis(
+            atr=10.0,
+            atr_percentile_rank=50,
+            stop_loss=5265.0,
+            entry_price=5277.66,
+            take_profit=5408.31,
+            risk_reward_ratio=2.0
+        )
+
+        plan = build_trade_plan(
+            signal_direction='bullish',
+            current_price=0.0,
+            volatility=volatility
+        )
+
+        assert plan is None
+
+    def test_build_trade_plan_with_or_data(self):
+        """Test building trade plan with opening range data."""
+        from app.analyzers.trade_plan_builder import build_trade_plan
+
+        volatility = VolatilityAnalysis(
+            atr=10.0,
+            atr_percentile_rank=50,
+            stop_loss=5265.0,
+            entry_price=5277.66,
+            take_profit=5408.31,
+            take_profit_level1=5303.00,
+            take_profit_level2=5355.00,
+            risk_reward_ratio=2.0
+        )
+
+        or_data = {'or_high': 5400.0, 'or_low': 5250.0, 'broken': False}
+
+        plan = build_trade_plan(
+            signal_direction='bullish',
+            current_price=5382.97,
+            volatility=volatility,
+            or_data=or_data
+        )
+
+        assert plan is not None
+        assert plan.invalidation == 5250.0
+        assert 'below 5250.00' in plan.stop_basis
+
+    def test_build_trade_plan_market_entry(self):
+        """Test entry basis label for market entry."""
+        from app.analyzers.trade_plan_builder import build_trade_plan
+
+        volatility = VolatilityAnalysis(
+            atr=10.0,
+            atr_percentile_rank=50,
+            stop_loss=5265.0,
+            entry_price=5382.97,  # Same as current price
+            take_profit=5408.31,
+            risk_reward_ratio=2.0
+        )
+
+        plan = build_trade_plan(
+            signal_direction='bullish',
+            current_price=5382.97,
+            volatility=volatility
+        )
+
+        assert plan is not None
+        assert 'Market entry near current price' in plan.entry_basis
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 8. FUNDAMENTALS ANALYZER
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestFundamentalsAnalyzer:
+    """Test fundamentals analysis for economic calendar events."""
+
+    def test_detect_relevant_currencies_forex_pair(self):
+        """Test currency detection for forex pairs."""
+        from app.analyzers.fundamentals_analyzer import _detect_relevant_currencies
+
+        currencies = _detect_relevant_currencies('EURUSD')
+        assert 'EUR' in currencies
+        assert 'USD' in currencies
+
+    def test_detect_relevant_currencies_gold(self):
+        """Test currency detection for gold (USD-pegged)."""
+        from app.analyzers.fundamentals_analyzer import _detect_relevant_currencies
+
+        currencies = _detect_relevant_currencies('XAU')
+        assert 'USD' in currencies
+
+    def test_detect_relevant_currencies_wti(self):
+        """Test currency detection for WTI (USD-pegged)."""
+        from app.analyzers.fundamentals_analyzer import _detect_relevant_currencies
+
+        currencies = _detect_relevant_currencies('WTI')
+        assert 'USD' in currencies
+
+    def test_detect_relevant_currencies_btc(self):
+        """Test currency detection for BTC (USD-pegged)."""
+        from app.analyzers.fundamentals_analyzer import _detect_relevant_currencies
+
+        currencies = _detect_relevant_currencies('BTC')
+        assert 'USD' in currencies
+
+    def test_detect_relevant_currencies_usd_suffix(self):
+        """Test currency detection for symbols ending in USD."""
+        from app.analyzers.fundamentals_analyzer import _detect_relevant_currencies
+
+        currencies = _detect_relevant_currencies('DXY')
+        assert 'USD' in currencies
+
+    def test_analyze_fundamentals_no_events(self):
+        """Test fundamentals analysis with no high-impact events."""
+        from app.analyzers.fundamentals_analyzer import analyze_fundamentals
+
+        # This will return no events since we can't mock the external API
+        result = analyze_fundamentals('TEST')
+        assert result is not None
+        assert isinstance(result.has_high_impact_events, bool)
+        assert isinstance(result.events, list)
+        assert result.description is not None
+        assert result.risk_reduction_active is False
+        assert result.recommended_position_multiplier == 1.0
+
+    def test_analyze_fundamentals_structure(self):
+        """Test fundamentals analysis returns proper structure."""
+        from app.analyzers.fundamentals_analyzer import analyze_fundamentals
+
+        result = analyze_fundamentals('XAU')
+        assert hasattr(result, 'has_high_impact_events')
+        assert hasattr(result, 'events')
+        assert hasattr(result, 'description')
+        assert hasattr(result, 'event_timestamps')
+        assert hasattr(result, 'risk_reduction_active')
+        assert hasattr(result, 'recommended_position_multiplier')
+        assert hasattr(result, 'pre_event_caution')
+        assert hasattr(result, 'minutes_to_next_event')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 9. NEWS ANALYZER
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestNewsAnalyzer:
+    """Test news sentiment analysis."""
+
+    def test_yahoo_symbol_map_xau(self):
+        """Test Yahoo symbol mapping for gold."""
+        from app.analyzers.news_analyzer import _YAHOO_SYMBOL_MAP
+
+        ticker, name = _YAHOO_SYMBOL_MAP.get('XAU')
+        assert ticker == 'GC=F'
+        assert name == 'Gold'
+
+    def test_yahoo_symbol_map_wti(self):
+        """Test Yahoo symbol mapping for crude oil."""
+        from app.analyzers.news_analyzer import _YAHOO_SYMBOL_MAP
+
+        ticker, name = _YAHOO_SYMBOL_MAP.get('WTI')
+        assert ticker == 'CL=F'
+        assert name == 'Crude Oil'
+
+    def test_yahoo_symbol_map_btc(self):
+        """Test Yahoo symbol mapping for bitcoin."""
+        from app.analyzers.news_analyzer import _YAHOO_SYMBOL_MAP
+
+        ticker, name = _YAHOO_SYMBOL_MAP.get('BTC')
+        assert ticker == 'BTC-USD'
+        assert name == 'Bitcoin'
+
+    def test_newsapi_search_map_xau(self):
+        """Test NewsAPI search term mapping for gold."""
+        from app.analyzers.news_analyzer import _NEWSAPI_SEARCH_MAP
+
+        search_term = _NEWSAPI_SEARCH_MAP.get('XAU')
+        assert search_term == 'gold price commodities'
+
+    def test_newsapi_search_map_wti(self):
+        """Test NewsAPI search term mapping for crude oil."""
+        from app.analyzers.news_analyzer import _NEWSAPI_SEARCH_MAP
+
+        search_term = _NEWSAPI_SEARCH_MAP.get('WTI')
+        assert search_term == 'crude oil price WTI'
+
+    def test_newsapi_search_map_btc(self):
+        """Test NewsAPI search term mapping for bitcoin."""
+        from app.analyzers.news_analyzer import _NEWSAPI_SEARCH_MAP
+
+        search_term = _NEWSAPI_SEARCH_MAP.get('BTC')
+        assert search_term == 'bitcoin cryptocurrency'
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 10. PERFORMANCE ANALYZER
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestPerformanceAnalyzer:
+    """Test weekly performance calculation."""
+
+    def test_calculate_weekly_performance_no_trades(self):
+        """Test performance calculation with no trade-worthy signals."""
+        from app.analyzers.performance_analyzer import calculate_weekly_performance
+        from app.models import StrategySettings, Signal
+
+        instruments = [{'symbol': 'XAU'}]
+        data_map = {}  # Empty data map
+        params = {}
+        benchmarks = {'SPX': Signal.NEUTRAL}
+        settings = StrategySettings()
+
+        result = calculate_weekly_performance(instruments, data_map, params, benchmarks, settings)
+        assert result.total_trades == 0
+        assert result.total_pnl_percent == 0.0
+        assert result.win_rate == 0.0
+        assert result.best_trade_symbol == "N/A"
+        assert result.worst_trade_symbol == "N/A"
+
+    def test_calculate_weekly_performance_structure(self):
+        """Test performance calculation returns proper structure."""
+        from app.analyzers.performance_analyzer import calculate_weekly_performance
+        from app.models import StrategySettings, Signal
+
+        instruments = [{'symbol': 'XAU'}]
+        data_map = {}
+        params = {}
+        benchmarks = {'SPX': Signal.NEUTRAL}
+        settings = StrategySettings()
+
+        result = calculate_weekly_performance(instruments, data_map, params, benchmarks, settings)
+        assert hasattr(result, 'total_pnl_percent')
+        assert hasattr(result, 'total_trades')
+        assert hasattr(result, 'win_rate')
+        assert hasattr(result, 'best_trade_symbol')
+        assert hasattr(result, 'best_trade_pnl')
+        assert hasattr(result, 'worst_trade_symbol')
+        assert hasattr(result, 'worst_trade_pnl')
+        assert hasattr(result, 'description')
