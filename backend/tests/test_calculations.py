@@ -21,7 +21,7 @@ import numpy as np
 from app.analyzers.volatility_analyzer import analyze_volatility_and_risk, calculate_atr
 from app.analyzers.liquidity_map_analyzer import calculate_liquidity_map, _cluster_levels
 from app.analyzers.day_trading_expert import generate_expert_trade_plan
-from app.models import NewsItem, NewsSentiment, StrengthAnalysis, VolatilityAnalysis, TradeSignal, Recommendation, TradePlan, TechnicalAnalysis, Signal, StrategySettings
+from app.models import NewsItem, NewsSentiment, StrengthAnalysis, VolatilityAnalysis, TradeSignal, TradePlan, TechnicalAnalysis, Signal, StrategySettings
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -766,7 +766,7 @@ class TestGeopoliticalRiskAnalyzer:
 
         strength = StrengthAnalysis(adx=25, rsi=55, volume_ratio=1.5)
         volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=50)
-        trade_signal = TradeSignal(recommendation=Recommendation(value='neutral'))
+        trade_signal = TradeSignal(recommendation=Signal.NEUTRAL)
 
         result = analyze_geopolitical_risk('XAU', None, strength, volatility, trade_signal)
         assert result.detected is False
@@ -787,7 +787,7 @@ class TestGeopoliticalRiskAnalyzer:
         )
         strength = StrengthAnalysis(adx=25, rsi=55, volume_ratio=1.5)
         volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=50)
-        trade_signal = TradeSignal(recommendation=Recommendation(value='neutral'))
+        trade_signal = TradeSignal(recommendation=Signal.NEUTRAL)
 
         result = analyze_geopolitical_risk('XAU', news, strength, volatility, trade_signal)
         assert result.detected is False
@@ -807,7 +807,7 @@ class TestGeopoliticalRiskAnalyzer:
         )
         strength = StrengthAnalysis(adx=35, rsi=60, volume_ratio=2.0)
         volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=75)
-        trade_signal = TradeSignal(recommendation=Recommendation(value='bullish'))
+        trade_signal = TradeSignal(recommendation=Signal.BULLISH)
 
         result = analyze_geopolitical_risk('XAU', news, strength, volatility, trade_signal)
         assert result.detected is True
