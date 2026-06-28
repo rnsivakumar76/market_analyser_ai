@@ -39,6 +39,26 @@ _HISTORY_CACHE = {} # { "SYMBOL_TIME": {"timestamp": 0, "df": df} }
 _HISTORY_TTL = 14400
 
 
+def _sane_entry(ideal_entry, current_price, max_dev_pct: float = 0.05):
+    """Reject entry anchors that sit unrealistically far from the current price.
+
+    Fibonacci swing levels computed over a long lookback (FIB_LOOKBACK_BARS) can
+    land far from the live price (e.g. an old swing high). Anchoring stop/target
+    there produces nonsensical levels (entry $99 when price is $71). If the
+    candidate entry deviates more than ``max_dev_pct`` from current price, return
+    None so the volatility analyzer falls back to anchoring on current price.
+    """
+    if ideal_entry is None or current_price is None or current_price <= 0:
+        return None
+    if abs(ideal_entry - current_price) / current_price > max_dev_pct:
+        logger.info(
+            f"[ENTRY] Rejecting ideal_entry={ideal_entry} (>{max_dev_pct:.0%} from "
+            f"current_price={current_price}); anchoring to current price instead."
+        )
+        return None
+    return ideal_entry
+
+
 def _fetch_via_yfinance(ticker: str, days: int = 30):
     """Fetch daily OHLCV data via yfinance as a free alternative for DXY / US10Y.
 
@@ -151,7 +171,7 @@ def analyze_instrument_lazy(
         analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength,
         analyze_intermarket_context, analyze_session_context,
         detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan,
-        analyze_blowoff_top,
+        analyze_blowoff_top, analyze_position_exit, build_trade_plan,
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode, IntermarketContext
@@ -304,7 +324,10 @@ def analyze_instrument_lazy(
             ideal_entry = max(pp.r1, fib.ret_618)
         elif pp.s1 and fib.ret_382:
             ideal_entry = min(pp.s1, fib.ret_382)
+        # Guard against far-away swing levels producing unreachable entries.
+        ideal_entry = _sane_entry(ideal_entry, current_price)
 
+    # Initial volatility calculation using trend direction (may be updated after trade signal)
     volatility = analyze_volatility_and_risk(execution_data, current_price, trend.direction.value, entry_price=ideal_entry)
     fundamentals = analyze_fundamentals(symbol)
     blowoff_top = analyze_blowoff_top(
@@ -327,7 +350,7 @@ def analyze_instrument_lazy(
         if dxy_df is not None and not dxy_df.empty:
             bench_data = dxy_df
         else:
-            bench_data = fetch_historical_data("DXY", days=60, interval="1day")
+            bench_data = _fetch_via_yfinance("DX-Y.NYB", 60)
     elif _is_crypto_rs:
         bench_sym = "BTC"
         bench_data = benchmark_data_df if benchmark_data_df is not None else fetch_historical_data(
@@ -372,7 +395,47 @@ def analyze_instrument_lazy(
         benchmark_symbol=bench_sym,
     )
 
-    # Build expert plan now that trade_signal.recommendation is final and volatility.atr is available
+    # Recalculate volatility using the actual trade signal recommendation
+    # to ensure stop/target values match the trade direction
+    ideal_entry_for_signal = None
+    if tech_indicators and tech_indicators.pivot_points and tech_indicators.fibonacci:
+        pp = tech_indicators.pivot_points
+        fib = tech_indicators.fibonacci
+        if trade_signal.recommendation.value == "bearish" and pp.r1 and fib.ret_618:
+            ideal_entry_for_signal = max(pp.r1, fib.ret_618)
+        elif pp.s1 and fib.ret_382:
+            ideal_entry_for_signal = min(pp.s1, fib.ret_382)
+        # Guard against far-away swing levels producing unreachable entries.
+        ideal_entry_for_signal = _sane_entry(ideal_entry_for_signal, current_price)
+    
+    logger.info(f"[{symbol}] Volatility recalc: recommendation={trade_signal.recommendation.value}, ideal_entry={ideal_entry_for_signal}, current_price={current_price}")
+    volatility = analyze_volatility_and_risk(execution_data, current_price, trade_signal.recommendation.value, entry_price=ideal_entry_for_signal)
+    logger.info(f"[{symbol}] Volatility result: anchor={volatility.entry_price}, sl={volatility.stop_loss}, tp={volatility.take_profit}")
+
+    # ── Canonical trade plan — SINGLE SOURCE OF TRUTH for entry/stop/targets ──
+    # Built once from the FINAL volatility levels + structural context. Every UI
+    # surface (level card, Strategic Action, Battle Plan, scaling) renders from
+    # this so the numbers can never diverge.
+    trade_plan = build_trade_plan(
+        signal_direction=trade_signal.recommendation.value,
+        current_price=current_price,
+        volatility=volatility,
+        tech_indicators=tech_indicators,
+        is_actionable=trade_signal.trade_worthy,
+        or_data=_expert_or_data,
+    )
+
+    # Keep the Strategic Action scaling narrative numerically in sync with the
+    # final plan (it was generated earlier off the pre-recalc volatility).
+    if trade_plan and trade_plan.direction != "neutral":
+        trade_signal.scaling_plan = (
+            f"Stage 1 (De-risk): Exit 30% at ${trade_plan.take_profit_1:.2f} & move stop to break-even. "
+            f"Stage 2 (Profit): Exit 40% at ${trade_plan.take_profit_2:.2f}. "
+            f"Stage 3 (Runner): Leave 30% for ${trade_plan.take_profit_3:.2f} or trail by 2.0x ATR."
+        )
+
+    # Build expert plan now that trade_signal.recommendation is final and the
+    # canonical trade plan is available (numbers come from the plan).
     if _expert_or_data is not None:
         expert_plan = generate_expert_trade_plan(
             symbol, current_price, _expert_or_data, _expert_rvol, tech_indicators, _expert_advice,
@@ -381,6 +444,7 @@ def analyze_instrument_lazy(
             rsi=float(strength.rsi),
             adx=float(strength.adx),
             session_ctx=session_ctx,
+            trade_plan=trade_plan,
         )
 
     # Selection of daily data for backtesting (1Y perspective)
@@ -414,6 +478,49 @@ def analyze_instrument_lazy(
         trade_signal=trade_signal,
     )
 
+    # P11: Position Exit Analysis - systematic loss-cutting mechanism
+    # This detects when short-term trends contradict long-term positions.
+    # Align the assumed position side with the system's actual directional view
+    # (trend first, then the composite recommendation) so the exit alert never
+    # contradicts the displayed bias. If neither is directional, leave it None
+    # and the analyzer reports "not applicable" instead of guessing a side.
+    exit_side = None
+    if trend.direction == Signal.BULLISH:
+        exit_side = "long"
+    elif trend.direction == Signal.BEARISH:
+        exit_side = "short"
+    elif trade_signal.recommendation == Signal.BULLISH:
+        exit_side = "long"
+    elif trade_signal.recommendation == Signal.BEARISH:
+        exit_side = "short"
+
+    position_exit = analyze_position_exit(
+        trend=trend,
+        strength=strength,
+        volatility=volatility,
+        technical_indicators=tech_indicators,
+        current_price=current_price,
+        assumed_position_side=exit_side,
+        execution_data=execution_data,
+        trade_plan=trade_plan,
+    )
+
+    # P12: Intraday Signals (for INTRADAY mode)
+    intraday_signals = None
+    if mode == StrategyMode.INTRADAY:
+        from .analyzers.intraday_signal_generator import detect_intraday_signals_verbose
+        # Fetch intraday timeframes: 4H, 1H, 15m
+        bars_4h = fetch_historical_data(symbol, days=30, interval="4h")
+        bars_1h = fetch_historical_data(symbol, days=14, interval="1h")
+        bars_15m = fetch_historical_data(symbol, days=3, interval="15m")
+        intraday_signals, _ = detect_intraday_signals_verbose(
+            symbol=symbol,
+            name=name,
+            bars_4h=bars_4h,
+            bars_1h=bars_1h,
+            bars_15m=bars_15m,
+        )
+
     return InstrumentAnalysis(
         symbol=symbol,
         name=name,
@@ -428,6 +535,7 @@ def analyze_instrument_lazy(
         fundamentals=fundamentals,
         backtest_results=backtest,
         candle_patterns=candle_model,
+        intraday_signals=intraday_signals,
         benchmark_direction=benchmark_direction,
         trade_signal=trade_signal,
         technical_indicators=tech_indicators,
@@ -443,6 +551,8 @@ def analyze_instrument_lazy(
         block_flow=block_flow,
         geopolitical_risk=geopolitical_risk,
         blowoff_top=blowoff_top,
+        position_exit=position_exit,
+        trade_plan=trade_plan,
     ), execution_data
 
 # In-memory store for sent alerts
@@ -562,7 +672,7 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         # the TwelveData batch above.  If yfinance is unavailable or returns empty
         # data, intermarket analysis degrades gracefully to None.
         with ThreadPoolExecutor(max_workers=2) as _yfin_pool:
-            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DXY",  60)
+            _f_dxy   = _yfin_pool.submit(_fetch_via_yfinance, "DX-Y.NYB",  60)
             _f_us10y = _yfin_pool.submit(_fetch_via_yfinance, "^TNX",  60)
             _dxy_df   = _f_dxy.result()
             _us10y_df = _f_us10y.result()
@@ -705,7 +815,16 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
         with ThreadPoolExecutor(max_workers=10) as executor:
             future_to_inst = {executor.submit(process_instrument, inst): inst for inst in instruments}
             for future in as_completed(future_to_inst):
-                sym, analysis, hist_data = future.result()
+                # Isolate each instrument so a single failure (including a fallback
+                # construction error) can NEVER abort the whole scan and empty the list.
+                inst_cfg = future_to_inst[future]
+                try:
+                    sym, analysis, hist_data = future.result()
+                except Exception as inst_exc:
+                    sym = (inst_cfg.get('symbol') if isinstance(inst_cfg, dict) else None) or 'UNKNOWN'
+                    logger.error(f"Instrument task failed for {sym}: {inst_exc}", exc_info=True)
+                    sym, analysis, hist_data = sym, None, None
+
                 if analysis:
                     results.append(analysis)
                     data_map[sym] = hist_data
@@ -729,53 +848,8 @@ async def run_scheduled_analysis(user_id: str = "global_default", mode: Any = No
                                     SENT_ALERTS.add(expert_key)
                 else:
                     logger.warning(f"Analysis produced no result for {sym}")
-                    # Create fallback analysis for failed instruments so they still appear in monitoring
-                    from .models import InstrumentAnalysis, Signal, TradeSignal
-                    
-                    # Find the original instrument config
-                    original_inst = next((inst for inst in instruments if inst['symbol'].upper() == sym), None)
-                    if original_inst:
-                        fallback_analysis = InstrumentAnalysis(
-                            symbol=sym,
-                            name=original_inst.get('name', sym),
-                            current_price=0.0,
-                            analysis_date=date.today(),
-                            last_updated=datetime.now(timezone.utc).isoformat(),
-                            monthly_trend=None,  # Will show as "No data"
-                            weekly_pullback=None,
-                            daily_strength=None,
-                            market_phase=None,
-                            volatility_risk=None,
-                            fundamentals=None,
-                            backtest_results=None,
-                            candle_patterns=None,
-                            benchmark_direction=Signal.NEUTRAL,
-                            trade_signal=TradeSignal(
-                                score=0,
-                                recommendation='neutral',
-                                confidence=0.0,
-                                reasons=['Analysis failed - data unavailable'],
-                                trade_worthy=False,
-                                signal_conflict=None
-                            ),
-                            technical_indicators=None,
-                            news_sentiment=None,
-                            relative_strength=None,
-                            expert_trade_plan=None,
-                            strategy_mode=mode,
-                            intermarket_context=None,
-                            session_context=None,
-                            volume_profile=None,
-                            session_vwap=None,
-                            liquidity_map=None,
-                            block_flow=None,
-                            geopolitical_risk=None,
-                            blowoff_top=None,
-                        )
-                        results.append(fallback_analysis)
-                        logger.info(f"Created fallback analysis for failed instrument {sym}")
     except Exception as e:
-        logger.error(f"Parallel analysis loop failed: {e}")
+        logger.error(f"Parallel analysis loop failed: {e}", exc_info=True)
         # Continue with whatever results we have (possibly empty)
 
     perf_summary = calculate_weekly_performance(instruments, data_map, params, {"SPX": spy_bench, "BTC": btc_bench}, strategy_settings)

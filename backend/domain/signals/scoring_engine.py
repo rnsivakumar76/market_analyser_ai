@@ -25,6 +25,9 @@ from ..constants import (
     SIGNAL_ADX_TRENDING,
     SIGNAL_ADX_STRONG,
     SIGNAL_ADX_REGIME_WEIGHTS,
+    SIGNAL_NEUTRAL_TREND_TACTICAL_DAMPEN,
+    SIGNAL_NEUTRAL_TREND_PB_SUPPORT_FRACTION,
+    SIGNAL_NEUTRAL_TREND_PB_DETECTED_FRACTION,
 )
 
 # Direction literals used throughout the domain layer
@@ -158,6 +161,68 @@ def compute_strength_score(
     return 0, "Daily momentum neutral"
 
 
+def compute_tactical_neutral_score(
+    strength_direction: str,
+    pullback_detected: bool,
+    near_support: bool,
+    pullback_weight: int,
+    strength_weight: int,
+) -> tuple[int, str]:
+    """
+    Tactical directional score used ONLY when the monthly trend is neutral.
+
+    Problem this solves:
+        In a neutral-trend (often RANGING) market the trend weight is forfeited
+        and the standard pullback factor returns 0 — wasting the *largest* weight
+        in the RANGING regime (pullback=45). The result is that a clearly
+        directional daily move (e.g. a sharp -5.9% day) collapses to a near-zero
+        composite and the signal reads NEUTRAL / STAND ASIDE, which feels wrong
+        when the market is visibly moving.
+
+    Fix:
+        When there is no monthly trend, daily momentum becomes the tactical bias.
+        It earns the full strength weight (it is not "counter" to any trend) plus
+        a fraction of the otherwise-wasted pullback weight when price sits at a
+        mean-reversion location. The total is dampened to reflect the lower
+        conviction of trading without long-term trend backing, so it can register
+        a directional lean without ever reaching full trade-worthy conviction.
+
+    Args:
+        strength_direction: Daily signal direction ('bullish' | 'bearish' | 'neutral').
+        pullback_detected:  Weekly pullback flag.
+        near_support:       Weekly near-support flag.
+        pullback_weight:    Regime-adjusted pullback weight (highest in RANGING).
+        strength_weight:    Regime-adjusted strength weight.
+
+    Returns:
+        (score_delta, reason_text)
+    """
+    if strength_direction not in (BULLISH, BEARISH):
+        return 0, "Neutral trend + neutral momentum — no tactical edge"
+
+    sign = 1 if strength_direction == BULLISH else -1
+    base = float(strength_weight)
+
+    if pullback_detected and near_support:
+        base += pullback_weight * SIGNAL_NEUTRAL_TREND_PB_SUPPORT_FRACTION
+        location_note = "at support"
+    elif pullback_detected:
+        base += pullback_weight * SIGNAL_NEUTRAL_TREND_PB_DETECTED_FRACTION
+        location_note = "mid-pullback"
+    else:
+        location_note = "no mean-reversion location"
+
+    score = int(round(sign * base * SIGNAL_NEUTRAL_TREND_TACTICAL_DAMPEN))
+    score = max(min(score, 100), -100)
+
+    direction_word = "bullish" if sign > 0 else "bearish"
+    reason = (
+        f"No monthly trend — daily {direction_word} momentum sets a tactical bias "
+        f"({location_note}); dampened, capped below full conviction"
+    )
+    return score, reason
+
+
 def compute_composite_score(
     trend_direction: str,
     pullback_detected: bool,
@@ -206,6 +271,30 @@ def compute_composite_score(
             SIGNAL_WEIGHT_STRENGTH,
         )
         regime = "NORMAL"
+
+    # ── Neutral-trend tactical path ──────────────────────────────────────────
+    # When there is no monthly trend, the standard trend (0) and pullback (0)
+    # factors waste their weight — especially the dominant pullback weight in
+    # RANGING regimes. Route the directional daily momentum into a single
+    # dampened tactical score so a visibly trending market does not collapse to
+    # a misleading NEUTRAL reading. Decomposition invariant is preserved by
+    # carrying the whole tactical value in strength_score (trend/pullback = 0).
+    if trend_direction == NEUTRAL and strength_direction in (BULLISH, BEARISH):
+        t_reason = compute_trend_score(trend_direction, weight=trend_w)[1]
+        tactical_score, tactical_reason = compute_tactical_neutral_score(
+            strength_direction,
+            pullback_detected,
+            near_support,
+            pullback_weight=pullback_w,
+            strength_weight=strength_w,
+        )
+        components.trend_score    = 0
+        components.pullback_score = 0
+        components.strength_score = tactical_score
+        components.composite      = tactical_score
+        components.add_reason(t_reason)
+        components.add_reason(tactical_reason)
+        return components
 
     t_score, t_reason = compute_trend_score(trend_direction, weight=trend_w)
     p_score, p_reason = compute_pullback_score(

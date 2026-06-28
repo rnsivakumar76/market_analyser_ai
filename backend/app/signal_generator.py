@@ -12,6 +12,7 @@ from domain.signals.breakout_guard import evaluate_breakout as _domain_evaluate_
 from domain.signals.verdict import compute_verdict as _domain_compute_verdict
 from domain.constants import (
     SIGNAL_CONVICTION_THRESHOLD,
+    SIGNAL_TACTICAL_THRESHOLD,
     FILTER_ADX_THRESHOLD,
     SIGNAL_ADX_TRENDING,
     SIGNAL_ADX_STRONG,
@@ -52,7 +53,7 @@ def _apply_aggressiveness_to_threshold(mode: str, threshold: int) -> int:
 
 def _normalize_strategy_mode(mode: Optional[str]) -> str:
     normalized = (mode or "long_term").strip().lower()
-    if normalized not in {"long_term", "short_term"}:
+    if normalized not in {"long_term", "short_term", "intraday"}:
         return "long_term"
     return normalized
 
@@ -73,16 +74,19 @@ def _derive_execution_profile(
     score_abs = abs(score)
     macro_caution = any("Macro Caution" in reason for reason in reasons)
 
+    # Check if this qualifies as a tactical setup (strong bias but not full conviction)
+    is_tactical = not trade_worthy and recommendation != Signal.NEUTRAL and score_abs >= SIGNAL_TACTICAL_THRESHOLD
+
     if aggressiveness_mode == "aggressive":
         conditional_min_score = 12
     elif aggressiveness_mode == "conservative":
         conditional_min_score = 28
     else:
-        conditional_min_score = 20
+        conditional_min_score = 15  # Balanced: more active (was 20)
 
     if trade_worthy and not blocked:
         execution_state = "ready"
-    elif recommendation != Signal.NEUTRAL and score_abs >= conditional_min_score:
+    elif is_tactical or (recommendation != Signal.NEUTRAL and score_abs >= conditional_min_score):
         execution_state = "conditional"
     else:
         execution_state = "stand_aside"
@@ -94,8 +98,8 @@ def _derive_execution_profile(
         ready_a_cutoff = 95
         conditional_b_cutoff = 62
     else:
-        ready_a_cutoff = 85
-        conditional_b_cutoff = 50
+        ready_a_cutoff = 80  # Balanced: more active (was 85)
+        conditional_b_cutoff = 45  # Balanced: more active (was 50)
 
     if execution_state == "ready" and score_abs >= ready_a_cutoff:
         opportunity_grade = "A"
@@ -111,7 +115,15 @@ def _derive_execution_profile(
     if execution_state == "stand_aside":
         suggested_size_text = "0.0x (no entry)"
     elif execution_state == "conditional":
-        if aggressiveness_mode == "aggressive":
+        if is_tactical:
+            # Tactical setups get reduced size
+            if aggressiveness_mode == "aggressive":
+                suggested_size_text = "0.5x (tactical reduced size)"
+            elif aggressiveness_mode == "conservative":
+                suggested_size_text = "0.25x (tactical reduced size)"
+            else:
+                suggested_size_text = "0.35x (tactical reduced size)"
+        elif aggressiveness_mode == "aggressive":
             suggested_size_text = "0.65x (aggressive starter on trigger close)"
         elif aggressiveness_mode == "conservative":
             suggested_size_text = "0.35x (conservative starter on trigger close)"
@@ -241,7 +253,7 @@ def generate_trade_signal(
     effective_threshold = _apply_aggressiveness_to_threshold(aggressiveness_mode, effective_threshold)
     if effective_threshold != threshold:
         reasons.append(
-            f"Adaptive conviction threshold active: {effective_threshold} (base {threshold}, mode={aggressiveness_mode}, ADXY={adx_value:.1f})"
+            f"Adaptive conviction threshold active: {effective_threshold} (base {threshold}, mode={aggressiveness_mode}, ADX={adx_value:.1f})"
         )
 
     recommendation_str, trade_worthy = classify_recommendation(score, effective_threshold)
@@ -268,9 +280,15 @@ def generate_trade_signal(
         else:
             reasons.append("No clear setup - keep capital protected until direction confirms")
 
-    # ADX pass-through reason (when ADX is above threshold, add as a reason)
-    if adx_value is not None and adx_value > adx_threshold:
-        reasons.append(f"Trend strength high (ADXY={adx_value:.1f})")
+    # ADX pass-through reason — tier the wording to match the regime engine so
+    # "high" is never claimed while the regime label still reads NORMAL/ranging.
+    if adx_value is not None:
+        if adx_value >= SIGNAL_ADX_STRONG:
+            reasons.append(f"Trend strength very strong (ADX={adx_value:.1f})")
+        elif adx_value >= SIGNAL_ADX_TRENDING:
+            reasons.append(f"Trend strength strong — trending (ADX={adx_value:.1f})")
+        elif adx_value > adx_threshold:
+            reasons.append(f"Trend strength adequate but still developing (ADX={adx_value:.1f})")
 
     # ── Domain layer: all hard filters ───────────────────────────────────────
     is_outperforming = relative_strength.is_outperforming if relative_strength else None
@@ -293,7 +311,7 @@ def generate_trade_signal(
     # ADX hard-filter blocked case: when adx_value is low and it DID block, add a fallback reason
     if not trade_worthy and adx_value is not None and adx_value <= adx_threshold:
         if not any("ADX" in r for r in reasons):
-            reasons.append(f"Filter: Trend strength (ADXY={adx_value:.1f}) too low. Threshold: {adx_threshold}")
+            reasons.append(f"Filter: Trend strength (ADX={adx_value:.1f}) too low. Threshold: {adx_threshold}")
 
     # Candle confirmation reason (when candle was fine, add it)
     if candle.is_bullish is not None and not any("Trigger Filter" in r for r in reasons):
@@ -316,16 +334,13 @@ def generate_trade_signal(
     pyramiding_plan = "N/A"
     scaling_plan = "Wait for clear trend alignment."
 
+    # NOTE: scaling_plan is populated with canonical trade_plan numbers in main.py
+    # after the plan is built. Do NOT compute pivot/fib-based scaling here — that
+    # would be an SSOT violation. Only set qualitative defaults here.
+
     if current_price and tech_indicators:
         pivots = tech_indicators.pivot_points
         fibs = tech_indicators.fibonacci
-        
-        # Base Scaling text
-        s_tp1 = s_tp2 = s_tp3 = "N/A"
-        if volatility:
-            s_tp1 = f"${volatility.take_profit_level1:.2f}" if volatility.take_profit_level1 is not None else "N/A"
-            s_tp2 = f"${volatility.take_profit_level2:.2f}" if volatility.take_profit_level2 is not None else "N/A"
-            s_tp3 = f"${volatility.take_profit:.2f}" if volatility.take_profit is not None else "N/A"
 
         if recommendation == Signal.BULLISH:
             psychological_guard = "NEVER average down into a losing trade. If price falls below support or hits your stop loss, cut the trade immediately. The market does not owe you a bounce."
@@ -334,16 +349,6 @@ def generate_trade_signal(
                 price_str = f"${current_price:.2f}" if current_price else "current price"
                 pivot_str = f"${pivots.pivot:.2f}" if pivots.pivot else "N/A"
                 action_plan_details = f"Strong bullish setup confirmed near {price_str}. Support is Pivot ({pivot_str}). If trend accelerates, target Fibonacci Extensions."
-                
-                if volatility:
-                    scaling_plan = (
-                        f"Stage 1 (De-risk): Exit 30% at {s_tp1} & Move SL to Break-even. "
-                        f"Stage 2 (Profit): Exit 40% at {s_tp2}. "
-                        f"Stage 3 (Runner): Leave 30% for {s_tp3} or trail by 2.0x ATR."
-                    )
-                else:
-                    scaling_plan = f"Target R1 (${pivots.r1}) for first exit, then trail."
-                
                 pyramiding_plan = f"Aggressive Addition: Add 50% to position size IF price holds above R1 (${pivots.r1}) AND RSI stays < 70."
             else:
                 action_plan = "Conditional Long Setup"
@@ -371,16 +376,6 @@ def generate_trade_signal(
                 price_str = f"${current_price:.2f}" if current_price else "current price"
                 pivot_str = f"${pivots.pivot:.2f}" if pivots.pivot else "N/A"
                 action_plan_details = f"Strong bearish setup confirmed near {price_str}. Resistance is Pivot ({pivot_str}). If decline accelerates, target Fibonacci Extensions."
-                
-                if volatility:
-                    scaling_plan = (
-                        f"Stage 1 (De-risk): Exit 30% at {s_tp1} & Move SL to Break-even. "
-                        f"Stage 2 (Profit): Exit 40% at {s_tp2}. "
-                        f"Stage 3 (Runner): Leave 30% for {s_tp3} or trail by 2.0x ATR."
-                    )
-                else:
-                    scaling_plan = f"Target S1 (${pivots.s1}) for first exit, then trail."
-                
                 pyramiding_plan = f"Aggressive Addition: Add 50% to short position IF price holds below S1 (${pivots.s1}) AND RSI stays > 30."
             else:
                 action_plan = "Conditional Short Setup"

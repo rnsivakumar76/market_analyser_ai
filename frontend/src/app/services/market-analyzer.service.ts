@@ -253,6 +253,7 @@ export interface VolatilityAnalysis {
   take_profit: number;
   take_profit_level1?: number;
   take_profit_level2?: number;
+  entry_price?: number;
   risk_reward_ratio: number;
   description: string;
   atr_percentile_rank: number;
@@ -414,7 +415,23 @@ export interface ExpertTradePlan {
   or_broken: 'bullish' | 'bearish' | 'none';
 }
 
-export type StrategyMode = 'long_term' | 'short_term';
+export type StrategyMode = 'long_term' | 'short_term' | 'intraday';
+
+export interface PositionExitAnalysis {
+  should_exit: boolean;
+  exit_urgency: 'IMMEDIATE' | 'HIGH' | 'MODERATE' | 'LOW' | 'NONE';
+  exit_reason: string;
+  position_health: 'CRITICAL' | 'DAMAGED' | 'WEAKENING' | 'HEALTHY' | 'STRONG';
+  divergence_detected: boolean;
+  divergence_type: 'trend_reversal' | 'momentum_shift' | 'support_break' | 'none';
+  current_drawdown_pct: number;
+  max_acceptable_drawdown_pct: number;
+  time_in_position_bars: number;
+  recommended_action: string;
+  stop_loss_level?: number;
+  recovery_probability: number;
+  factors: string[];
+}
 
 export interface InstrumentAnalysis {
   symbol: string;
@@ -449,6 +466,8 @@ export interface InstrumentAnalysis {
   geopolitical_risk?: GeopoliticalRisk;
   blowoff_top?: BlowOffTopAnalysis;
   oil_market_context?: OilMarketContext;
+  position_exit?: PositionExitAnalysis;
+  intraday_signals?: IntradaySignal[];
 }
 
 export interface VolumeProfileBucket {

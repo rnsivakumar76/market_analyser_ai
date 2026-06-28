@@ -47,6 +47,7 @@ def analyze_volatility_and_risk(
             atr=0.0,
             stop_loss=0.0,
             take_profit=0.0,
+            entry_price=float(round(entry_price if (entry_price and entry_price > 0) else current_price, 4)),
             risk_reward_ratio=0.0,
             description="Insufficient data for Volatility/ATR calculation."
         )
@@ -76,6 +77,9 @@ def analyze_volatility_and_risk(
 
     # ── 4. SL / TP levels ───────────────────────────────────────────────────
     regime_note = f" [{regime_label} vol, {sl_mult}×/{tp3_mult}× ATR]"
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Volatility calc: signal_direction={signal_direction}, anchor={anchor}, atr={atr}, sl_mult={sl_mult}, tp3_mult={tp3_mult}")
 
     if signal_direction == "bullish":
         sl  = anchor - (atr * sl_mult)
@@ -101,12 +105,15 @@ def analyze_volatility_and_risk(
 
     rr_ratio = tp3_mult / sl_mult if sl_mult > 0 else 0
 
+    logger.info(f"Volatility result: sl={sl}, tp3={tp3}, branch={'bearish' if signal_direction=='bearish' else 'bullish/neutral'}")
+
     return VolatilityAnalysis(
         atr=float(round(atr, 4)),
         stop_loss=float(round(sl, 4)),
         take_profit=float(round(tp3, 4)),
         take_profit_level1=float(round(tp1, 4)),
         take_profit_level2=float(round(tp2, 4)),
+        entry_price=float(round(anchor, 4)),
         risk_reward_ratio=float(round(rr_ratio, 2)),
         description=desc,
         atr_percentile_rank=atr_pct_rank,

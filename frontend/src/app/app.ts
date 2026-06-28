@@ -10,6 +10,7 @@ import { LoginComponent } from './components/login/login.component';
 import { AuthService, User } from './services/auth.service';
 import { WatchlistHeatmapComponent } from './components/watchlist-heatmap/watchlist-heatmap.component';
 import { OrbDashboardComponent } from './components/orb-dashboard/orb-dashboard.component';
+import { OpportunitiesOverviewComponent } from './components/opportunities-overview/opportunities-overview.component';
 import { AiCopilotComponent } from './components/ai-copilot/ai-copilot.component';
 import { TradeJournalComponent } from './components/trade-journal/trade-journal.component';
 import { SmartAlertsComponent } from './components/smart-alerts/smart-alerts.component';
@@ -21,7 +22,7 @@ import { interval, Subscription, timer } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, OrbDashboardComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, ThemeToggleComponent],
+  imports: [CommonModule, InstrumentCardComponent, SettingsComponent, StrategySettingsComponent, CorrelationModalComponent, UserManualComponent, LoginComponent, WatchlistHeatmapComponent, OrbDashboardComponent, OpportunitiesOverviewComponent, AiCopilotComponent, TradeJournalComponent, SmartAlertsComponent, GeopoliticalAnalysisComponent, ThemeToggleComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -53,6 +54,8 @@ export class App implements OnInit, OnDestroy {
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
   mobileTab = signal<'watchlist' | 'analysis' | 'context'>('watchlist');
+  // Top-level navigation: high-level opportunities overview vs. detailed analysis
+  viewMode = signal<'overview' | 'detail'>('overview');
   contextPanelTab = signal<'context' | 'chat'>('context');
   sidebarTab = signal<'heatmap' | 'orb'>('heatmap');
 
@@ -203,11 +206,13 @@ export class App implements OnInit, OnDestroy {
   }
 
   toggleStrategyMode() {
-    const newMode = this.strategyMode() === 'long_term' ? 'short_term' : 'long_term';
+    const modes: StrategyMode[] = ['long_term', 'short_term', 'intraday'];
+    const currentIndex = modes.indexOf(this.strategyMode());
+    const newMode = modes[(currentIndex + 1) % modes.length];
     this.switchStrategyMode(newMode);
   }
 
-  switchStrategyMode(mode: 'long_term' | 'short_term') {
+  switchStrategyMode(mode: StrategyMode) {
     if (this.strategyMode() === mode) return; // already in this mode
     this.strategyMode.set(mode);
     this.savePreference('strategy_mode', mode);
@@ -233,6 +238,19 @@ export class App implements OnInit, OnDestroy {
     this.analysisSub = this.analyzerService.analyzeAll(this.strategyMode(), refresh).subscribe({
       next: (response: AnalysisResponse) => {
         let newInstruments = [...response.instruments];
+
+        // Intraday mode: surface instruments with active signals first, but NEVER
+        // blank the list. Quiet markets / off-hours / weekends frequently have zero
+        // active signals — hiding everything made the dashboard look broken. Only
+        // narrow to active-signal instruments when at least one exists.
+        if (this.strategyMode() === 'intraday') {
+          const withActive = newInstruments.filter(inst =>
+            (inst.intraday_signals || []).some(s => s.status === 'ACTIVE')
+          );
+          if (withActive.length > 0) {
+            newInstruments = withActive;
+          }
+        }
 
         // Sort instruments: Highest magnitude score at the top
         const sortedInstruments = newInstruments.sort((a, b) => {
@@ -523,6 +541,19 @@ export class App implements OnInit, OnDestroy {
     } catch (e) {
       console.warn('Could not load error info:', e);
     }
+  }
+
+  /** Open the full detailed analysis for an instrument from the overview */
+  openInstrumentDetail(instrument: InstrumentAnalysis) {
+    this.selectedInstrument.set(instrument);
+    this.viewMode.set('detail');
+    this.mobileTab.set('analysis');
+  }
+
+  /** Return to the high-level opportunities overview */
+  backToOverview() {
+    this.viewMode.set('overview');
+    this.mobileTab.set('watchlist');
   }
 
   refreshInstrument(symbol: string) {

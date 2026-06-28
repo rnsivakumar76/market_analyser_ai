@@ -2,23 +2,12 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any, Optional
 from ..models import PullbackAnalysis
+from domain.levels.support_resistance import find_swing_lows, nearest_support_below
 
 
 def find_recent_high(data: pd.DataFrame) -> float:
     """Find the recent swing high."""
     return float(data['High'].max())
-
-
-def find_support_levels(data: pd.DataFrame) -> list:
-    """Find potential support levels from recent lows."""
-    lows = data['Low'].values
-    supports = []
-    
-    for i in range(1, len(lows) - 1):
-        if lows[i] < lows[i-1] and lows[i] < lows[i+1]:
-            supports.append(lows[i])
-    
-    return sorted(supports) if supports else [float(data['Low'].min())]
 
 
 def analyze_weekly_pullback(
@@ -47,19 +36,14 @@ def analyze_weekly_pullback(
     
     recent_high = find_recent_high(weekly_data)
     pullback_percent = (recent_high - current_price) / recent_high
-    
-    # Find support levels
-    support_levels = find_support_levels(weekly_data)
-    nearest_support = None
-    near_support = False
-    
-    for support in reversed(support_levels):
-        if support <= current_price:
-            nearest_support = support
-            distance_to_support = (current_price - support) / current_price
-            if distance_to_support <= support_tolerance:
-                near_support = True
-            break
+
+    # Find support levels using domain layer (SSOT)
+    support_levels = find_swing_lows(weekly_data['Low'].tolist(), lookback=1)
+    nearest_support, near_support = nearest_support_below(
+        current_price,
+        support_levels,
+        tolerance_pct=support_tolerance,
+    )
     
     # Determine if pullback is detected
     pullback_detected = pullback_percent >= pullback_threshold

@@ -1,6 +1,6 @@
 import { Component, Input, Output, EventEmitter, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem } from '../../services/market-analyzer.service';
+import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem, IntradaySignal } from '../../services/market-analyzer.service';
 import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
 import { MultiTimeframeOverlayComponent } from '../multi-timeframe-overlay/multi-timeframe-overlay.component';
 import { TradeJournalComponent } from '../trade-journal/trade-journal.component';
@@ -26,7 +26,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
             <div class="th-badges">
               <span class="th-badge strategy" [class]="analysis.strategy_mode">
-                {{ analysis.strategy_mode === 'long_term' ? '📈' : '⚡' }}
+                {{ analysis.strategy_mode === 'long_term' ? '📈' : analysis.strategy_mode === 'short_term' ? '⚡' : '🔥' }}
               </span>
               <div class="th-clocks">
                 <span class="th-clock session" [class]="getCurrentSession().toLowerCase().replace(' ', '-')">{{ getCurrentSession() }}</span>
@@ -36,15 +36,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           </div>
 
           <div class="th-right-compact">
-            <div class="th-status-pill" [class]="getSignalClass()">
-               <span class="th-s-val">{{ analysis.trade_signal.score }}</span>
-               <span class="th-s-rec">{{ analysis.trade_signal.recommendation }}</span>
-               <span class="th-conflict-badge" [class]="'sev-' + getExecutionStateClass()">
-                 {{ getExecutionStateLabel() }} · {{ analysis.trade_signal.opportunity_grade }}
-               </span>
-               @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
-                 <span class="th-conflict-badge" [class]="'sev-' + analysis.trade_signal.signal_conflict!.severity">⚡ CONFLICT</span>
-               }
+            <div class="th-status-pill" [class]="getVerdictState().toLowerCase()">
+               <span class="th-verdict">{{ getVerdictState() }}</span>
+               <span class="th-score">{{ analysis.trade_signal.score }}</span>
+               <span class="th-grade">{{ analysis.trade_signal.opportunity_grade }}</span>
             </div>
             <button class="btn-refresh-circle" (click)="onRefresh()">🔄</button>
           </div>
@@ -68,11 +63,56 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
         </div>
         }
 
+        <!-- INTRADAY SIGNALS — Day trading specific signals (shown in intraday mode) -->
+        @if (analysis.strategy_mode === 'intraday' && getActiveIntradaySignals().length > 0) {
+        <div class="intraday-signals-panel">
+          <div class="isp-header">⚡ INTRADAY SIGNALS</div>
+          @for (signal of getActiveIntradaySignals(); track signal.signal_id) {
+          <div class="isp-signal" [class]="signal.signal_type.toLowerCase()">
+            <div class="isp-timeframe">{{ signal.timeframe }}</div>
+            <div class="isp-direction">{{ signal.signal_type }}</div>
+            <div class="isp-trigger">{{ signal.trigger }}</div>
+            <div class="isp-confidence" [class]="getIntradayConfClass(signal.confidence)">{{ signal.confidence }}%</div>
+            <div class="isp-entry">@ {{ formatPrice(signal.entry_price) }}</div>
+            <div class="isp-levels">
+              <span class="isp-tp">TP: {{ formatPrice(signal.take_profit_1) }}</span>
+              <span class="isp-sl">SL: {{ formatPrice(signal.stop_loss) }}</span>
+            </div>
+          </div>
+          }
+        </div>
+        }
+
+        <!-- POSITION EXIT WARNING - Systematic Loss-Cutting Mechanism -->
+        @if (analysis.position_exit && analysis.position_exit.should_exit) {
+        <div class="position-exit-warning" [class]="'pe-' + analysis.position_exit.exit_urgency.toLowerCase()">
+          <div class="pew-header">
+            <span class="pew-icon">🚨</span>
+            <span class="pew-title">POSITION EXIT ALERT</span>
+            <span class="pew-urgency" [class]="'peu-' + analysis.position_exit.exit_urgency.toLowerCase()">{{ analysis.position_exit.exit_urgency }}</span>
+          </div>
+          <div class="pew-health">
+            <span class="pew-health-label">Position Health:</span>
+            <span class="pew-health-value" [class]="'ph-' + analysis.position_exit.position_health.toLowerCase()">{{ analysis.position_exit.position_health }}</span>
+            <span class="pew-drawdown">Drawdown: {{ analysis.position_exit.current_drawdown_pct.toFixed(2) }}%</span>
+          </div>
+          <div class="pew-reason">{{ analysis.position_exit.exit_reason }}</div>
+          <div class="pew-action">{{ analysis.position_exit.recommended_action }}</div>
+          @if (analysis.position_exit.factors && analysis.position_exit.factors.length > 0) {
+          <div class="pew-factors">
+            @for (factor of analysis.position_exit.factors; track factor) {
+              <div class="pew-factor">• {{ factor }}</div>
+            }
+          </div>
+          }
+        </div>
+        }
+
         <!-- EXECUTION CHECK CARD — DECISION HERO (Zone B) -->
         <div class="exec-check-card">
           <div class="ec-header">
             <span class="ec-title">⚡ EXECUTION CHECK</span>
-            <span class="ec-score">{{ getExecPassCount() }}/5 GATES PASSED</span>
+            <span class="ec-score">{{ getExecPassCount() }}/{{ analysis.strategy_mode === 'intraday' ? '7' : '5' }} GATES PASSED</span>
           </div>
           <div class="ec-rows">
             <div class="ec-row">
@@ -92,7 +132,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
             </div>
             <div class="ec-row">
               <span class="ec-gate-label">CONFIRM</span>
-              <span class="ec-gate-src">Technical Heat / Volume</span>
+              <span class="ec-gate-src">Volume</span>
               <span [class]="getExecChipClass(getExecConfirmationStatus())">{{ getExecConfirmationStatus() }}</span>
             </div>
             <div class="ec-row">
@@ -100,9 +140,110 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
               <span class="ec-gate-src">Stop + R:R ≥1.8 + Sizing</span>
               <span [class]="getExecChipClass(getExecRiskStatus())">{{ getExecRiskStatus() }}</span>
             </div>
+            @if (analysis.strategy_mode === 'intraday') {
+            <div class="ec-row intraday-gate">
+              <span class="ec-gate-label">SESSION</span>
+              <span class="ec-gate-src">London/NY Overlap Timing</span>
+              <span [class]="getExecChipClass(getExecSessionStatus())">{{ getExecSessionStatus() }}</span>
+            </div>
+            <div class="ec-row intraday-gate">
+              <span class="ec-gate-label">VOLUME</span>
+              <span class="ec-gate-src">Session Range Activity</span>
+              <span [class]="getExecChipClass(getExecVolumeStatus())">{{ getExecVolumeStatus() }}</span>
+            </div>
+            }
           </div>
           <div class="ec-decision" [class]="getExecDecision().cssClass">{{ getExecDecision().label }}</div>
-          <div class="ec-microcopy">Bullish count is context, not trigger — trade only when all gates pass.</div>
+          <div class="ec-microcopy">Verdict above = directional thesis · gates here = is it executable right now. Best entries have all 5 aligned.</div>
+        </div>
+
+        <!-- ZONE C: THE PLAN — always visible (entry/stop/target, R:R, scaling) -->
+        <div class="tech-section action-section plan-zone">
+          <div class="tile-header">
+            🎯 STRATEGIC ACTION & SCALING
+          </div>
+          <div class="action-hero">
+             <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
+          </div>
+
+          @if (analysis.trade_signal.recommendation === 'neutral') {
+            <div class="levels-dormant">⏸ Two-sided conditional plan — directional levels activate once a side is confirmed (close above R1 for long, below S1 for short)</div>
+          } @else if (hasDirectionalPlan()) {
+          <div class="levels-stack">
+            <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
+            <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
+            <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
+          </div>
+          @if (getExecPassCount() < 5) {
+            <div class="levels-pending">{{ 5 - getExecPassCount() }} execution gate{{ (5 - getExecPassCount()) !== 1 ? 's' : '' }} still pending ({{ getExecPassCount() }}/5) — size down until all align.</div>
+          }
+          } @else {
+            <div class="levels-dormant">⏸ No directional edge yet — trade levels activate once the bias is confirmed (currently stand-aside).</div>
+          }
+
+          @if (analysis.trade_signal.recommendation !== 'neutral') {
+          <div class="rr-visual-diagram">
+            <div class="rrd-header">VISUAL R/R DIAGRAM</div>
+            <div class="rrd-chart">
+              <div class="rrd-row">
+                <span class="rrd-tag tp-tag">TARGET</span>
+                <div class="rrd-bar tp-bar"></div>
+                <span class="rrd-price bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
+              </div>
+              <div class="rrd-row reward-row">
+                <span class="rrd-amount bullish">▲ +\${{ getRRReward() }} REWARD</span>
+              </div>
+              <div class="rrd-row">
+                <span class="rrd-tag entry-tag">ENTRY ●</span>
+                <div class="rrd-bar entry-bar"></div>
+                <span class="rrd-price">\${{ getEntryZone() }}</span>
+              </div>
+              <div class="rrd-row risk-row">
+                <span class="rrd-amount bearish">▼ -\${{ getRRRisk() }} RISK</span>
+              </div>
+              <div class="rrd-row">
+                <span class="rrd-tag sl-tag">STOP</span>
+                <div class="rrd-bar sl-bar"></div>
+                <span class="rrd-price bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
+              </div>
+            </div>
+            <div class="rrd-stats">
+              <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
+              <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
+              <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
+              <div class="rrd-stat"><span>SIGNAL SCORE</span><strong [class]="getSignalClass()">{{ analysis.trade_signal.score }}</strong></div>
+            </div>
+          </div>
+          }
+
+          <div class="terminal-gauge">
+             <div class="tg-track">
+                <div class="tg-fill" [style.left.%]="getPricePositionPercent()"></div>
+                <div class="tg-marker pivot" style="left: 50%"></div>
+             </div>
+             <div class="tg-labels"><span>S1</span><span>PIVOT</span><span>R1</span></div>
+          </div>
+
+          <div class="scaling-zone">
+              <div class="sz-header">📊 PROFIT TARGETS (T1 / T2 / T3)</div>
+              <div class="sz-grid">
+                  @for (step of getScalingStrategy(); track step.stage) {
+                    <div class="sz-item" [class.sz-item--hit]="isTargetHit(step.target)" [class.sz-item--next]="isNextTarget(step.target)">
+                       <div class="sz-top"><span>{{ step.percent }}% ALLOC</span><strong>{{ step.stage }}</strong></div>
+                       <div class="sz-val">{{ step.target }}</div>
+                       <div class="sz-dist">{{ getTargetDistance(step.target) }}</div>
+                    </div>
+                  }
+              </div>
+              <div class="sz-interpretation">
+                <p class="sz-action-read">{{ getScalingActionRead() }}</p>
+              </div>
+          </div>
+
+          <div class="mm-footer">
+             <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
+             <div class="mmf-item"><span>ENTRY</span><strong>\${{ (analysis.position_sizing?.entry_price ?? analysis.current_price)?.toFixed(2) }}</strong></div>
+          </div>
         </div>
 
         <!-- EXPERT BATTLE PLAN (Zone D — above drawers) -->
@@ -140,111 +281,12 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           <section class="t-tile intel-tile tab-content-tile">
             <div class="intel-column-stack">
 
-              <!-- CONFLICT DETAIL (inline, compact) -->
-              @if (analysis.trade_signal.signal_conflict?.conflict_type && analysis.trade_signal.signal_conflict?.conflict_type !== 'none') {
-              <div class="conflict-inline" [class]="'ci-' + analysis.trade_signal.signal_conflict!.severity">
-                @if (analysis.trade_signal.signal_conflict!.headline) {
-                  <span class="ci-headline">{{ analysis.trade_signal.signal_conflict!.headline }}</span>
-                }
-                <span class="ci-text">{{ analysis.trade_signal.signal_conflict!.guidance }}</span>
-                @if (analysis.trade_signal.signal_conflict!.trigger_price_up) {
-                  <span class="ci-trigger bullish">▲ \${{ analysis.trade_signal.signal_conflict!.trigger_price_up?.toFixed(2) }}</span>
-                }
-                @if (analysis.trade_signal.signal_conflict!.trigger_price_down) {
-                  <span class="ci-trigger bearish">▼ \${{ analysis.trade_signal.signal_conflict!.trigger_price_down?.toFixed(2) }}</span>
-                }
-              </div>
-              }
+              <!-- Conflict narrative now lives once in the Trade Verdict hero;
+                   the MTF overlay shows the timeframe directions and the scenario
+                   blocks below show the trigger levels — so no inline conflict box. -->
 
-              <!-- SECTION 1: STRATEGIC ACTION & SCALING -->
-              <div class="tech-section action-section">
-                <div class="tile-header">
-                  🎯 STRATEGIC ACTION & SCALING
-                  <span class="action-rec-badge" [class]="isWaitAction() ? 'badge-wait' : getSignalClass()">{{ analysis.trade_signal.action_plan }}</span>
-                </div>
-                <div class="action-hero">
-                   <div class="aph-sub">{{ analysis.trade_signal.action_plan_details }}</div>
-                </div>
-
-                @if (analysis.trade_signal.recommendation === 'neutral') {
-                  <div class="levels-dormant">⏸ Two-sided conditional plan — directional levels activate once a side is confirmed (close above R1 for long, below S1 for short)</div>
-                } @else if (getExecPassCount() >= 3) {
-                <div class="levels-stack">
-                  <div class="lvl-box entry"><span class="ll">ENTRY</span><span class="lv">\${{ getEntryZone() }}</span></div>
-                  <div class="lvl-box sl"><span class="ll">STOP</span><span class="lv bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span></div>
-                  <div class="lvl-box tp"><span class="ll">TARGET</span><span class="lv bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span></div>
-                </div>
-                } @else {
-                  <div class="levels-dormant">⏸ Trade levels appear once {{ 3 - getExecPassCount() }} more execution gate{{ (3 - getExecPassCount()) !== 1 ? 's' : '' }} pass ({{ getExecPassCount() }}/5 currently)</div>
-                }
-
-                @if (analysis.trade_signal.recommendation !== 'neutral') {
-                <div class="rr-visual-diagram">
-                  <div class="rrd-header">VISUAL R/R DIAGRAM</div>
-                  <div class="rrd-chart">
-                    <div class="rrd-row">
-                      <span class="rrd-tag tp-tag">TARGET</span>
-                      <div class="rrd-bar tp-bar"></div>
-                      <span class="rrd-price bullish">\${{ analysis.volatility_risk.take_profit.toFixed(2) }}</span>
-                    </div>
-                    <div class="rrd-row reward-row">
-                      <span class="rrd-amount bullish">▲ +\${{ getRRReward() }} REWARD</span>
-                    </div>
-                    <div class="rrd-row">
-                      <span class="rrd-tag entry-tag">ENTRY ●</span>
-                      <div class="rrd-bar entry-bar"></div>
-                      <span class="rrd-price">\${{ getEntryZone() }}</span>
-                    </div>
-                    <div class="rrd-row risk-row">
-                      <span class="rrd-amount bearish">▼ -\${{ getRRRisk() }} RISK</span>
-                    </div>
-                    <div class="rrd-row">
-                      <span class="rrd-tag sl-tag">STOP</span>
-                      <div class="rrd-bar sl-bar"></div>
-                      <span class="rrd-price bearish">\${{ analysis.volatility_risk.stop_loss.toFixed(2) }}</span>
-                    </div>
-                  </div>
-                  <div class="rrd-stats">
-                    <div class="rrd-stat"><span>R/R RATIO</span><strong class="bullish">{{ getRRRatio() }}:1</strong></div>
-                    <div class="rrd-stat"><span>EXP. VALUE</span><strong class="bullish">+\${{ getExpectedValue() }}</strong></div>
-                    <div class="rrd-stat"><span>ACC. RISK</span><strong>{{ getRiskAmount() }}</strong></div>
-                    <div class="rrd-stat"><span>SIGNAL SCORE</span><strong [class]="getSignalClass()">{{ analysis.trade_signal.score }}</strong></div>
-                  </div>
-                </div>
-                }
-
-                <div class="terminal-gauge">
-                   <div class="tg-track">
-                      <div class="tg-fill" [style.left.%]="getPricePositionPercent()"></div>
-                      <div class="tg-marker pivot" style="left: 50%"></div>
-                   </div>
-                   <div class="tg-labels"><span>S1</span><span>PIVOT</span><span>R1</span></div>
-                </div>
-
-                <div class="scaling-zone">
-                    <div class="sz-header">📊 PROFIT TARGETS (T1 / T2 / T3)</div>
-                    <div class="sz-grid">
-                        @for (step of getScalingStrategy(); track step.stage) {
-                          <div class="sz-item" [class.sz-item--hit]="isTargetHit(step.target)" [class.sz-item--next]="isNextTarget(step.target)">
-                             <div class="sz-top"><span>{{ step.percent }}% ALLOC</span><strong>{{ step.stage }}</strong></div>
-                             <div class="sz-val">{{ step.target }}</div>
-                             <div class="sz-dist">{{ getTargetDistance(step.target) }}</div>
-                          </div>
-                        }
-                    </div>
-                    <!-- Scaling Interpretation -->
-                    <div class="sz-interpretation">
-                      <p class="sz-action-read">{{ getScalingActionRead() }}</p>
-                    </div>
-                </div>
-
-                <div class="mm-footer">
-                   <div class="mmf-item"><span>LOTS</span><strong>{{ getCalculatedLotSize() }}</strong></div>
-                   <div class="mmf-item"><span>ENTRY</span><strong>\${{ (analysis.position_sizing?.entry_price ?? analysis.current_price)?.toFixed(2) }}</strong></div>
-                </div>
-
-              </div>
-
+              <!-- The Plan (Strategic Action & Scaling) is promoted to the
+                   always-visible Zone C below the Execution Check card. -->
 
               <!-- MARKET MOMENTUM READ -->
               <div class="tech-section momentum-read-section">
@@ -261,14 +303,14 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                     <span class="mmr-interp" [class]="getRSIClass()">{{ getRSIInterpretation() }}</span>
                   </div>
                   <div class="mmr-item">
+                    <span class="mmr-lbl">ATR</span>
+                    <strong class="mmr-val">{{ analysis.volatility_risk?.atr?.toFixed(2) || '0.00' }}</strong>
+                    <span class="mmr-interp">{{ getATRInterpretation() }}</span>
+                  </div>
+                  <div class="mmr-item">
                     <span class="mmr-lbl">IMPACT</span>
                     <strong class="mmr-val" [class]="getTechnicalHeatClass()">{{ getTechnicalHeatImpact() }}</strong>
                     <span class="mmr-interp">{{ getTechnicalRecommendation() }}</span>
-                  </div>
-                  <div class="mmr-item">
-                    <span class="mmr-lbl">VWAP DIST</span>
-                    <strong class="mmr-val" [class]="getVWAPClass()">{{ getVwapDistDisplay() }}</strong>
-                    <span class="mmr-interp" [class]="getVWAPClass()">{{ getVWAPDistLabel() }}</span>
                   </div>
                 </div>
                 <div class="mmr-combined-read">{{ getMarketMomentumRead() }}</div>
@@ -415,10 +457,6 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
                   <div class="ch-item" [class]="getTrendCheck()">
                      <div class="ch-left-data"><span class="ch-i">Trend Structure</span><span class="ch-v">{{ analysis.monthly_trend.direction | uppercase }}</span></div>
                      <div class="ch-correlation">{{ getTrendCorrelation() }}</div>
-                  </div>
-                  <div class="ch-item" [class]="getMomentumCheck()">
-                     <div class="ch-left-data"><span class="ch-i">Momentum (ADX)</span><span class="ch-v">{{ analysis.daily_strength.adx.toFixed(1) }}</span></div>
-                     <div class="ch-correlation">{{ getMomentumCorrelation() }}</div>
                   </div>
                   <div class="ch-item" [class]="getVolatilityCheck()">
                      <div class="ch-left-data"><span class="ch-i">Volatility Risk</span><span class="ch-v">{{ getVolatilityLevel() }}</span></div>
@@ -902,7 +940,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .eat-text { font-size: 0.82rem; color: #e2e8f0; line-height: 1.7; margin: 0; font-weight: 500; white-space: pre-line; }
 
     /* TRADE VERDICT HERO */
-    .trade-verdict { border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; border-left: 5px solid; }
+    .trade-verdict { border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; border-left: 5px solid; }
     .tv-headline { font-size: 1.02rem; font-weight: 950; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px; }
     .tv-detail { font-size: 0.82rem; line-height: 1.5; color: #cbd5e1; font-weight: 500; }
     .tv-green { background: rgba(16,185,129,0.12); border-left-color: #10b981; }
@@ -914,15 +952,63 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .tv-slate { background: rgba(100,116,139,0.12); border-left-color: #64748b; }
     .tv-slate .tv-headline { color: #94a3b8; }
 
+    /* INTRADAY SIGNALS PANEL */
+    .intraday-signals-panel { padding: 12px 16px; background: rgba(245,158,11,0.08); border-top: 1px solid rgba(245,158,11,0.3); border-bottom: 1px solid rgba(245,158,11,0.2); }
+    .isp-header { font-size: 0.72rem; font-weight: 950; letter-spacing: 1.2px; color: #fb923c; text-transform: uppercase; margin-bottom: 10px; }
+    .isp-signal { display: grid; grid-template-columns: 40px 50px 1fr 45px 1fr; gap: 8px 12px; align-items: center; padding: 8px 10px; border-radius: 6px; background: rgba(17,17,27,0.6); border: 1px solid #253348; margin-bottom: 6px; }
+    .isp-signal.long { border-left: 3px solid #86efac; }
+    .isp-signal.short { border-left: 3px solid #f87171; }
+    .isp-timeframe { font-size: 0.70rem; font-weight: 900; color: #64748b; background: #141f30; padding: 3px 6px; border-radius: 4px; text-align: center; }
+    .isp-direction { font-size: 0.72rem; font-weight: 950; text-transform: uppercase; }
+    .isp-signal.long .isp-direction { color: #86efac; }
+    .isp-signal.short .isp-direction { color: #f87171; }
+    .isp-trigger { font-size: 0.68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+    .isp-confidence { font-size: 0.70rem; font-weight: 900; text-align: center; padding: 2px 6px; border-radius: 4px; }
+    .isp-confidence.conf-high { background: rgba(134,239,172,0.15); color: #86efac; }
+    .isp-confidence.conf-medium { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .isp-confidence.conf-low { background: rgba(148,163,184,0.15); color: #94a3b8; }
+    .isp-entry { font-size: 0.72rem; font-weight: 800; color: #e2e8f0; }
+    .isp-levels { display: flex; gap: 10px; font-size: 0.68rem; font-weight: 700; }
+    .isp-tp { color: #86efac; }
+    .isp-sl { color: #f87171; }
+
     /* EXECUTION CHECK CARD */
-    .exec-check-card { background: rgba(10,10,22,0.9); border: 1px solid rgba(137,180,250,0.18); border-left: 4px solid #60a5fa; padding: 12px 16px 10px; }
+    .exec-check-card { background: rgba(10,10,22,0.9); border: 1px solid rgba(137,180,250,0.18); border-left: 4px solid #60a5fa; padding: 14px 18px 12px; margin-bottom: 16px; }
     .ec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .ec-title { font-size: 0.80rem; font-weight: 950; letter-spacing: 1.5px; color: #60a5fa; text-transform: uppercase; }
+
+    /* POSITION EXIT WARNING CARD */
+    .position-exit-warning { background: rgba(10,10,22,0.9); border: 1px solid rgba(243,139,168,0.25); border-left: 4px solid #f38ba8; padding: 14px 18px 12px; margin-bottom: 16px; }
+    .position-exit-warning.pe-immediate { border-color: rgba(248,113,113,0.45); border-left-color: #f87171; background: rgba(248,113,113,0.04); }
+    .position-exit-warning.pe-high { border-color: rgba(243,139,168,0.35); border-left-color: #f38ba8; background: rgba(243,139,168,0.03); }
+    .position-exit-warning.pe-moderate { border-color: rgba(249,226,175,0.35); border-left-color: #f9e2af; background: rgba(249,226,175,0.02); }
+    .pew-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .pew-icon { font-size: 1.05rem; }
+    .pew-title { font-size: 0.82rem; font-weight: 950; letter-spacing: 1.2px; color: #e2e8f0; text-transform: uppercase; }
+    .pew-urgency { font-size: 0.72rem; font-weight: 900; letter-spacing: 1px; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; }
+    .pew-urgency.peu-immediate { background: rgba(248,113,113,0.2); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+    .pew-urgency.peu-high { background: rgba(243,139,168,0.15); color: #f38ba8; border: 1px solid rgba(243,139,168,0.25); }
+    .pew-urgency.peu-moderate { background: rgba(249,226,175,0.12); color: #f9e2af; border: 1px solid rgba(249,226,175,0.25); }
+    .pew-health { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.78rem; }
+    .pew-health-label { color: #7f8fa6; font-weight: 600; }
+    .pew-health-value { font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
+    .pew-health-value.ph-critical { color: #f87171; }
+    .pew-health-value.ph-damaged { color: #f38ba8; }
+    .pew-health-value.ph-weakening { color: #f9e2af; }
+    .pew-health-value.ph-healthy { color: #86efac; }
+    .pew-health-value.ph-strong { color: #60a5fa; }
+    .pew-drawdown { color: #e2e8f0; font-weight: 700; }
+    .pew-reason { font-size: 0.88rem; line-height: 1.5; color: #c0cad8; margin-bottom: 8px; }
+    .pew-action { font-size: 0.85rem; line-height: 1.45; color: #e2e8f0; font-weight: 600; margin-bottom: 10px; }
+    .pew-factors { display: flex; flex-direction: column; gap: 4px; }
+    .pew-factor { font-size: 0.78rem; color: #94a3b8; line-height: 1.4; padding-left: 12px; position: relative; }
+    .pew-factor::before { content: '•'; position: absolute; left: 0; color: #64748b; }
     .ec-score { font-size: 0.74rem; font-weight: 900; color: #475569; letter-spacing: 1px; }
     .ec-rows { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
     .ec-row { display: grid; grid-template-columns: 80px 1fr auto; align-items: center; gap: 10px; padding: 7px 10px; background: rgba(255,255,255,0.02); border-radius: 4px; border: 1px solid rgba(255,255,255,0.04); }
+    .ec-row.intraday-gate { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); }
     .ec-gate-label { font-size: 0.74rem; font-weight: 950; color: #e2e8f0; letter-spacing: 1px; text-transform: uppercase; }
-    .ec-gate-src { font-size: 0.72rem; color: #334155; font-weight: 600; }
+    .ec-gate-src { font-size: 0.72rem; color: #64748b; font-weight: 600; }
     .ec-chip { font-size: 0.72rem; font-weight: 900; padding: 2px 7px; border-radius: 3px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
     .ec-yes { background: rgba(166,227,161,0.15); color: #86efac; border: 1px solid rgba(166,227,161,0.3); }
     .ec-weak { background: rgba(249,226,175,0.12); color: #fcd34d; border: 1px solid rgba(249,226,175,0.3); }
@@ -948,20 +1034,24 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .th-badges { display: flex; gap: 6px; align-items: center; }
     .th-clock { font-size: 0.74rem; padding: 1px 4px; }
     .th-status-pill { padding: 4px 10px; border-radius: 4px; display: flex; align-items: center; gap: 8px; border: 1px solid; }
-    .th-status-pill.bullish { border-color: #86efac; color: #86efac; background: rgba(166, 227, 161, 0.1); }
-    .th-status-pill.bearish { border-color: #f87171; color: #f87171; background: rgba(243, 139, 168, 0.1); }
-    .th-status-pill.neutral { border-color: #fcd34d; color: #fcd34d; background: rgba(249, 226, 175, 0.1); }
+    .th-status-pill.execute { border-color: #86efac; color: #86efac; background: rgba(166, 227, 161, 0.1); }
+    .th-status-pill.tactical { border-color: #fcd34d; color: #fcd34d; background: rgba(249, 226, 175, 0.1); }
+    .th-status-pill.wait { border-color: #f9e2af; color: #f9e2af; background: rgba(249, 226, 175, 0.08); }
+    .th-status-pill.stand aside { border-color: #64748b; color: #94a3b8; background: rgba(100, 116, 139, 0.08); }
+    .th-verdict { font-size: 0.80rem; font-weight: 950; letter-spacing: 1px; text-transform: uppercase; }
+    .th-score { font-size: 0.78rem; font-weight: 700; color: #e2e8f0; }
+    .th-grade { font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
     .btn-refresh-circle { background: #141f30; border: 1px solid #253348; color: #64748b; padding: 6px; border-radius: 50%; cursor: pointer; }
 
     /* 3-COLUMN COMMAND CENTER (BALANCED UX) */
     .terminal-grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 0; background: #070d1c; align-items: stretch; border-bottom: 2px solid #192642; }
     .t-tile { padding: 30px; border-right: 1px solid #192642; }
     .t-tile:last-child { border-right: none; }
-    .tile-header { font-size: 0.86rem; font-weight: 950; color: #475569; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1.5px; display: flex; align-items: center; gap: 8px; }
+    .tile-header { font-size: 0.82rem; font-weight: 950; color: #64748b; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1.2px; display: flex; align-items: center; gap: 8px; }
 
     /* Action Column CSS */
     .scaling-zone { margin: 24px 0; background: #0f172a; border: 1px dashed #253348; padding: 16px; border-radius: 8px; }
-    .sz-header { font-size: 0.76rem; color: #334155; font-weight: 950; margin-bottom: 16px; }
+    .sz-header { font-size: 0.76rem; color: #64748b; font-weight: 950; margin-bottom: 16px; }
     .sz-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .sz-item { background: #070d1c; padding: 10px; border-radius: 6px; border: 1px solid #192642; text-align: center; transition: all 0.2s; }
     .sz-top { font-size: 0.70rem; color: #475569; display: block; margin-bottom: 4px; }
@@ -977,7 +1067,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .sz-action-read:first-letter { font-size: 1rem; }
     .mm-footer { display: flex; gap: 10px; margin-bottom: 24px; }
     .mmf-item { flex: 1; padding: 12px; background: #0d1526; border-radius: 6px; text-align: center; }
-    .mmf-item span { font-size: 0.74rem; color: #334155; display: block; margin-bottom: 4px; }
+    .mmf-item span { font-size: 0.74rem; color: #64748b; display: block; margin-bottom: 4px; }
     .mmf-item strong { font-size: 0.9rem; color: #e2e8f0; }
 
     /* Validation Column CSS */
@@ -999,7 +1089,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .pic-metric-value.moderate { color: #fb923c; }
     .pic-metric-value.low { color: #86efac; }
     .probability-box-v2 { padding: 20px; background: #0f172a; border-radius: 8px; margin-bottom: 24px; border: 1px solid #192642; }
-    .pb2-header { font-size: 0.76rem; color: #334155; font-weight: 950; margin-bottom: 12px; }
+    .pb2-header { font-size: 0.76rem; color: #64748b; font-weight: 950; margin-bottom: 12px; }
     .pb2-grid { display: flex; gap: 20px; margin-bottom: 12px; }
     .pb2-stat span { font-size: 0.74rem; color: #475569; display: block; }
     .pb2-stat strong { font-size: 1.1rem; font-weight: 950; color: #e2e8f0; }
@@ -1123,7 +1213,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     /* RISK CALCULATOR RESTORED */
     .position-calculator { background: #0f172a; border: 1px solid #192642; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
-    .pc-header { font-size: 0.76rem; color: #334155; font-weight: 950; margin-bottom: 12px; }
+    .pc-header { font-size: 0.76rem; color: #64748b; font-weight: 950; margin-bottom: 12px; }
     .pc-toggles { display: flex; gap: 6px; margin-bottom: 16px; }
     .pc-toggles button { flex: 1; background: #1e293b; border: 1px solid #253348; color: #64748b; padding: 8px; border-radius: 6px; font-size: 0.90rem; font-weight: 900; cursor: pointer; }
     .pc-toggles button.active { background: #60a5fa; color: #0f172a; border-color: #60a5fa; }
@@ -1168,7 +1258,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .verdict-banner-pro.no-go { background: rgba(243, 139, 168, 0.1); color: #f87171; border: 1px solid #f87171; }
 
     .probability-mini { padding-top: 20px; border-top: 1px solid #192642; margin-bottom: 24px; }
-    .prob-header { font-size: 0.76rem; color: #334155; font-weight: 950; margin-bottom: 16px; }
+    .prob-header { font-size: 0.76rem; color: #64748b; font-weight: 950; margin-bottom: 16px; }
     .bt-stats { display: flex; justify-content: space-between; margin-bottom: 12px; }
     .bt-s { display: flex; flex-direction: column; }
     .bt-s span { font-size: 0.70rem; color: #334155; }
@@ -1210,6 +1300,8 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     /* Conditional levels — dormant state */
     .levels-dormant { padding: 10px 16px; font-size: 0.88rem; color: #334155; font-style: italic; background: rgba(243,139,168,0.03); border: 1px dashed rgba(243,139,168,0.15); border-radius: 6px; margin: 10px 0; }
+    /* Levels shown but execution gates still pending — size-down caution */
+    .levels-pending { padding: 6px 16px; font-size: 0.8rem; color: #b45309; background: rgba(234,179,8,0.08); border-left: 3px solid #eab308; border-radius: 4px; margin: 4px 0 10px; }
 
     /* Compact reason strip (top-3 only) */
     .signal-reasons-compact { flex-wrap: wrap; gap: 5px; padding: 6px 16px; }
@@ -1406,17 +1498,17 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
 
     /* MARKET MOMENTUM READ */
     .momentum-read-section { background: rgba(137,180,250,0.02); }
-    .mmr-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
-    .mmr-item { display: flex; flex-direction: column; gap: 4px; background: #070d1c; border-radius: 6px; padding: 10px; border: 1px solid #192642; }
-    .mmr-lbl { font-size: 0.70rem; font-weight: 950; color: #334155; letter-spacing: 1px; text-transform: uppercase; }
-    .mmr-val { font-size: 1.1rem; font-weight: 950; color: #e2e8f0; line-height: 1; }
+    .mmr-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; min-width: 0; }
+    .mmr-item { display: flex; flex-direction: column; gap: 4px; background: #070d1c; border-radius: 6px; padding: 10px; border: 1px solid #192642; min-width: 0; overflow: hidden; }
+    .mmr-lbl { font-size: 0.70rem; font-weight: 950; color: #64748b; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mmr-val { font-size: 1.1rem; font-weight: 950; color: #e2e8f0; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mmr-val.strong { color: #fb923c; }
     .mmr-val.trending { color: #60a5fa; }
     .mmr-val.weak { color: #64748b; }
     .mmr-val.high { color: #f87171; }
     .mmr-val.medium { color: #fcd34d; }
     .mmr-val.low { color: #64748b; }
-    .mmr-interp { font-size: 0.74rem; font-weight: 900; letter-spacing: 0.3px; }
+    .mmr-interp { font-size: 0.74rem; font-weight: 900; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mmr-interp.strong { color: #fb923c; }
     .mmr-interp.trending { color: #60a5fa; }
     .mmr-interp.weak { color: #64748b; }
@@ -1448,8 +1540,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .tech-section { padding: 20px 24px; border-bottom: 1px solid #192642; }
     .tech-section:last-child { border-bottom: none; }
     .action-section { background: transparent; }
-    .pivot-section .pm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
-    .pivot-section .pm-v { font-size: 0.90rem; font-weight: 800; color: #c0cad8; padding: 8px 6px; background: #070d1c; border-radius: 4px; text-align: center; }
+    .plan-zone { border-left: 4px solid #60a5fa; background: rgba(96,165,250,0.03); }
+    .pivot-section .pm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; min-width: 0; }
+    .pivot-section .pm-v { font-size: 0.90rem; font-weight: 800; color: #c0cad8; padding: 8px 6px; background: #070d1c; border-radius: 4px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pivot-section .pm-v.res { color: #f87171; }
     .pivot-section .pm-v.sup { color: #86efac; }
     .pivot-section .pm-v.center { background: rgba(137,180,250,0.1); border: 1px solid #60a5fa; color: #60a5fa; }
@@ -1569,10 +1662,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .pea-multiplier strong { color: #a78bfa; }
 
     /* VOLUME PROFILE */
-    .vp-key-levels { display: flex; gap: 8px; margin-bottom: 14px; }
-    .vp-lvl { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px; background: #070d1c; border-radius: 6px; border: 1px solid #192642; }
-    .vp-lvl span { font-size: 0.74rem; color: #334155; font-weight: 900; text-transform: uppercase; }
-    .vp-lvl strong { font-size: 0.75rem; font-weight: 950; margin-top: 3px; color: #e2e8f0; }
+    .vp-key-levels { display: flex; gap: 8px; margin-bottom: 14px; min-width: 0; }
+    .vp-lvl { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px; background: #070d1c; border-radius: 6px; border: 1px solid #192642; min-width: 0; overflow: hidden; }
+    .vp-lvl span { font-size: 0.74rem; color: #64748b; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vp-lvl strong { font-size: 0.75rem; font-weight: 950; margin-top: 3px; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .vp-lvl.poc { border-color: #a78bfa; }
     .vp-lvl.poc strong { color: #a78bfa; }
     .vp-sparkline { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; max-height: 140px; overflow-y: auto; }
@@ -1584,10 +1677,10 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
     .vp-interpretation { font-size: 0.82rem; color: #64748b; line-height: 1.4; margin: 0; }
 
     /* SESSION VWAP */
-    .vwap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
-    .vwap-cell { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; background: #070d1c; border-radius: 6px; border: 1px solid #192642; }
-    .vwap-cell span { font-size: 0.70rem; color: #334155; font-weight: 900; text-transform: uppercase; }
-    .vwap-cell strong { font-size: 0.90rem; font-weight: 950; margin-top: 3px; }
+    .vwap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; min-width: 0; }
+    .vwap-cell { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; background: #070d1c; border-radius: 6px; border: 1px solid #192642; min-width: 0; overflow: hidden; }
+    .vwap-cell span { font-size: 0.70rem; color: #64748b; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vwap-cell strong { font-size: 0.90rem; font-weight: 950; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .vwap-position-badge { display: inline-block; font-size: 0.76rem; font-weight: 900; padding: 3px 10px; border-radius: 4px; margin-bottom: 8px; letter-spacing: 1px; }
     .vwap-position-badge.above { background: rgba(166,227,161,0.1); color: #86efac; border: 1px solid rgba(166,227,161,0.3); }
     .vwap-position-badge.below { background: rgba(243,139,168,0.1); color: #f87171; border: 1px solid rgba(243,139,168,0.3); }
@@ -1973,18 +2066,33 @@ export class InstrumentCardComponent implements OnChanges {
     return action.includes('wait') || action.includes('observe') || action.includes('sideline') || action.includes('neutral') || executionState === 'conditional' || executionState === 'stand_aside';
   }
 
-  getExecutionStateLabel(): string {
+  // Single source of truth for the state word, derived from the backend verdict
+  // so the header pill, the Execution Check decision and the Verdict hero never
+  // use three different words for the same situation.
+  getVerdictState(): 'EXECUTE' | 'TACTICAL' | 'WAIT' | 'STAND ASIDE' {
+    const v = (this.analysis?.trade_signal?.trade_verdict?.verdict ?? '').toUpperCase();
+    if (v.startsWith('TRADE')) return 'EXECUTE';
+    if (v.startsWith('TACTICAL')) return 'TACTICAL';
+    if (v === 'WAIT') return 'WAIT';
+    if (v === 'STAND_ASIDE') return 'STAND ASIDE';
+    // Fallback for older payloads without a verdict.
     const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
-    if (state === 'ready') return 'READY';
-    if (state === 'conditional') return 'CONDITIONAL';
+    if (state === 'ready') return 'EXECUTE';
+    if (state === 'conditional') return 'WAIT';
     return 'STAND ASIDE';
   }
 
+  getExecutionStateLabel(): string {
+    return this.getVerdictState();
+  }
+
   getExecutionStateClass(): string {
-    const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
-    if (state === 'ready') return 'none';
-    if (state === 'conditional') return 'medium';
-    return 'high';
+    switch (this.getVerdictState()) {
+      case 'EXECUTE': return 'none';
+      case 'TACTICAL': return 'medium';
+      case 'WAIT': return 'medium';
+      default: return 'high';
+    }
   }
 
   getGeoImpactClass(impact: string): string {
@@ -2183,6 +2291,15 @@ export class InstrumentCardComponent implements OnChanges {
     if (rsi < 30) return 'Oversold';
     if (rsi < 40) return 'Weak';
     return 'Neutral';
+  }
+
+  getATRInterpretation(): string {
+    const atr = this.analysis.volatility_risk?.atr || 0;
+    const price = this.analysis.current_price;
+    const atrPct = (atr / price) * 100;
+    if (atrPct > 2) return 'High Vol';
+    if (atrPct > 1) return 'Moderate';
+    return 'Low Vol';
   }
 
   getTechnicalHeatImpact(): string {
@@ -2512,7 +2629,7 @@ export class InstrumentCardComponent implements OnChanges {
     return out.slice(0, 5);
   }
 
-  private formatPrice(v: number | null | undefined): string {
+  formatPrice(v: number | null | undefined): string {
     return (v !== null && v !== undefined && Number.isFinite(v)) ? `$${v.toFixed(2)}` : 'N/A';
   }
 
@@ -2648,15 +2765,12 @@ export class InstrumentCardComponent implements OnChanges {
   }
 
   getEntryZone(): string {
-    const entry = this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
-    const s1 = this.analysis.technical_indicators?.pivot_points?.s1;
-    const ret382 = this.analysis.technical_indicators?.fibonacci?.ret_382;
-    if (this.isBullish && s1 && ret382) {
-      const low = Math.min(s1, ret382);
-      const high = Math.max(s1, ret382);
-      return `${low.toFixed(2)} – ${high.toFixed(2)}`;
-    }
-    return entry.toFixed(2);
+    // Anchor shown to the SAME level the backend used to compute SL/TP
+    // (ideal bounce/pullback entry) so ENTRY/STOP/TARGET stay consistent.
+    const anchor = this.analysis.volatility_risk?.entry_price
+      ?? this.analysis.position_sizing?.entry_price
+      ?? this.analysis.current_price;
+    return anchor.toFixed(2);
   }
 
   getEntryType(): string {
@@ -2872,7 +2986,7 @@ export class InstrumentCardComponent implements OnChanges {
     const adx = this.analysis.daily_strength?.adx ?? 0;
     const rsi = this.analysis.daily_strength?.rsi ?? 50;
     const rec = this.analysis.trade_signal?.recommendation;
-    if (adx >= 30) {
+    if (adx >= 25) {
       if (rec === 'bullish' && rsi > 45 && rsi < 72) return 'YES';
       if (rec === 'bearish' && rsi < 55 && rsi > 28) return 'YES';
     }
@@ -2887,21 +3001,114 @@ export class InstrumentCardComponent implements OnChanges {
     return rr >= 1.8 ? 'YES' : 'NO';
   }
 
+  // Intraday-specific gate: Session timing
+  // Best sessions for day trading: London/NY overlap (13:00-16:00 UTC)
+  getExecSessionStatus(): 'YES' | 'WEAK' | 'NO' {
+    if (this.analysis.strategy_mode !== 'intraday') return 'YES'; // Not applicable for other modes
+    const sessionCtx = this.analysis.session_context;
+    if (!sessionCtx) return 'NO';
+
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+
+    // London/NY overlap (13:00-16:00 UTC) - highest liquidity
+    if (utcHour >= 13 && utcHour < 16) return 'YES';
+    // London open (8:00-12:00 UTC) - good liquidity
+    if (utcHour >= 8 && utcHour < 12) return 'WEAK';
+    // NY open (13:00-17:00 UTC) - good liquidity
+    if (utcHour >= 13 && utcHour < 17) return 'WEAK';
+    // Asian session (0:00-8:00 UTC) - lower liquidity, avoid for most instruments
+    if (utcHour >= 0 && utcHour < 8) return 'NO';
+
+    return 'NO';
+  }
+
+  // Intraday-specific gate: Volume confirmation
+  // Check if session range indicates sufficient activity
+  getExecVolumeStatus(): 'YES' | 'NO' {
+    if (this.analysis.strategy_mode !== 'intraday') return 'YES'; // Not applicable for other modes
+    const sessionCtx = this.analysis.session_context;
+    if (!sessionCtx) return 'NO';
+
+    // Session range > 0.5% indicates sufficient activity
+    return sessionCtx.current_session_range_pct >= 0.5 ? 'YES' : 'NO';
+  }
+
   getExecPassCount(): number {
     let count = 0;
     if (this.getExecBiasStatus() === 'YES') count++;
     if (this.getExecLocationStatus() === 'YES') count++;
     if (this.getExecTriggerStatus() === 'YES') count++;
-    if (this.getExecConfirmationStatus() !== 'NO') count++;
+    // Only a full 'YES' counts as a passed gate. A 'WEAK' confirmation is shown
+    // on its chip but must not inflate the gates-passed tally.
+    if (this.getExecConfirmationStatus() === 'YES') count++;
     if (this.getExecRiskStatus() === 'YES') count++;
+
+    // Intraday-specific gates
+    if (this.analysis.strategy_mode === 'intraday') {
+      if (this.getExecSessionStatus() === 'YES') count++;
+      if (this.getExecVolumeStatus() === 'YES') count++;
+    }
+
     return count;
   }
 
+  getActiveIntradaySignals(): IntradaySignal[] {
+    return (this.analysis.intraday_signals || []).filter(s => s.status === 'ACTIVE');
+  }
+
+  getIntradayConfClass(confidence: number): string {
+    if (confidence >= 75) return 'conf-high';
+    if (confidence >= 60) return 'conf-medium';
+    return 'conf-low';
+  }
+
+  // True when the backend has an actual directional plan to manage (entry/stop/
+  // target exist). Used to keep trade levels and the exec decision in sync with
+  // the backend verdict instead of a frontend-only gate count.
+  hasDirectionalPlan(): boolean {
+    const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
+    const rec = this.analysis?.trade_signal?.recommendation;
+    return state !== 'stand_aside' && rec !== 'neutral';
+  }
+
+  // Blend model: the hero verdict carries the directional THESIS; this decision
+  // reports whether that thesis is EXECUTABLE right now. It defers to the backend
+  // execution_state so it can never flatly contradict the verdict banner.
   getExecDecision(): { label: string; cssClass: string } {
+    const state = this.analysis?.trade_signal?.execution_state ?? 'stand_aside';
+    const rec = this.analysis?.trade_signal?.recommendation;
     const pass = this.getExecPassCount();
-    if (pass === 5) return { label: 'EXECUTE · FULL SIZE', cssClass: 'ec-decision exec-go' };
-    if (pass === 4) return { label: 'TACTICAL ONLY · 0.5× SIZE', cssClass: 'ec-decision exec-tactical' };
-    return { label: 'WAIT', cssClass: 'ec-decision exec-wait' };
+    const totalGates = this.analysis.strategy_mode === 'intraday' ? 7 : 5;
+    const pending = totalGates - pass;
+    const dir = rec === 'bullish' ? 'LONG' : rec === 'bearish' ? 'SHORT' : '';
+
+    if (state === 'ready') {
+      const fullSizeThreshold = this.analysis.strategy_mode === 'intraday' ? 6 : 5;
+      const reducedSizeThreshold = this.analysis.strategy_mode === 'intraday' ? 5 : 4;
+      if (pass >= fullSizeThreshold) return { label: `EXECUTE ${dir} · FULL SIZE`, cssClass: 'ec-decision exec-go' };
+      if (pass >= reducedSizeThreshold) return { label: `EXECUTE ${dir} · REDUCED SIZE`, cssClass: 'ec-decision exec-go' };
+      return {
+        label: `SETUP VALID · ${pending} GATE${pending !== 1 ? 'S' : ''} PENDING`,
+        cssClass: 'ec-decision exec-tactical',
+      };
+    }
+    if (state === 'conditional') {
+      return {
+        label: `CONDITIONAL ${dir} · WAIT FOR TRIGGER`,
+        cssClass: 'ec-decision exec-tactical',
+      };
+    }
+    // execution_state is stand_aside — but defer to the verdict vocabulary so we
+    // don't say "STAND ASIDE" while the hero verdict says "WAIT".
+    if (this.getVerdictState() === 'WAIT') {
+      const conflict = this.analysis?.trade_signal?.signal_conflict;
+      if (conflict?.conflict_type && conflict.conflict_type !== 'none') {
+        return { label: 'WAIT · TIMEFRAMES DISAGREE', cssClass: 'ec-decision exec-wait' };
+      }
+      return { label: 'WAIT · BIAS UNCONFIRMED', cssClass: 'ec-decision exec-wait' };
+    }
+    return { label: 'STAND ASIDE · NO EDGE', cssClass: 'ec-decision exec-wait' };
   }
 
   getExecChipClass(status: string): string {
@@ -3012,7 +3219,7 @@ export class InstrumentCardComponent implements OnChanges {
   getRRReward(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
-    const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
+    const entry = vr.entry_price ?? this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
     const reward = this.isShortTrade()
       ? entry - vr.take_profit
       : vr.take_profit - entry;
@@ -3022,7 +3229,7 @@ export class InstrumentCardComponent implements OnChanges {
   getRRRisk(): string {
     const vr = this.analysis.volatility_risk;
     if (!vr) return '0.00';
-    const entry = parseFloat(this.getEntryZone()) || (vr.stop_loss + vr.take_profit) / 2;
+    const entry = vr.entry_price ?? this.analysis.position_sizing?.entry_price ?? this.analysis.current_price;
     const risk = this.isShortTrade()
       ? vr.stop_loss - entry
       : entry - vr.stop_loss;

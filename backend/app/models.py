@@ -65,6 +65,7 @@ class VolatilityAnalysis(BaseModel):
     take_profit: float  # Final target
     take_profit_level1: Optional[float] = None  # Scale out 1
     take_profit_level2: Optional[float] = None  # Scale out 2
+    entry_price: Optional[float] = None  # Anchor used for SL/TP (ideal entry or current price)
     risk_reward_ratio: float
     description: str
     atr_percentile_rank: float = 50.0
@@ -201,7 +202,7 @@ class InstrumentCorrelations(BaseModel):
 
 
 class TradeVerdict(BaseModel):
-    verdict: str        # "TRADE_LONG" | "TRADE_SHORT" | "WAIT" | "STAND_ASIDE"
+    verdict: str        # "TRADE_LONG" | "TRADE_SHORT" | "TACTICAL_LONG" | "TACTICAL_SHORT" | "WAIT" | "STAND_ASIDE"
     headline: str       # short, bold instruction shown as the hero element
     detail: str         # one-line supporting explanation
     color: str          # "green" | "red" | "amber" | "slate"
@@ -223,6 +224,29 @@ class TradeSignal(BaseModel):
     executive_summary: str = ""
     signal_conflict: Optional['SignalConflict'] = None
     trade_verdict: Optional['TradeVerdict'] = None
+
+
+class TradePlan(BaseModel):
+    """Single source of truth for trade levels.
+
+    Every UI surface (trade-level card, Strategic Action narrative, Expert Battle
+    Plan, scaling plan) must render entry/stop/targets from THIS object so the
+    numbers never diverge. Computed once from the final reconciled volatility
+    levels plus structural context (pivots / opening range).
+    """
+    direction: str                       # "long" | "short" | "neutral"
+    entry: float
+    stop_loss: float
+    take_profit_1: float
+    take_profit_2: float
+    take_profit_3: float
+    risk_reward: float
+    is_actionable: bool = False          # True = tradeable now; False = pending/conditional
+    entry_basis: str = ""                # where the entry comes from (market / pullback / bounce)
+    stop_basis: str = ""                 # stop logic + structural invalidation
+    target_basis: str = ""               # scale-out ladder description
+    invalidation: Optional[float] = None # structural level that voids the plan
+    narrative: str = ""
 
 
 class PositionSizing(BaseModel):
@@ -393,6 +417,27 @@ class BlockFlowDetection(BaseModel):
                         "Cross-reference with Level 2 / tape data before acting.")
 
 
+class IntradaySignal(BaseModel):
+    signal_id: str
+    symbol: str
+    name: str
+    timeframe: str            # "15m" | "1H" | "4H"
+    signal_type: str          # "LONG" | "SHORT"
+    trigger: str              # "EMA_CROSS" | "MACD_CROSS" | "EMA_MACD_CONFLUENCE"
+    entry_price: float
+    stop_loss: float
+    take_profit_1: float      # 1R target
+    take_profit_2: float      # 2R target
+    risk_reward: float
+    mtf_bias: str             # 4H direction backing this signal
+    confidence: int           # 0-100
+    generated_at: str         # ISO datetime
+    bar_time: str             # Bar that triggered the signal
+    expires_at: str           # ISO datetime
+    status: str = "ACTIVE"    # "ACTIVE" | "EXPIRED" | "HIT_TP1" | "HIT_TP2" | "HIT_SL"
+    notes: str = ""
+
+
 class InstrumentAnalysis(BaseModel):
     symbol: str
     name: str
@@ -414,7 +459,7 @@ class InstrumentAnalysis(BaseModel):
     news_sentiment: Optional[NewsSentiment] = None
     pullback_warning: Optional[PullbackWarningAnalysis] = None
     relative_strength: Optional[RelativeStrengthAnalysis] = None
-    expert_trade_plan: Optional[Dict[str, Any]] = None 
+    expert_trade_plan: Optional[Dict[str, Any]] = None
     strategy_mode: StrategyMode = StrategyMode.LONG_TERM
     intermarket_context: Optional['IntermarketContext'] = None
     session_context: Optional[SessionContext] = None
@@ -426,27 +471,9 @@ class InstrumentAnalysis(BaseModel):
     geopolitical_risk: Optional[GeopoliticalRisk] = None
     blowoff_top: Optional[BlowOffTopAnalysis] = None
     oil_market_context: Optional[OilMarketContext] = None
-
-
-class IntradaySignal(BaseModel):
-    signal_id: str
-    symbol: str
-    name: str
-    timeframe: str            # "15m" | "1H" | "4H"
-    signal_type: str          # "LONG" | "SHORT"
-    trigger: str              # "EMA_CROSS" | "MACD_CROSS" | "EMA_MACD_CONFLUENCE"
-    entry_price: float
-    stop_loss: float
-    take_profit_1: float      # 1R target
-    take_profit_2: float      # 2R target
-    risk_reward: float
-    mtf_bias: str             # 4H direction backing this signal
-    confidence: int           # 0-100
-    generated_at: str         # ISO datetime
-    bar_time: str             # Bar that triggered the signal
-    expires_at: str           # ISO datetime
-    status: str = "ACTIVE"    # "ACTIVE" | "EXPIRED" | "HIT_TP1" | "HIT_TP2" | "HIT_SL"
-    notes: str = ""
+    position_exit: Optional['PositionExitAnalysis'] = None
+    intraday_signals: Optional[List[IntradaySignal]] = None
+    trade_plan: Optional['TradePlan'] = None
 
 
 class PerformanceSummary(BaseModel):
@@ -499,5 +526,22 @@ class StrategySettings(BaseModel):
     portfolio_value: float
     risk_per_trade_percent: float
     aggressiveness_mode: str = "balanced"  # "conservative" | "balanced" | "aggressive"
+
+
+class PositionExitAnalysis(BaseModel):
+    """Systematic loss-cutting analysis for existing positions."""
+    should_exit: bool
+    exit_urgency: str  # "IMMEDIATE" | "HIGH" | "MODERATE" | "LOW" | "NONE"
+    exit_reason: str
+    position_health: str  # "CRITICAL" | "DAMAGED" | "WEAKENING" | "HEALTHY" | "STRONG"
+    divergence_detected: bool
+    divergence_type: str  # "trend_reversal" | "momentum_shift" | "support_break" | "none"
+    current_drawdown_pct: float
+    max_acceptable_drawdown_pct: float
+    time_in_position_bars: int
+    recommended_action: str
+    stop_loss_level: Optional[float] = None
+    recovery_probability: float  # 0 to 1
+    factors: List[str] = []
 
 

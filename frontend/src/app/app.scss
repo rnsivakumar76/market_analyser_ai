@@ -1349,6 +1349,37 @@ app-ai-copilot     { display: block; }
   }
 }
 
+.overview-container {
+  height: calc(100vh - 146px);
+  overflow-y: auto;
+  background: var(--bg-primary);
+
+  &::-webkit-scrollbar { width: 8px; }
+  &::-webkit-scrollbar-track { background: var(--bg-secondary); }
+  &::-webkit-scrollbar-thumb { background: var(--bg-quaternary); border-radius: 4px; }
+}
+
+.back-to-overview-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-primary);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--bg-quaternary);
+    color: var(--text-primary);
+  }
+}
+
 .split-view-container {
   display: flex;
   height: calc(100vh - 146px);
@@ -2288,4 +2319,187 @@ app-ai-copilot     { display: block; }
   .orb-price                          { color: #64748b !important; }
   .orb-footer                         { border-top-color: #e2e8f0 !important; }
   .orb-footer .orb-stat span          { color: #94a3b8 !important; }
+}
+
+/* Position Exit Warning - Systematic Loss-Cutting Mechanism */
+.position-exit-warning {
+  margin: 12px 0;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  background: var(--surface-secondary);
+  animation: pulse-warning 2s ease-in-out infinite;
+
+  &.pe-immediate {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  &.pe-high {
+    border-left-color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+  }
+
+  &.pe-moderate {
+    border-left-color: #eab308;
+    background: rgba(234, 179, 8, 0.1);
+  }
+
+  &.pe-low {
+    border-left-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .pew-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+
+    .pew-icon {
+      font-size: 1.5rem;
+    }
+
+    .pew-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .pew-urgency {
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+
+      &.peu-immediate {
+        background: #ef4444;
+        color: white;
+      }
+
+      &.peu-high {
+        background: #f97316;
+        color: white;
+      }
+
+      &.peu-moderate {
+        background: #eab308;
+        color: white;
+      }
+
+      &.peu-low {
+        background: #3b82f6;
+        color: white;
+      }
+    }
+  }
+
+  .pew-health {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+
+    .pew-health-label {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .pew-health-value {
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+
+      &.ph-critical {
+        background: #ef4444;
+        color: white;
+      }
+
+      &.ph-damaged {
+        background: #f97316;
+        color: white;
+      }
+
+      &.ph-weakening {
+        background: #eab308;
+        color: white;
+      }
+
+      &.ph-healthy {
+        background: #22c55e;
+        color: white;
+      }
+
+      &.ph-strong {
+        background: #3b82f6;
+        color: white;
+      }
+    }
+
+    .pew-drawdown {
+      margin-left: auto;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  }
+
+  .pew-reason {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .pew-action {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    font-style: italic;
+  }
+
+  .pew-factors {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .pew-factor {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      padding-left: 8px;
+      border-left: 2px solid var(--border-color);
+    }
+  }
+}
+
+@keyframes pulse-warning {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Light theme adjustments for position exit warning */
+.light-theme {
+  .position-exit-warning {
+    &.pe-immediate {
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    &.pe-high {
+      background: rgba(249, 115, 22, 0.15);
+    }
+
+    &.pe-moderate {
+      background: rgba(234, 179, 8, 0.15);
+    }
+
+    &.pe-low {
+      background: rgba(59, 130, 246, 0.15);
+    }
+  }
 }

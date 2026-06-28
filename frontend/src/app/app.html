@@ -44,9 +44,10 @@
       </div>
 
       <button class="mode-toggle-btn" (click)="toggleStrategyMode()"
-        [class.short-term]="strategyMode() === 'short_term'">
-        <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : 'Short Term' }}</span>
-        <span class="mode-icon">{{ strategyMode() === 'long_term' ? '📅' : '⏱️' }}</span>
+        [class.short-term]="strategyMode() === 'short_term'"
+        [class.intraday]="strategyMode() === 'intraday'">
+        <span class="mode-name">{{ strategyMode() === 'long_term' ? 'Long Term' : strategyMode() === 'short_term' ? 'Short Term' : 'Intraday' }}</span>
+        <span class="mode-icon">{{ strategyMode() === 'long_term' ? '📅' : strategyMode() === 'short_term' ? '⏱️' : '⚡' }}</span>
       </button>
 
       @if (lastUpdated()) {
@@ -334,8 +335,20 @@
   }
 
 
+  @if (viewMode() === 'overview') {
+  <main class="overview-container">
+    <app-opportunities-overview
+      [instruments]="instruments()"
+      [strategyMode]="strategyMode()"
+      (select)="openInstrumentDetail($event)"
+      (modeChange)="switchStrategyMode($event)">
+    </app-opportunities-overview>
+  </main>
+  } @else {
+
   <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
     <div class="sidebar-panel" [class.mobile-hidden]="mobileTab() !== 'watchlist'" [class.mobile-active-panel]="mobileTab() === 'watchlist'">
+      <button class="back-to-overview-btn" (click)="backToOverview()">‹ Back to Opportunities</button>
       <!-- Sidebar Tab Bar -->
       <div class="sidebar-tabs">
         <button class="stab" [class.active]="sidebarTab() === 'heatmap'" (click)="sidebarTab.set('heatmap')">
@@ -572,6 +585,7 @@
     }
     }
   </main>
+  }
 
   <!-- Mobile Bottom Navigation -->
   <nav class="mobile-bottom-nav">

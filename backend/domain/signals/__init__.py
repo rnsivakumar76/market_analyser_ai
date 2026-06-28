@@ -9,6 +9,7 @@ from .scoring_engine import (
     compute_trend_score,
     compute_pullback_score,
     compute_strength_score,
+    compute_tactical_neutral_score,
     compute_composite_score,
     ScoreComponents,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "compute_trend_score",
     "compute_pullback_score",
     "compute_strength_score",
+    "compute_tactical_neutral_score",
     "compute_composite_score",
     "ScoreComponents",
     "FilterResult",
