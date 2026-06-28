@@ -1918,7 +1918,7 @@ async def get_pyramid_plan(
         
         # Get ATR for volatility
         df = fetch_historical_data(position_data['symbol'], interval='1day', days=50)
-        atr = calculate_atr(df['Close'], df['High'], df['Low'], period=14)
+        atr = calculate_atr(df, period=14)
         
         # Create PyramidPosition model
         from app.models import PyramidPosition
@@ -2023,7 +2023,7 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
                     
                     if primary_signal.get('confidence', 0) >= 0.6:
                         current_price = get_current_price(symbol)
-                        atr = calculate_atr(df_daily['Close'], df_daily['High'], df_daily['Low'], period=14)
+                        atr = calculate_atr(df_daily, period=14)
                         
                         # Apply price offset for local market
                         price_offset = get_price_offset(config, symbol)
