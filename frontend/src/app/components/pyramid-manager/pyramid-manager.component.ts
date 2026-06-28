@@ -275,4 +275,48 @@ export class PyramidManagerComponent implements OnInit {
       default: return '#64748b';
     }
   }
+  
+  isInProfit(): boolean {
+    if (!this.selectedPosition) return false;
+    return this.selectedPosition.unrealized_pnl >= 0;
+  }
+  
+  getRecommendationColor(action: string): string {
+    switch (action) {
+      case 'ADD_POSITION': return '#10b981';
+      case 'MOVE_STOP': return '#3b82f6';
+      case 'PARTIAL_EXIT': return '#f59e0b';
+      case 'CLOSE_ALL': return '#ef4444';
+      default: return '#64748b';
+    }
+  }
+  
+  getActionGuidance(): string {
+    if (!this.selectedPosition || !this.pyramidPlan) return '';
+    
+    const rec = this.pyramidPlan.current_recommendation;
+    const pnl = this.selectedPosition.unrealized_pnl;
+    
+    if (pnl < 0) {
+      return '⚠️ Position is in loss. Wait for profit before adding more lots.';
+    }
+    
+    if (rec.action === 'ADD_POSITION') {
+      return '✅ Price reached target. Good time to add position.';
+    }
+    
+    if (rec.action === 'MOVE_STOP') {
+      return '📈 Trail your stop loss to protect profits.';
+    }
+    
+    if (rec.action === 'PARTIAL_EXIT') {
+      return '💰 Consider taking partial profits at this level.';
+    }
+    
+    if (rec.action === 'CLOSE_ALL') {
+      return '🚪 Consider closing the position now.';
+    }
+    
+    return '⏳ Hold current position. Wait for price to reach next target.';
+  }
 }

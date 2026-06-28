@@ -228,10 +228,36 @@
       </div>
     </div>
 
+    <!-- Warning Banner for Negative PnL -->
+    <div class="warning-banner" *ngIf="!isInProfit()">
+      <span class="warning-icon">⚠️</span>
+      <div class="warning-content">
+        <strong>Position in Loss</strong>
+        <p>Current PnL: {{ formatPnl(selectedPosition.unrealized_pnl) }}</p>
+        <p class="warning-text">Do not add more lots while position is in loss. Wait for price to move in your favor.</p>
+      </div>
+    </div>
+
+    <!-- Action Guidance Banner -->
+    <div class="guidance-banner" [class.warning]="!isInProfit()">
+      <span class="guidance-icon">{{ isInProfit() ? '💡' : '🛑' }}</span>
+      <span class="guidance-text">{{ getActionGuidance() }}</span>
+    </div>
+
     <!-- Current Recommendation -->
-    <div class="recommendation-card" [class.action]="pyramidPlan.current_recommendation.action !== 'HOLD'">
+    <div 
+      class="recommendation-card" 
+      [class.action]="pyramidPlan.current_recommendation.action !== 'HOLD'"
+      [class.warning]="pyramidPlan.current_recommendation.action === 'ADD_POSITION' && !isInProfit()"
+      [style.border-left-color]="getRecommendationColor(pyramidPlan.current_recommendation.action)"
+    >
       <div class="rec-header">
-        <span class="rec-action">{{ pyramidPlan.current_recommendation.action }}</span>
+        <span 
+          class="rec-action" 
+          [style.color]="getRecommendationColor(pyramidPlan.current_recommendation.action)"
+        >
+          {{ pyramidPlan.current_recommendation.action }}
+        </span>
         <span class="rec-stage">{{ pyramidPlan.current_recommendation.pyramid_stage }}</span>
       </div>
       <p class="rec-reason">{{ pyramidPlan.current_recommendation.reason }}</p>
@@ -252,9 +278,11 @@
       <button 
         class="btn-execute" 
         *ngIf="pyramidPlan.current_recommendation.action !== 'HOLD'"
+        [class.disabled]="pyramidPlan.current_recommendation.action === 'ADD_POSITION' && !isInProfit()"
         (click)="executeRecommendation()"
+        [disabled]="pyramidPlan.current_recommendation.action === 'ADD_POSITION' && !isInProfit()"
       >
-        Execute Recommendation
+        {{ pyramidPlan.current_recommendation.action === 'ADD_POSITION' && !isInProfit() ? 'Cannot Add (Position in Loss)' : 'Execute Recommendation' }}
       </button>
     </div>
 
