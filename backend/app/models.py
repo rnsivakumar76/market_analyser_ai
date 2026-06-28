@@ -226,6 +226,29 @@ class TradeSignal(BaseModel):
     trade_verdict: Optional['TradeVerdict'] = None
 
 
+class TradePlan(BaseModel):
+    """Single source of truth for trade levels.
+
+    Every UI surface (trade-level card, Strategic Action narrative, Expert Battle
+    Plan, scaling plan) must render entry/stop/targets from THIS object so the
+    numbers never diverge. Computed once from the final reconciled volatility
+    levels plus structural context (pivots / opening range).
+    """
+    direction: str                       # "long" | "short" | "neutral"
+    entry: float
+    stop_loss: float
+    take_profit_1: float
+    take_profit_2: float
+    take_profit_3: float
+    risk_reward: float
+    is_actionable: bool = False          # True = tradeable now; False = pending/conditional
+    entry_basis: str = ""                # where the entry comes from (market / pullback / bounce)
+    stop_basis: str = ""                 # stop logic + structural invalidation
+    target_basis: str = ""               # scale-out ladder description
+    invalidation: Optional[float] = None # structural level that voids the plan
+    narrative: str = ""
+
+
 class PositionSizing(BaseModel):
     suggested_units: float
     risk_amount: float
@@ -450,6 +473,7 @@ class InstrumentAnalysis(BaseModel):
     oil_market_context: Optional[OilMarketContext] = None
     position_exit: Optional['PositionExitAnalysis'] = None
     intraday_signals: Optional[List[IntradaySignal]] = None
+    trade_plan: Optional['TradePlan'] = None
 
 
 class PerformanceSummary(BaseModel):

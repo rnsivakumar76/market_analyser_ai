@@ -171,7 +171,7 @@ def analyze_instrument_lazy(
         analyze_news_sentiment, analyze_pullback_warning, analyze_relative_strength,
         analyze_intermarket_context, analyze_session_context,
         detect_opening_range, calculate_rvol, analyze_commodity_specifics, generate_expert_trade_plan,
-        analyze_blowoff_top, analyze_position_exit,
+        analyze_blowoff_top, analyze_position_exit, build_trade_plan,
     )
     from .signal_generator import generate_trade_signal
     from .models import InstrumentAnalysis, Signal, CandleAnalysis, PullbackWarningAnalysis, StrategyMode, IntermarketContext
@@ -412,7 +412,30 @@ def analyze_instrument_lazy(
     volatility = analyze_volatility_and_risk(execution_data, current_price, trade_signal.recommendation.value, entry_price=ideal_entry_for_signal)
     logger.info(f"[{symbol}] Volatility result: anchor={volatility.entry_price}, sl={volatility.stop_loss}, tp={volatility.take_profit}")
 
-    # Build expert plan now that trade_signal.recommendation is final and volatility.atr is available
+    # ── Canonical trade plan — SINGLE SOURCE OF TRUTH for entry/stop/targets ──
+    # Built once from the FINAL volatility levels + structural context. Every UI
+    # surface (level card, Strategic Action, Battle Plan, scaling) renders from
+    # this so the numbers can never diverge.
+    trade_plan = build_trade_plan(
+        signal_direction=trade_signal.recommendation.value,
+        current_price=current_price,
+        volatility=volatility,
+        tech_indicators=tech_indicators,
+        is_actionable=trade_signal.trade_worthy,
+        or_data=_expert_or_data,
+    )
+
+    # Keep the Strategic Action scaling narrative numerically in sync with the
+    # final plan (it was generated earlier off the pre-recalc volatility).
+    if trade_plan and trade_plan.direction != "neutral":
+        trade_signal.scaling_plan = (
+            f"Stage 1 (De-risk): Exit 30% at ${trade_plan.take_profit_1:.2f} & move stop to break-even. "
+            f"Stage 2 (Profit): Exit 40% at ${trade_plan.take_profit_2:.2f}. "
+            f"Stage 3 (Runner): Leave 30% for ${trade_plan.take_profit_3:.2f} or trail by 2.0x ATR."
+        )
+
+    # Build expert plan now that trade_signal.recommendation is final and the
+    # canonical trade plan is available (numbers come from the plan).
     if _expert_or_data is not None:
         expert_plan = generate_expert_trade_plan(
             symbol, current_price, _expert_or_data, _expert_rvol, tech_indicators, _expert_advice,
@@ -421,6 +444,7 @@ def analyze_instrument_lazy(
             rsi=float(strength.rsi),
             adx=float(strength.adx),
             session_ctx=session_ctx,
+            trade_plan=trade_plan,
         )
 
     # Selection of daily data for backtesting (1Y perspective)
@@ -527,6 +551,7 @@ def analyze_instrument_lazy(
         geopolitical_risk=geopolitical_risk,
         blowoff_top=blowoff_top,
         position_exit=position_exit,
+        trade_plan=trade_plan,
     ), execution_data
 
 # In-memory store for sent alerts

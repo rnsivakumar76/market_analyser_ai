@@ -92,12 +92,19 @@ def generate_expert_trade_plan(
     rsi: Optional[float] = None,
     adx: Optional[float] = None,
     session_ctx: Any = None,
+    trade_plan: Any = None,
 ) -> Dict[str, Any]:
     """
     Generates a rich multi-line 'Battle Plan' for the day trader.
     Covers: SITUATION → ENTRY → TARGETS → STOP/INVALIDATION → CONVICTION → CONTEXT
+
+    When a canonical ``trade_plan`` is supplied, the ENTRY / TARGETS / STOP
+    numbers are taken from it (single source of truth) so the Battle Plan never
+    contradicts the trade-level card. The opening-range / session logic is kept
+    as qualitative confirmation guidance.
     """
     sections = []
+    _has_plan = trade_plan is not None and getattr(trade_plan, "direction", "neutral") != "neutral"
 
     orb_direction = or_data.get("broken", "none")
     or_high = or_data.get("or_high", 0.0)
@@ -168,10 +175,21 @@ def generate_expert_trade_plan(
         if entry:
             sections.append(entry)
 
+    # Canonical entry reference (authoritative — from the shared trade plan)
+    if _has_plan and getattr(trade_plan, "entry_basis", ""):
+        sections.append(f"PLAN ENTRY: {trade_plan.entry_basis}.")
+
     # ── 3. TARGETS ────────────────────────────────────────────────────────────
-    # Signal direction (daily) takes priority over ORB direction when they conflict.
-    # A bearish ORB on a bullish daily signal = pullback entry → long targets.
-    if technical and technical.pivot_points:
+    # Prefer the canonical plan ladder; fall back to pivot-based targets only
+    # when no plan was supplied.
+    if _has_plan:
+        sections.append(
+            f"TARGETS: T1 → ${trade_plan.take_profit_1:.2f} — book 50% profit and move stop to breakeven. "
+            f"T2 → ${trade_plan.take_profit_2:.2f}. Runner → ${trade_plan.take_profit_3:.2f}."
+        )
+    elif technical and technical.pivot_points:
+        # Signal direction (daily) takes priority over ORB direction when they conflict.
+        # A bearish ORB on a bullish daily signal = pullback entry → long targets.
         p = technical.pivot_points
         long_targets = is_bullish or (not is_bearish and orb_direction == "bullish")
         short_targets = is_bearish or (not is_bullish and orb_direction == "bearish")
@@ -187,8 +205,13 @@ def generate_expert_trade_plan(
             )
 
     # ── 4. STOP / INVALIDATION ────────────────────────────────────────────────
-    # Same priority logic: daily signal determines which side the stop goes.
-    if technical and technical.pivot_points:
+    # Prefer the canonical plan stop; fall back to pivot/OR logic otherwise.
+    if _has_plan:
+        inv = getattr(trade_plan, "invalidation", None)
+        side_word = "below" if trade_plan.direction == "long" else "above"
+        inv_note = f" Plan INVALIDATED on a 15m close {side_word} {inv:.2f}." if inv else ""
+        sections.append(f"STOP: Hard stop at ${trade_plan.stop_loss:.2f}.{inv_note}")
+    elif technical and technical.pivot_points:
         p = technical.pivot_points
         atr_note = f" ({atr:.2f} ATR buffer)" if atr and atr > 0 else ""
         long_stop = is_bullish or (not is_bearish and orb_direction == "bullish")
