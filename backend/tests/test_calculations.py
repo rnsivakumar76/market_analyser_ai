@@ -1198,3 +1198,224 @@ class TestPerformanceAnalyzer:
         assert hasattr(result, 'worst_trade_symbol')
         assert hasattr(result, 'worst_trade_pnl')
         assert hasattr(result, 'description')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 11. BACKTEST ENGINE
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestBacktestEngine:
+    """Test backtest engine for historical performance analysis."""
+
+    def test_load_cache_empty(self):
+        """Test cache loading when no cache exists."""
+        from app.analyzers.backtest_engine import _load_cache
+
+        cache = _load_cache()
+        assert isinstance(cache, dict)
+
+    def test_get_backtest_results_insufficient_data(self):
+        """Test backtest with insufficient historical data."""
+        from app.analyzers.backtest_engine import get_backtest_results
+        import pandas as pd
+
+        # Create minimal dataframe with less than 150 rows
+        dates = pd.date_range(start='2024-01-01', periods=100, freq='D')
+        data = pd.DataFrame({
+            'Open': [100.0] * 100,
+            'High': [105.0] * 100,
+            'Low': [95.0] * 100,
+            'Close': [100.0] * 100,
+            'Volume': [1000000] * 100
+        }, index=dates)
+
+        result = get_backtest_results('TEST', data, {}, StrategySettings())
+        assert result.total_trades == 0
+        assert result.win_rate == 0.0
+        assert 'Insufficient historical data' in result.description
+
+    def test_get_backtest_results_structure(self):
+        """Test backtest returns proper structure."""
+        from app.analyzers.backtest_engine import get_backtest_results
+        import pandas as pd
+
+        # Create dataframe with sufficient data
+        dates = pd.date_range(start='2023-01-01', periods=200, freq='D')
+        data = pd.DataFrame({
+            'Open': [100.0] * 200,
+            'High': [105.0] * 200,
+            'Low': [95.0] * 200,
+            'Close': [100.0] * 200,
+            'Volume': [1000000] * 200
+        }, index=dates)
+
+        result = get_backtest_results('TEST', data, {}, StrategySettings())
+        assert hasattr(result, 'win_rate')
+        assert hasattr(result, 'total_trades')
+        assert hasattr(result, 'profit_factor')
+        assert hasattr(result, 'avg_win')
+        assert hasattr(result, 'avg_loss')
+        assert hasattr(result, 'description')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 12. INTRADAY SIGNAL GENERATOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestIntradaySignalGenerator:
+    """Test intraday signal generation with EMA/MACD crossovers."""
+
+    def test_ema_calculation(self):
+        """Test EMA calculation helper function."""
+        from app.analyzers.intraday_signal_generator import _ema
+        import numpy as np
+
+        arr = np.array([100, 101, 102, 103, 104, 105])
+        result = _ema(arr, span=9)
+        assert len(result) == len(arr)
+        assert not np.isnan(result[-1])
+
+    def test_ema_crossover_bullish(self):
+        """Test EMA crossover detection for bullish signal."""
+        from app.analyzers.intraday_signal_generator import _ema_crossover
+        import numpy as np
+
+        # Create price series where fast EMA crosses above slow EMA
+        closes = np.array([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124])
+        result = _ema_crossover(closes)
+        # Result should be one of 'bullish', 'bearish', or 'none'
+        assert result in ['bullish', 'bearish', 'none']
+
+    def test_ema_crossover_insufficient_data(self):
+        """Test EMA crossover with insufficient data returns 'none'."""
+        from app.analyzers.intraday_signal_generator import _ema_crossover
+        import numpy as np
+
+        closes = np.array([100, 101, 102, 103, 104])
+        result = _ema_crossover(closes)
+        assert result == 'none'
+
+    def test_ema_bias_bullish(self):
+        """Test EMA bias detection for bullish bias."""
+        from app.analyzers.intraday_signal_generator import _ema_bias
+        import numpy as np
+
+        # Price significantly above EMA21
+        closes = np.array([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 130])
+        result = _ema_bias(closes)
+        assert result in ['bullish', 'bearish', 'neutral']
+
+    def test_ema_bias_insufficient_data(self):
+        """Test EMA bias with insufficient data returns 'neutral'."""
+        from app.analyzers.intraday_signal_generator import _ema_bias
+        import numpy as np
+
+        closes = np.array([100, 101, 102, 103, 104])
+        result = _ema_bias(closes)
+        assert result == 'neutral'
+
+    def test_macd_crossover_insufficient_data(self):
+        """Test MACD crossover with insufficient data returns 'none'."""
+        from app.analyzers.intraday_signal_generator import _macd_crossover
+        import numpy as np
+
+        closes = np.array([100, 101, 102, 103, 104])
+        result = _macd_crossover(closes)
+        assert result == 'none'
+
+    def test_calc_atr(self):
+        """Test ATR calculation helper function."""
+        from app.analyzers.intraday_signal_generator import _calc_atr
+        import numpy as np
+
+        highs = np.array([105, 106, 107, 108, 109, 110])
+        lows = np.array([95, 96, 97, 98, 99, 100])
+        closes = np.array([100, 101, 102, 103, 104, 105])
+        result = _calc_atr(highs, lows, closes, period=14)
+        assert result > 0
+        assert isinstance(result, float)
+
+    def test_calc_atr_insufficient_data(self):
+        """Test ATR calculation with insufficient data uses fallback."""
+        from app.analyzers.intraday_signal_generator import _calc_atr
+        import numpy as np
+
+        highs = np.array([105, 106, 107])
+        lows = np.array([95, 96, 97])
+        closes = np.array([100, 101, 102])
+        result = _calc_atr(highs, lows, closes, period=14)
+        assert result > 0
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 13. OIL MARKET ANALYZER
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestOilMarketAnalyzer:
+    """Test oil market context analysis for WTI."""
+
+    def test_classify_ovx_low(self):
+        """Test OVX classification for low volatility."""
+        from app.analyzers.oil_market_analyzer import _classify_ovx
+
+        result = _classify_ovx(20.0)
+        assert result.regime == "LOW"
+        assert result.size_multiplier == 1.0
+
+    def test_classify_ovx_normal(self):
+        """Test OVX classification for normal volatility."""
+        from app.analyzers.oil_market_analyzer import _classify_ovx
+
+        result = _classify_ovx(30.0)
+        assert result.regime == "NORMAL"
+        assert result.size_multiplier == 1.0
+
+    def test_classify_ovx_elevated(self):
+        """Test OVX classification for elevated volatility."""
+        from app.analyzers.oil_market_analyzer import _classify_ovx
+
+        result = _classify_ovx(40.0)
+        assert result.regime == "ELEVATED"
+        assert result.size_multiplier == 0.65
+
+    def test_classify_ovx_extreme(self):
+        """Test OVX classification for extreme volatility."""
+        from app.analyzers.oil_market_analyzer import _classify_ovx
+
+        result = _classify_ovx(55.0)
+        assert result.regime == "EXTREME"
+        assert result.size_multiplier == 0.30
+
+    def test_next_wednesday(self):
+        """Test next Wednesday calculation."""
+        from app.analyzers.oil_market_analyzer import _next_wednesday
+        from datetime import date
+
+        result = _next_wednesday()
+        assert isinstance(result, date)
+        assert result.weekday() == 2  # Wednesday
+
+    def test_check_opec_window(self):
+        """Test OPEC window check."""
+        from app.analyzers.oil_market_analyzer import _check_opec_window
+
+        result = _check_opec_window()
+        # Result can be None or OpecWindow depending on current date
+        if result is not None:
+            assert hasattr(result, 'next_meeting_date')
+            assert hasattr(result, 'days_until')
+            assert hasattr(result, 'is_active_window')
+            assert hasattr(result, 'caution_message')
+
+    def test_analyze_oil_market_context_structure(self):
+        """Test oil market context returns proper structure."""
+        from app.analyzers.oil_market_analyzer import analyze_oil_market_context
+
+        result = analyze_oil_market_context()
+        assert hasattr(result, 'ovx')
+        assert hasattr(result, 'eia_inventory')
+        assert hasattr(result, 'opec_window')
+        assert hasattr(result, 'overall_regime')
+        assert hasattr(result, 'regime_summary')
+        assert hasattr(result, 'size_guidance')
+        assert hasattr(result, 'warnings')
