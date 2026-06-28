@@ -671,7 +671,7 @@ class TestGeopoliticalRiskAnalyzer:
         from app.analyzers.geo_risk_analyzer import _scan_keywords
 
         news_items = [
-            NewsItem(title="War escalation in middle east", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+            NewsItem(title="War escalation in middle east", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral", sentiment_score=0.0)
         ]
         result = _scan_keywords(news_items)
         assert 'conflict' in result
@@ -682,7 +682,7 @@ class TestGeopoliticalRiskAnalyzer:
         from app.analyzers.geo_risk_analyzer import _scan_keywords
 
         news_items = [
-            NewsItem(title="New sanctions imposed on oil exports", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+            NewsItem(title="New sanctions imposed on oil exports", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral", sentiment_score=0.0)
         ]
         result = _scan_keywords(news_items)
         assert 'sanctions' in result
@@ -692,7 +692,7 @@ class TestGeopoliticalRiskAnalyzer:
         from app.analyzers.geo_risk_analyzer import _scan_keywords
 
         news_items = [
-            NewsItem(title="Stock market rally continues", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+            NewsItem(title="Stock market rally continues", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral", sentiment_score=0.0)
         ]
         result = _scan_keywords(news_items)
         assert len(result) == 0
@@ -764,9 +764,9 @@ class TestGeopoliticalRiskAnalyzer:
         """Test geopolitical analysis with no news data."""
         from app.analyzers.geo_risk_analyzer import analyze_geopolitical_risk
 
-        strength = StrengthAnalysis(adx=25, rsi=55, volume_ratio=1.5)
-        volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=50)
-        trade_signal = TradeSignal(recommendation=Signal.NEUTRAL)
+        strength = StrengthAnalysis(signal=Signal.NEUTRAL, adx=25, rsi=55, volume_ratio=1.5, price_change_percent=0.0, description="Test strength")
+        volatility = VolatilityAnalysis(atr=10, stop_loss=95, take_profit=110, risk_reward_ratio=2.0, atr_percentile_rank=50, description="Test volatility")
+        trade_signal = TradeSignal(recommendation=Signal.NEUTRAL, score=0, reasons=[], trade_worthy=False)
 
         result = analyze_geopolitical_risk('XAU', None, strength, volatility, trade_signal)
         assert result.detected is False
@@ -782,12 +782,12 @@ class TestGeopoliticalRiskAnalyzer:
             score=0,
             sentiment_summary='No geopolitical news',
             news_items=[
-                NewsItem(title="Stock market rally", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+                NewsItem(title="Stock market rally", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral", sentiment_score=0.0)
             ]
         )
-        strength = StrengthAnalysis(adx=25, rsi=55, volume_ratio=1.5)
-        volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=50)
-        trade_signal = TradeSignal(recommendation=Signal.NEUTRAL)
+        strength = StrengthAnalysis(signal=Signal.NEUTRAL, adx=25, rsi=55, volume_ratio=1.5, price_change_percent=0.0, description="Test strength")
+        volatility = VolatilityAnalysis(atr=10, stop_loss=95, take_profit=110, risk_reward_ratio=2.0, atr_percentile_rank=50, description="Test volatility")
+        trade_signal = TradeSignal(recommendation=Signal.NEUTRAL, score=0, reasons=[], trade_worthy=False)
 
         result = analyze_geopolitical_risk('XAU', news, strength, volatility, trade_signal)
         assert result.detected is False
@@ -802,12 +802,12 @@ class TestGeopoliticalRiskAnalyzer:
             score=0,
             sentiment_summary='Geopolitical tension',
             news_items=[
-                NewsItem(title="War escalation in middle east", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral")
+                NewsItem(title="War escalation in middle east", source="Test", url="http://test.com", published_at="2024-01-01", sentiment_label="neutral", sentiment_score=0.0)
             ]
         )
-        strength = StrengthAnalysis(adx=35, rsi=60, volume_ratio=2.0)
-        volatility = VolatilityAnalysis(atr=10, atr_percentile_rank=75)
-        trade_signal = TradeSignal(recommendation=Signal.BULLISH)
+        strength = StrengthAnalysis(signal=Signal.BULLISH, adx=35, rsi=60, volume_ratio=2.0, price_change_percent=1.0, description="Test strength")
+        volatility = VolatilityAnalysis(atr=10, stop_loss=95, take_profit=110, risk_reward_ratio=2.0, atr_percentile_rank=75, description="Test volatility")
+        trade_signal = TradeSignal(recommendation=Signal.BULLISH, score=50, reasons=[], trade_worthy=True)
 
         result = analyze_geopolitical_risk('XAU', news, strength, volatility, trade_signal)
         assert result.detected is True
@@ -851,7 +851,8 @@ class TestTradePlanBuilder:
             take_profit=5408.31,
             take_profit_level1=5303.00,
             take_profit_level2=5355.00,
-            risk_reward_ratio=2.0
+            risk_reward_ratio=2.0,
+            description="Test volatility"
         )
 
         plan = build_trade_plan(
@@ -883,7 +884,8 @@ class TestTradePlanBuilder:
             take_profit=5260.0,
             take_profit_level1=5340.0,
             take_profit_level2=5300.0,
-            risk_reward_ratio=2.0
+            risk_reward_ratio=2.0,
+            description="Test volatility"
         )
 
         plan = build_trade_plan(
@@ -911,7 +913,8 @@ class TestTradePlanBuilder:
             take_profit=5408.31,
             take_profit_level1=5303.00,
             take_profit_level2=5355.00,
-            risk_reward_ratio=2.0
+            risk_reward_ratio=2.0,
+            description="Test volatility"
         )
 
         plan = build_trade_plan(
@@ -946,7 +949,8 @@ class TestTradePlanBuilder:
             stop_loss=5265.0,
             entry_price=5277.66,
             take_profit=5408.31,
-            risk_reward_ratio=2.0
+            risk_reward_ratio=2.0,
+            description="Test volatility"
         )
 
         plan = build_trade_plan(
@@ -967,7 +971,8 @@ class TestTradePlanBuilder:
             stop_loss=5265.0,
             entry_price=5277.66,
             take_profit=5408.31,
-            risk_reward_ratio=2.0
+            risk_reward_ratio=2.0,
+            description="Test volatility"
         )
 
         plan = build_trade_plan(
@@ -990,7 +995,8 @@ class TestTradePlanBuilder:
             take_profit=5408.31,
             take_profit_level1=5303.00,
             take_profit_level2=5355.00,
-            risk_reward_ratio=2.0
+            risk_reward_ratio=2.0,
+            description="Test volatility"
         )
 
         or_data = {'or_high': 5400.0, 'or_low': 5250.0, 'broken': False}
@@ -1016,7 +1022,8 @@ class TestTradePlanBuilder:
             stop_loss=5265.0,
             entry_price=5382.97,  # Same as current price
             take_profit=5408.31,
-            risk_reward_ratio=2.0
+            risk_reward_ratio=2.0,
+            description="Test volatility"
         )
 
         plan = build_trade_plan(
@@ -1169,7 +1176,14 @@ class TestPerformanceAnalyzer:
         data_map = {}  # Empty data map
         params = {}
         benchmarks = {'SPX': Signal.NEUTRAL}
-        settings = StrategySettings()
+        settings = StrategySettings(
+            conviction_threshold=70,
+            adx_threshold=25,
+            atr_multiplier_tp=3.0,
+            atr_multiplier_sl=1.5,
+            portfolio_value=10000.0,
+            risk_per_trade_percent=1.0
+        )
 
         result = calculate_weekly_performance(instruments, data_map, params, benchmarks, settings)
         assert result.total_trades == 0
@@ -1187,7 +1201,14 @@ class TestPerformanceAnalyzer:
         data_map = {}
         params = {}
         benchmarks = {'SPX': Signal.NEUTRAL}
-        settings = StrategySettings()
+        settings = StrategySettings(
+            conviction_threshold=70,
+            adx_threshold=25,
+            atr_multiplier_tp=3.0,
+            atr_multiplier_sl=1.5,
+            portfolio_value=10000.0,
+            risk_per_trade_percent=1.0
+        )
 
         result = calculate_weekly_performance(instruments, data_map, params, benchmarks, settings)
         assert hasattr(result, 'total_pnl_percent')
@@ -1229,7 +1250,14 @@ class TestBacktestEngine:
             'Volume': [1000000] * 100
         }, index=dates)
 
-        result = get_backtest_results('TEST', data, {}, StrategySettings())
+        result = get_backtest_results('TEST', data, {}, StrategySettings(
+            conviction_threshold=70,
+            adx_threshold=25,
+            atr_multiplier_tp=3.0,
+            atr_multiplier_sl=1.5,
+            portfolio_value=10000.0,
+            risk_per_trade_percent=1.0
+        ))
         assert result.total_trades == 0
         assert result.win_rate == 0.0
         assert 'Insufficient historical data' in result.description
@@ -1249,7 +1277,14 @@ class TestBacktestEngine:
             'Volume': [1000000] * 200
         }, index=dates)
 
-        result = get_backtest_results('TEST', data, {}, StrategySettings())
+        result = get_backtest_results('TEST', data, {}, StrategySettings(
+            conviction_threshold=70,
+            adx_threshold=25,
+            atr_multiplier_tp=3.0,
+            atr_multiplier_sl=1.5,
+            portfolio_value=10000.0,
+            risk_per_trade_percent=1.0
+        ))
         assert hasattr(result, 'win_rate')
         assert hasattr(result, 'total_trades')
         assert hasattr(result, 'profit_factor')
