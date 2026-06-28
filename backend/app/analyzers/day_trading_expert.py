@@ -146,7 +146,9 @@ def generate_expert_trade_plan(
     sections.append(sit)
 
     # ── 2. ENTRY ZONE ─────────────────────────────────────────────────────────
-    if technical and technical.pivot_points:
+    # When the canonical trade plan exists, skip pivot/fib entry text to avoid
+    # redundant/conflicting lines. The plan's entry_basis is the authoritative source.
+    if not _has_plan and technical and technical.pivot_points:
         p   = technical.pivot_points
         fib = technical.fibonacci
         entry = None

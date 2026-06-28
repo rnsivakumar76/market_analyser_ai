@@ -7,8 +7,8 @@ import pandas as pd
 import numpy as np
 from typing import Optional, Tuple
 from app.models import (
-    PositionExitAnalysis, TrendAnalysis, StrengthAnalysis, 
-    VolatilityAnalysis, Signal, TechnicalAnalysis
+    PositionExitAnalysis, TrendAnalysis, StrengthAnalysis,
+    VolatilityAnalysis, Signal, TechnicalAnalysis, TradePlan
 )
 
 
@@ -21,16 +21,17 @@ def analyze_position_exit(
     assumed_entry_price: Optional[float] = None,
     assumed_position_side: Optional[str] = None,  # "long" or "short"
     execution_data: Optional[pd.DataFrame] = None,
+    trade_plan: Optional[TradePlan] = None,
 ) -> PositionExitAnalysis:
     """Analyze whether an existing position should be exited.
-    
+
     This is the core systematic loss-cutting mechanism. It detects:
     1. Multi-timeframe divergence (long-term bullish but short-term bearish)
     2. Momentum exhaustion (RSI extremes)
     3. Support/resistance breaks
     4. Volatility regime changes
     5. Drawdown severity
-    
+
     Args:
         trend: Long-term trend analysis (monthly/weekly)
         strength: Short-term strength analysis (daily/hourly)
@@ -40,7 +41,9 @@ def analyze_position_exit(
         assumed_entry_price: Entry price of the position (if known)
         assumed_position_side: "long" or "short" (if known)
         execution_data: Price data for deeper analysis
-    
+        trade_plan: Canonical trade plan (SSOT) — its `invalidation` field is used
+                     as the structural stop level when available.
+
     Returns:
         PositionExitAnalysis with exit recommendations
     """
@@ -235,9 +238,11 @@ def analyze_position_exit(
     else:
         recommended_action = "Hold position - No immediate exit signals. Continue monitoring."
     
-    # Calculate dynamic stop loss level
+    # Calculate dynamic stop loss level — use canonical plan invalidation when available
     stop_loss_level = None
-    if technical_indicators and technical_indicators.pivot_points:
+    if trade_plan and trade_plan.invalidation is not None:
+        stop_loss_level = trade_plan.invalidation
+    elif technical_indicators and technical_indicators.pivot_points:
         if assumed_position_side == "long":
             # Use S2 as emergency stop if S1 already broken
             if current_price < technical_indicators.pivot_points.s1:

@@ -83,14 +83,24 @@ def _build_signal_message(analysis: InstrumentAnalysis) -> str:
     emoji   = "🚀" if rec == 'BULLISH' else "🔻"
     mode_tag = f" [{str(mode.value).replace('_', ' ')}]" if mode else ""
 
-    # ── Entry / exit levels ────────────────────────────────────────────────────
-    entry = ps.entry_price if ps else price
-    sl    = ps.stop_loss   if ps else (vol.stop_loss   if vol else None)
-    tp1   = vol.take_profit_level1 if vol else None
-    tp2   = vol.take_profit_level2 if vol else None
-    tp    = ps.take_profit if ps else (vol.take_profit  if vol else None)
-    rr    = vol.risk_reward_ratio   if vol else None
-    atr   = vol.atr                 if vol else None
+    # ── Entry / exit levels — from canonical TradePlan (SSOT) ─────────────────
+    trade_plan = getattr(analysis, 'trade_plan', None)
+    if trade_plan and trade_plan.direction != "neutral":
+        entry = trade_plan.entry
+        sl = trade_plan.stop_loss
+        tp1 = trade_plan.take_profit_1
+        tp2 = trade_plan.take_profit_2
+        tp = trade_plan.take_profit_3
+        rr = trade_plan.risk_reward
+    else:
+        # Fallback for backward-compat when plan is missing
+        entry = ps.entry_price if ps else price
+        sl = ps.stop_loss if ps else (vol.stop_loss if vol else None)
+        tp1 = vol.take_profit_level1 if vol else None
+        tp2 = vol.take_profit_level2 if vol else None
+        tp = ps.take_profit if ps else (vol.take_profit if vol else None)
+        rr = vol.risk_reward_ratio if vol else None
+    atr = vol.atr if vol else None
     atr_regime = getattr(vol, 'atr_regime', '') if vol else ''
 
     entry_section = f"\n📍 *ENTRY / EXIT PLAN*\n"

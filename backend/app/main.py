@@ -502,6 +502,7 @@ def analyze_instrument_lazy(
         current_price=current_price,
         assumed_position_side=exit_side,
         execution_data=execution_data,
+        trade_plan=trade_plan,
     )
 
     # P12: Intraday Signals (for INTRADAY mode)

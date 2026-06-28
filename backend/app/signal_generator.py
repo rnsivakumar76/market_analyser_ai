@@ -334,16 +334,13 @@ def generate_trade_signal(
     pyramiding_plan = "N/A"
     scaling_plan = "Wait for clear trend alignment."
 
+    # NOTE: scaling_plan is populated with canonical trade_plan numbers in main.py
+    # after the plan is built. Do NOT compute pivot/fib-based scaling here — that
+    # would be an SSOT violation. Only set qualitative defaults here.
+
     if current_price and tech_indicators:
         pivots = tech_indicators.pivot_points
         fibs = tech_indicators.fibonacci
-        
-        # Base Scaling text
-        s_tp1 = s_tp2 = s_tp3 = "N/A"
-        if volatility:
-            s_tp1 = f"${volatility.take_profit_level1:.2f}" if volatility.take_profit_level1 is not None else "N/A"
-            s_tp2 = f"${volatility.take_profit_level2:.2f}" if volatility.take_profit_level2 is not None else "N/A"
-            s_tp3 = f"${volatility.take_profit:.2f}" if volatility.take_profit is not None else "N/A"
 
         if recommendation == Signal.BULLISH:
             psychological_guard = "NEVER average down into a losing trade. If price falls below support or hits your stop loss, cut the trade immediately. The market does not owe you a bounce."
@@ -352,16 +349,6 @@ def generate_trade_signal(
                 price_str = f"${current_price:.2f}" if current_price else "current price"
                 pivot_str = f"${pivots.pivot:.2f}" if pivots.pivot else "N/A"
                 action_plan_details = f"Strong bullish setup confirmed near {price_str}. Support is Pivot ({pivot_str}). If trend accelerates, target Fibonacci Extensions."
-                
-                if volatility:
-                    scaling_plan = (
-                        f"Stage 1 (De-risk): Exit 30% at {s_tp1} & Move SL to Break-even. "
-                        f"Stage 2 (Profit): Exit 40% at {s_tp2}. "
-                        f"Stage 3 (Runner): Leave 30% for {s_tp3} or trail by 2.0x ATR."
-                    )
-                else:
-                    scaling_plan = f"Target R1 (${pivots.r1}) for first exit, then trail."
-                
                 pyramiding_plan = f"Aggressive Addition: Add 50% to position size IF price holds above R1 (${pivots.r1}) AND RSI stays < 70."
             else:
                 action_plan = "Conditional Long Setup"
@@ -389,16 +376,6 @@ def generate_trade_signal(
                 price_str = f"${current_price:.2f}" if current_price else "current price"
                 pivot_str = f"${pivots.pivot:.2f}" if pivots.pivot else "N/A"
                 action_plan_details = f"Strong bearish setup confirmed near {price_str}. Resistance is Pivot ({pivot_str}). If decline accelerates, target Fibonacci Extensions."
-                
-                if volatility:
-                    scaling_plan = (
-                        f"Stage 1 (De-risk): Exit 30% at {s_tp1} & Move SL to Break-even. "
-                        f"Stage 2 (Profit): Exit 40% at {s_tp2}. "
-                        f"Stage 3 (Runner): Leave 30% for {s_tp3} or trail by 2.0x ATR."
-                    )
-                else:
-                    scaling_plan = f"Target S1 (${pivots.s1}) for first exit, then trail."
-                
                 pyramiding_plan = f"Aggressive Addition: Add 50% to short position IF price holds below S1 (${pivots.s1}) AND RSI stays > 30."
             else:
                 action_plan = "Conditional Short Setup"
