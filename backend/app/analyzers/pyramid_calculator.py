@@ -184,6 +184,7 @@ def _generate_recommendation(
 ) -> PyramidRecommendation:
     """Generate current recommendation based on pyramid level."""
     max_level = len(levels)
+    direction = position.direction
     
     # If at max level, recommend partial exit
     if current_level >= max_level:
