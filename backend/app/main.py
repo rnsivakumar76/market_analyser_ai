@@ -1770,5 +1770,42 @@ def _notify_signal_outcome(sig: "IntradaySignal", new_status: str):
         logger.warning(f"[OUTCOME_NOTIFY] Telegram failed: {e}")
 
 
+@app.get("/api/swing-reversal/{symbol}")
+async def get_swing_reversal(symbol: str, user_id: str = Depends(get_current_user)):
+    """
+    Analyze swing trade reversal opportunities using divergence detection.
+    Detects RSI, MACD, and MA divergences across multiple timeframes.
+    """
+    from .analyzers.swing_reversal_analyzer import analyze_swing_reversal
+    from .data_fetcher import fetch_historical_data
+    
+    try:
+        # Fetch daily data (primary timeframe)
+        df_daily = fetch_historical_data(symbol, interval='1day', outputsize=200)
+        
+        # Fetch 4H data for confirmation (optional)
+        df_4h = None
+        try:
+            df_4h = fetch_historical_data(symbol, interval='4h', outputsize=100)
+        except Exception as e:
+            logger.warning(f"Failed to fetch 4H data for {symbol}: {e}")
+        
+        # Fetch weekly data for major signals (optional)
+        df_weekly = None
+        try:
+            df_weekly = fetch_historical_data(symbol, interval='1week', outputsize=100)
+        except Exception as e:
+            logger.warning(f"Failed to fetch weekly data for {symbol}: {e}")
+        
+        # Analyze reversal
+        analysis = analyze_swing_reversal(symbol, df_daily, df_4h, df_weekly)
+        
+        return analysis
+        
+    except Exception as e:
+        logger.error(f"Error in swing reversal analysis for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Handler for AWS Lambda
 handler = Mangum(app)

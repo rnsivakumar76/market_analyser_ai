@@ -1566,3 +1566,60 @@ class TestSymbolValidator:
         assert result['message'] is not None
         assert 'not supported' in result['message'].lower()
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 13. SWING REVERSAL ANALYZER
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestSwingReversalAnalyzer:
+    """Test swing trade reversal detection using divergence analysis."""
+
+    def test_analyze_swing_reversal_insufficient_data(self):
+        """Test swing reversal analysis with insufficient data."""
+        from app.analyzers.swing_reversal_analyzer import analyze_swing_reversal
+        import pandas as pd
+
+        df = pd.DataFrame({'Close': [100, 95, 90]})
+        result = analyze_swing_reversal('XAU', df)
+        assert result['reversal_detected'] is False
+        assert 'Insufficient data' in result['reason']
+
+    def test_analyze_swing_reversal_structure(self):
+        """Test swing reversal analysis returns proper structure."""
+        from app.analyzers.swing_reversal_analyzer import analyze_swing_reversal
+        import pandas as pd
+        import numpy as np
+
+        # Create sample data
+        dates = pd.date_range(start='2024-01-01', periods=100, freq='D')
+        prices = np.random.uniform(70, 80, 100)
+        df = pd.DataFrame({'Close': prices}, index=dates)
+
+        result = analyze_swing_reversal('XAU', df)
+        assert 'symbol' in result
+        assert 'reversal_detected' in result
+        assert 'divergences' in result
+        assert 'multi_timeframe' in result
+        assert 'position_strategy' in result
+        assert 'risk_level' in result
+
+    def test_analyze_swing_reversal_with_4h_confirmation(self):
+        """Test swing reversal analysis with 4H timeframe confirmation."""
+        from app.analyzers.swing_reversal_analyzer import analyze_swing_reversal
+        import pandas as pd
+        import numpy as np
+
+        # Create sample daily data
+        daily_dates = pd.date_range(start='2024-01-01', periods=100, freq='D')
+        daily_prices = np.random.uniform(70, 80, 100)
+        df_daily = pd.DataFrame({'Close': daily_prices}, index=daily_dates)
+
+        # Create sample 4H data
+        fourh_dates = pd.date_range(start='2024-01-01', periods=100, freq='4H')
+        fourh_prices = np.random.uniform(70, 80, 100)
+        df_4h = pd.DataFrame({'Close': fourh_prices}, index=fourh_dates)
+
+        result = analyze_swing_reversal('XAU', df_daily, df_4h)
+        assert 'multi_timeframe' in result
+        assert '4h_confirmed' in result['multi_timeframe']
+

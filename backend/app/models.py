@@ -545,3 +545,15 @@ class PositionExitAnalysis(BaseModel):
     factors: List[str] = []
 
 
+class SwingReversalAnalysis(BaseModel):
+    """Swing trade reversal detection using divergence analysis."""
+    symbol: str
+    reversal_detected: bool
+    primary_signal: Optional[Dict[str, Any]] = None
+    divergences: Dict[str, Optional[Dict[str, Any]]] = {}
+    multi_timeframe: Dict[str, Any] = {}
+    position_strategy: Dict[str, Any] = {}
+    current_price: Optional[float] = None
+    risk_level: str = "LOW"
+
+
