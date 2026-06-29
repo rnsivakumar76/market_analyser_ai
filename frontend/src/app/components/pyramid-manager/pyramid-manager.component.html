@@ -1,24 +1,48 @@
 <div class="pyramid-manager">
   <div class="header">
+    <button class="back-btn" (click)="backToOverview()">‹ Back to Overview</button>
     <h2>📊 Pyramid Position Manager</h2>
-    <p class="subtitle">Jesse Livermore's Pyramid Technique for Swing Trading</p>
+    <p class="subtitle">Jesse Livermore's Pyramid Technique</p>
+    <div class="trading-style-selector">
+      <button
+        class="style-btn"
+        [class.active]="tradingStyle === 'swing'"
+        (click)="tradingStyle = 'swing'"
+      >
+        📅 Swing Trading
+      </button>
+      <button
+        class="style-btn"
+        [class.active]="tradingStyle === 'day'"
+        (click)="tradingStyle = 'day'"
+      >
+        ⚡ Day Trading
+      </button>
+    </div>
   </div>
 
   <!-- Tab Navigation -->
   <div class="tab-nav">
-    <button 
-      class="tab-btn" 
+    <button
+      class="tab-btn"
       [class.active]="showOpportunities"
       (click)="showOpportunities = true"
     >
       🔍 Opportunities
     </button>
-    <button 
-      class="tab-btn" 
-      [class.active]="!showOpportunities"
-      (click)="showOpportunities = false"
+    <button
+      class="tab-btn"
+      [class.active]="!showOpportunities && !showHistory"
+      (click)="showOpportunities = false; showHistory = false"
     >
       📋 My Positions
+    </button>
+    <button
+      class="tab-btn"
+      [class.active]="showHistory"
+      (click)="showOpportunities = false; showHistory = true"
+    >
+      📁 History
     </button>
   </div>
 
@@ -164,6 +188,17 @@
         <div class="position-level">
           Level {{ position.pyramid_level }}/5
         </div>
+        <div class="position-actions">
+          <button class="action-btn edit-btn" (click)="editPosition(position); $event.stopPropagation()" title="Edit">
+            ✏️
+          </button>
+          <button class="action-btn delete-btn" (click)="softDeletePosition(position); $event.stopPropagation()" title="Move to History">
+            📁
+          </button>
+          <button class="action-btn hard-delete-btn" (click)="hardDeletePosition(position); $event.stopPropagation()" title="Delete Permanently">
+            🗑️
+          </button>
+        </div>
       </div>
     </div>
     
@@ -172,6 +207,59 @@
       <button class="btn-primary" (click)="showNewPositionForm = true">
         Create First Position
       </button>
+    </div>
+  </div>
+
+  <!-- History Section -->
+  <div class="positions-panel" *ngIf="showHistory">
+    <div class="panel-header">
+      <h3>Position History</h3>
+      <button class="btn-secondary" (click)="loadHistory()">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <div class="positions-list" *ngIf="historyPositions.length > 0">
+      <div
+        class="position-card history-card"
+        *ngFor="let position of historyPositions"
+      >
+        <div class="position-header">
+          <span class="symbol">{{ position.symbol }}</span>
+          <span class="direction" [style.color]="getDirectionColor()">
+            {{ position.direction.toUpperCase() }}
+          </span>
+          <span class="status-badge history">History</span>
+        </div>
+        <div class="position-details">
+          <div class="detail">
+            <span class="label">Entry:</span>
+            <span class="value">${{ formatPrice(position.entry_price) }}</span>
+          </div>
+          <div class="detail">
+            <span class="label">Final PnL:</span>
+            <span class="value" [style.color]="getPnlColor()">
+              {{ formatPnl(position.unrealized_pnl) }}
+            </span>
+          </div>
+          <div class="detail">
+            <span class="label">Closed:</span>
+            <span class="value">{{ formatDate(position.updated_at) }}</span>
+          </div>
+        </div>
+        <div class="position-actions">
+          <button class="action-btn restore-btn" (click)="restorePosition(position)" title="Restore to Active">
+            ↩️
+          </button>
+          <button class="action-btn hard-delete-btn" (click)="hardDeletePosition(position)" title="Delete Permanently">
+            🗑️
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="historyPositions.length === 0 && !isLoading">
+      <p>No positions in history</p>
     </div>
   </div>
 

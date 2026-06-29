@@ -56,8 +56,8 @@ export class App implements OnInit, OnDestroy {
   userPreferences = signal<UserPreferences | null>(null);
   prefsLoaded = signal(false);
   mobileTab = signal<'watchlist' | 'analysis' | 'context'>('watchlist');
-  // Top-level navigation: high-level opportunities overview vs. detailed analysis
-  viewMode = signal<'overview' | 'detail'>('overview');
+  // Top-level navigation: overview, detail, or pyramid manager
+  viewMode = signal<'overview' | 'detail' | 'pyramid'>('overview');
   contextPanelTab = signal<'context' | 'chat'>('context');
   sidebarTab = signal<'heatmap' | 'orb'>('heatmap');
 

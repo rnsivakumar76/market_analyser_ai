@@ -1896,17 +1896,15 @@ async def get_pyramid_positions(user_id: str = Depends(get_current_user)):
 @app.get("/api/pyramid/position/{position_id}/plan")
 async def get_pyramid_plan(
     position_id: str,
+    request: Request,
     user_id: str = Depends(get_current_user)
 ):
-    """Get pyramid plan and recommendations for a position."""
-    from app.analyzers.pyramid_calculator import calculate_pyramid_plan
+    """Get pyramid plan for a specific position."""
     from app.db import get_trades
-    from app.data_fetcher import get_current_price, fetch_historical_data
+    from app.data_fetcher import fetch_historical_data, get_current_price
     from app.analyzers.volatility_analyzer import calculate_atr
-    import pandas as pd
     
     try:
-        # Get position from DynamoDB
         trades = get_trades(user_id)
         position_data = next((t for t in trades if t['id'] == position_id), None)
         
@@ -1928,67 +1926,110 @@ async def get_pyramid_plan(
             symbol=position_data['symbol'],
             direction=position_data['direction'],
             entry_price=position_data['entry_price'],
-            initial_lots=position_data['lots'],
-            current_lots=position_data.get('current_lots', position_data['lots']),
+            initial_lots=position_data['initial_lots'],
+            current_lots=position_data['lots'],
             current_stop_loss=position_data['stop_loss'],
             current_price=current_price,
-            unrealized_pnl=position_data.get('unrealized_pnl', 0),
+            unrealized_pnl=position_data.get('unrealized_pnl', 0.0),
             created_at=position_data['created_at'],
-            updated_at=position_data.get('updated_at', position_data['created_at']),
+            updated_at=position_data.get('updated_at', ''),
             pyramid_level=position_data.get('pyramid_level', 1),
             status=position_data.get('status', 'active')
         )
         
         # Calculate pyramid plan
-        plan = calculate_pyramid_plan(position, atr, current_price)
-        
+        from app.analyzers.pyramid_calculator import calculate_pyramid_plan
+        trading_style = request.query_params.get('trading_style', 'swing')
+        plan = calculate_pyramid_plan(position, atr, current_price, trading_style=trading_style)
+
         return plan.model_dump()
         
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error getting pyramid plan: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/pyramid/position/{position_id}")
+async def delete_pyramid_position(
+    position_id: str,
+    action: str = "soft",  # 'soft' for history, 'hard' for permanent
+    user_id: str = Depends(get_current_user)
+):
+    """Delete pyramid position (soft delete to history or hard delete)."""
+    from app.db import get_trades, save_trades
+    
+    try:
+        trades = get_trades(user_id)
+        position_index = next((i for i, t in enumerate(trades) if t['id'] == position_id), None)
+        
+        if position_index is None:
+            raise HTTPException(status_code=404, detail="Position not found")
+        
+        if action == "soft":
+            # Soft delete: move to history status
+            trades[position_index]['status'] = 'history'
+            trades[position_index]['updated_at'] = datetime.now().isoformat()
+            save_trades(user_id, trades)
+            return {"message": "Position moved to history", "action": "soft_delete"}
+        elif action == "hard":
+            # Hard delete: permanently remove
+            trades.pop(position_index)
+            save_trades(user_id, trades)
+            return {"message": "Position permanently deleted", "action": "hard_delete"}
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action. Use 'soft' or 'hard'")
+        
+    except Exception as e:
+        logger.error(f"Error deleting pyramid position: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.put("/api/pyramid/position/{position_id}")
 async def update_pyramid_position(
     position_id: str,
-    update_data: dict,
+    updates: dict,
     user_id: str = Depends(get_current_user)
 ):
-    """Update pyramid position (add lots, move stop, etc.)."""
-    from app.db import get_trades, save_trade
-    from datetime import datetime, timezone
+    """Update pyramid position (edit entry price, lots, etc.)."""
+    from app.db import get_trades, save_trades
     
     try:
         trades = get_trades(user_id)
-        position = next((t for t in trades if t['id'] == position_id), None)
+        position_index = next((i for i, t in enumerate(trades) if t['id'] == position_id), None)
         
-        if not position:
+        if position_index is None:
             raise HTTPException(status_code=404, detail="Position not found")
         
-        # Update fields
-        if 'current_lots' in update_data:
-            position['current_lots'] = update_data['current_lots']
-        if 'current_stop_loss' in update_data:
-            position['current_stop_loss'] = update_data['current_stop_loss']
-        if 'pyramid_level' in update_data:
-            position['pyramid_level'] = update_data['pyramid_level']
-        if 'status' in update_data:
-            position['status'] = update_data['status']
+        # Allowed fields to update
+        allowed_fields = ['entry_price', 'initial_lots', 'lots', 'stop_loss', 'direction']
         
-        position['updated_at'] = datetime.now(timezone.utc).isoformat()
+        for field, value in updates.items():
+            if field in allowed_fields:
+                trades[position_index][field] = value
         
-        # Save updated position
-        save_trade(user_id, position)
+        trades[position_index]['updated_at'] = datetime.now().isoformat()
+        save_trades(user_id, trades)
         
-        return position
+        return {"message": "Position updated successfully", "position": trades[position_index]}
         
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error updating pyramid position: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pyramid/positions/history")
+async def get_pyramid_history(user_id: str = Depends(get_current_user)):
+    """Get pyramid positions in history (soft deleted)."""
+    from app.db import get_trades
+    
+    try:
+        trades = get_trades(user_id)
+        history_trades = [t for t in trades if t.get('type') == 'pyramid' and t.get('status') == 'history']
+        
+        return {"positions": history_trades, "count": len(history_trades)}
+        
+    except Exception as e:
+        logger.error(f"Error getting pyramid history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

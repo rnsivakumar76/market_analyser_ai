@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -69,11 +69,15 @@ interface PyramidOpportunity {
   styleUrls: ['./pyramid-manager.component.scss']
 })
 export class PyramidManagerComponent implements OnInit {
+  @Output() back = new EventEmitter<void>();
+
   positions: PyramidPosition[] = [];
+  historyPositions: PyramidPosition[] = [];
   selectedPosition: PyramidPosition | null = null;
   pyramidPlan: PyramidPlan | null = null;
   opportunities: PyramidOpportunity[] = [];
   showOpportunities = true;
+  showHistory = false;
   
   // New position form
   newPosition = {
@@ -86,12 +90,81 @@ export class PyramidManagerComponent implements OnInit {
   
   // Available instruments
   instruments = ['XAU', 'XAG', 'WTI', 'BTC'];
-  
+
+  // Trading style: swing (longer timeframe) or day (faster completion)
+  tradingStyle = 'swing';
+
   isLoading = false;
   showNewPositionForm = false;
   
   constructor(private http: HttpClient) {}
-  
+
+  backToOverview() {
+    this.back.emit();
+  }
+
+  editPosition(position: PyramidPosition) {
+    // Populate form with position data for editing
+    this.newPosition = {
+      symbol: position.symbol,
+      direction: position.direction,
+      entry_price: position.entry_price,
+      initial_lots: position.initial_lots,
+      stop_loss: position.current_stop_loss
+    };
+    this.showNewPositionForm = true;
+  }
+
+  softDeletePosition(position: PyramidPosition) {
+    if (confirm(`Move ${position.symbol} to history?`)) {
+      this.http.delete(`/api/pyramid/position/${position.id}?action=soft`).subscribe({
+        next: () => {
+          this.loadPositions();
+          this.loadHistory();
+        },
+        error: (error) => console.error('Error soft deleting position:', error)
+      });
+    }
+  }
+
+  hardDeletePosition(position: PyramidPosition) {
+    if (confirm(`Permanently delete ${position.symbol}? This cannot be undone.`)) {
+      this.http.delete(`/api/pyramid/position/${position.id}?action=hard`).subscribe({
+        next: () => {
+          this.loadPositions();
+          this.loadHistory();
+        },
+        error: (error) => console.error('Error hard deleting position:', error)
+      });
+    }
+  }
+
+  loadHistory() {
+    this.http.get<any>('/api/pyramid/positions/history').subscribe({
+      next: (response) => {
+        this.historyPositions = response.positions || [];
+      },
+      error: (error) => console.error('Error loading history:', error)
+    });
+  }
+
+  restorePosition(position: PyramidPosition) {
+    // Restore by updating status back to active
+    this.http.put(`/api/pyramid/position/${position.id}`, { status: 'active' }).subscribe({
+      next: () => {
+        this.loadPositions();
+        this.loadHistory();
+      },
+      error: (error) => console.error('Error restoring position:', error)
+    });
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  }
+
   ngOnInit() {
     this.loadPositions();
     this.loadOpportunities();
@@ -132,7 +205,7 @@ export class PyramidManagerComponent implements OnInit {
   
   loadPyramidPlan(positionId: string) {
     this.isLoading = true;
-    this.http.get<PyramidPlan>(`/api/pyramid/position/${positionId}/plan`).subscribe({
+    this.http.get<PyramidPlan>(`/api/pyramid/position/${positionId}/plan?trading_style=${this.tradingStyle}`).subscribe({
       next: (plan) => {
         this.pyramidPlan = plan;
         this.isLoading = false;

@@ -17,7 +17,8 @@ from app.models import (
 def calculate_pyramid_plan(
     position: PyramidPosition,
     atr: float,
-    current_price: float
+    current_price: float,
+    trading_style: str = "swing"  # 'swing' or 'day'
 ) -> PyramidPlan:
     """
     Calculate complete pyramid plan for a position using Livermore's technique.
@@ -31,10 +32,15 @@ def calculate_pyramid_plan(
     6. Never add more than 5 levels total
     7. Take partial profits at peak level
     
+    Trading Styles:
+    - Swing: Standard multipliers, 5 levels, 1.5x ATR increments (longer timeframe)
+    - Day: Tighter multipliers, 3 levels, 0.5x ATR increments (faster completion)
+    
     Args:
         position: Current position details
         atr: Average True Range for volatility measurement
         current_price: Current market price
+        trading_style: 'swing' for swing trading, 'day' for day trading
         
     Returns:
         Complete pyramid plan with levels and recommendations
@@ -43,13 +49,25 @@ def calculate_pyramid_plan(
     entry_price = position.entry_price
     initial_lots = position.initial_lots
     
+    # Configure based on trading style
+    if trading_style == "day":
+        max_levels = 3
+        price_increment_mult = 0.5  # Smaller increments for day trading
+        trail_distance_mult = 0.3  # Tighter trailing stops
+    else:  # swing (default)
+        max_levels = 5
+        price_increment_mult = 1.5
+        trail_distance_mult = 0.5
+    
     # Calculate pyramid levels
     levels = _generate_pyramid_levels(
         direction=direction,
         entry_price=entry_price,
         initial_lots=initial_lots,
         atr=atr,
-        max_levels=5
+        max_levels=max_levels,
+        price_increment_mult=price_increment_mult,
+        trail_distance_mult=trail_distance_mult
     )
     
     # Determine current level based on current price
@@ -94,7 +112,9 @@ def _generate_pyramid_levels(
     entry_price: float,
     initial_lots: int,
     atr: float,
-    max_levels: int = 5
+    max_levels: int = 5,
+    price_increment_mult: float = 1.5,
+    trail_distance_mult: float = 0.5
 ) -> List[PyramidLevel]:
     """Generate pyramid levels with price targets and lot additions."""
     levels = []
@@ -110,28 +130,32 @@ def _generate_pyramid_levels(
         description="Base position - initial entry"
     ))
     
-    # Build pyramid levels (2-5)
+    # Build pyramid levels (2-max_levels)
     for i in range(2, max_levels + 1):
-        # Calculate price target (each level is 1.5x ATR from previous)
-        price_increment = atr * 1.5
+        # Calculate price target using dynamic multiplier
+        price_increment = atr * price_increment_mult
         if direction == 'long':
             price_target = entry_price + (price_increment * (i - 1))
         else:
             price_target = entry_price - (price_increment * (i - 1))
         
         # Calculate lots to add (pyramid: each level adds more)
-        # Level 2: 25%, Level 3: 30%, Level 4: 35%, Level 5: 40% of initial
-        add_percentages = [0.25, 0.30, 0.35, 0.40]
+        # Adjust percentages based on max_levels
+        if max_levels == 3:
+            add_percentages = [0.35, 0.40]  # Day trading: fewer levels, larger additions
+        else:
+            add_percentages = [0.25, 0.30, 0.35, 0.40]  # Swing trading
+        
         lots_to_add = int(initial_lots * add_percentages[i - 2])
         cumulative_lots += lots_to_add
         
-        # Calculate stop loss adjustment
+        # Calculate stop loss adjustment using dynamic trail distance
         # After level 2, move to break-even
-        # After level 3+, trail by 0.5x ATR
+        # After level 3+, trail by configured multiplier
         if i == 2:
             sl_adjustment = entry_price  # Break-even
         elif i >= 3:
-            trail_distance = atr * 0.5
+            trail_distance = atr * trail_distance_mult
             if direction == 'long':
                 sl_adjustment = price_target - trail_distance
             else:

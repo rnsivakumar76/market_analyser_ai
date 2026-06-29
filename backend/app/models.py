@@ -572,7 +572,7 @@ class PyramidPosition(BaseModel):
     created_at: str
     updated_at: str
     pyramid_level: int = 1  # Current pyramid level (1-5)
-    status: str = "active"  # 'active', 'partial_exit', 'closed'
+    status: str = "active"  # 'active', 'partial_exit', 'closed', 'history'
 
 
 class PyramidRecommendation(BaseModel):
