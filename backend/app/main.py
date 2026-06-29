@@ -1851,10 +1851,14 @@ async def create_pyramid_position(
             'symbol': position.symbol,
             'direction': position.direction,
             'entry_price': position.entry_price,
+            'initial_lots': position.initial_lots,
             'lots': position.current_lots,
             'stop_loss': position.current_stop_loss,
             'type': 'pyramid',
-            'created_at': now
+            'created_at': now,
+            'updated_at': now,
+            'pyramid_level': 1,
+            'status': 'active'
         })
         
         return position.model_dump()
@@ -1931,7 +1935,7 @@ async def get_pyramid_plan(
         atr = calculate_atr(df, period=14)
         logger.info(f"ATR: {atr}")
 
-        # Create PyramidPosition model
+        # Create PyramidPosition model with defaults for missing fields
         from app.models import PyramidPosition
         position = PyramidPosition(
             id=position_data['id'],
@@ -1939,13 +1943,13 @@ async def get_pyramid_plan(
             symbol=position_data['symbol'],
             direction=position_data['direction'],
             entry_price=position_data['entry_price'],
-            initial_lots=position_data['initial_lots'],
-            current_lots=position_data['lots'],
-            current_stop_loss=position_data['stop_loss'],
+            initial_lots=position_data.get('initial_lots', position_data.get('lots', 1)),
+            current_lots=position_data.get('lots', position_data.get('initial_lots', 1)),
+            current_stop_loss=position_data.get('stop_loss', 0),
             current_price=current_price,
             unrealized_pnl=position_data.get('unrealized_pnl', 0.0),
-            created_at=position_data['created_at'],
-            updated_at=position_data.get('updated_at', ''),
+            created_at=position_data.get('created_at', ''),
+            updated_at=position_data.get('updated_at', position_data.get('created_at', '')),
             pyramid_level=position_data.get('pyramid_level', 1),
             status=position_data.get('status', 'active')
         )

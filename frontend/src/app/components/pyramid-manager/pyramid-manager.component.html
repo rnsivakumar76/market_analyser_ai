@@ -124,7 +124,7 @@
         </div>
         
         <div class="opp-pyramid-preview">
-          <span class="label">Pyramid Plan (5 levels):</span>
+          <span class="label">Pyramid Plan ({{ tradingStyle === 'day' ? '3' : '5' }} levels, {{ tradingStyle }}):</span>
           <div class="pyramid-levels-mini">
             <div class="mini-level" *ngFor="let level of opp.pyramid_plan.levels">
               <span class="level-num">{{ level.level }}</span>
