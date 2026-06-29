@@ -50,6 +50,7 @@ interface PyramidOpportunity {
   price_offset: number;
   entry_range: { low: number; high: number };
   stop_loss: number;
+  target_profit_range: { low: number; high: number } | null;
   confidence: number;
   divergence_sources: string[];
   pyramid_plan: {
@@ -60,6 +61,7 @@ interface PyramidOpportunity {
   };
   multi_timeframe: any;
   risk_level: string;
+  trading_style: string;
 }
 
 @Component({

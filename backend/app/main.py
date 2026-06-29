@@ -2193,7 +2193,16 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
                         )
                         
                         plan = calculate_pyramid_plan(hypothetical_position, atr, adjusted_price)
-                        
+
+                        # Calculate target profit range based on pyramid levels
+                        final_level = plan.levels[-1] if plan.levels else None
+                        target_profit_range = None
+                        if final_level:
+                            target_profit_range = {
+                                'low': final_level.price_target * 0.98,  # 2% below peak
+                                'high': final_level.price_target * 1.02   # 2% above peak
+                            }
+
                         opportunities.append({
                             'symbol': symbol,
                             'name': inst.get('name', symbol),
@@ -2206,6 +2215,7 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
                                 'high': adjusted_price + (0.5 * atr)
                             },
                             'stop_loss': hypothetical_position.current_stop_loss,
+                            'target_profit_range': target_profit_range,
                             'confidence': primary_signal['confidence'],
                             'divergence_sources': primary_signal.get('sources', []),
                             'pyramid_plan': {
@@ -2215,7 +2225,8 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
                                 'risk_reward': plan.overall_risk_reward
                             },
                             'multi_timeframe': reversal.get('multi_timeframe', {}),
-                            'risk_level': reversal.get('risk_level', 'MODERATE')
+                            'risk_level': reversal.get('risk_level', 'MODERATE'),
+                            'trading_style': 'swing'  # Default to swing for opportunities
                         })
                         
             except Exception as e:

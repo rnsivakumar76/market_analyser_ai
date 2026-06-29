@@ -65,9 +65,12 @@
             <span class="symbol">{{ opp.symbol }}</span>
             <span class="name">{{ opp.name }}</span>
           </div>
-          <span class="direction" [style.color]="getDirectionColor()">
-            {{ opp.direction.toUpperCase() }}
-          </span>
+          <div class="header-badges">
+            <span class="direction" [style.color]="getDirectionColor()">
+              {{ opp.direction.toUpperCase() }}
+            </span>
+            <span class="trading-style-badge">{{ opp.trading_style?.toUpperCase() || 'SWING' }}</span>
+          </div>
         </div>
         
         <div class="opp-metrics">
@@ -111,6 +114,10 @@
           <div class="price-row">
             <span class="label">Stop Loss:</span>
             <span class="value" style="color: #ef4444">${{ formatPrice(opp.stop_loss) }}</span>
+          </div>
+          <div class="price-row" *ngIf="opp.target_profit_range">
+            <span class="label">Target Profit:</span>
+            <span class="value" style="color: #10b981">${{ formatPrice(opp.target_profit_range.low) }} - ${{ formatPrice(opp.target_profit_range.high) }}</span>
           </div>
         </div>
         

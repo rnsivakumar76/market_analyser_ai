@@ -493,12 +493,28 @@
     color: var(--text-primary);
   }
 
+  .header-badges {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
   .direction {
     font-size: 12px;
     font-weight: 600;
     padding: 4px 8px;
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.1);
+  }
+
+  .trading-style-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--accent-primary);
+    color: white;
+    text-transform: uppercase;
   }
 }
 
