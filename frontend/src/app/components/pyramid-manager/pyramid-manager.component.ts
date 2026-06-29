@@ -118,24 +118,36 @@ export class PyramidManagerComponent implements OnInit {
 
   softDeletePosition(position: PyramidPosition) {
     if (confirm(`Move ${position.symbol} to history?`)) {
+      console.log('Soft deleting position:', position.id);
       this.http.delete(`/api/pyramid/position/${position.id}?action=soft`).subscribe({
-        next: () => {
+        next: (response) => {
+          console.log('Soft delete successful:', response);
           this.loadPositions();
           this.loadHistory();
+          alert('Position moved to history');
         },
-        error: (error) => console.error('Error soft deleting position:', error)
+        error: (error) => {
+          console.error('Error soft deleting position:', error);
+          alert('Failed to move to history: ' + error.message);
+        }
       });
     }
   }
 
   hardDeletePosition(position: PyramidPosition) {
     if (confirm(`Permanently delete ${position.symbol}? This cannot be undone.`)) {
+      console.log('Hard deleting position:', position.id);
       this.http.delete(`/api/pyramid/position/${position.id}?action=hard`).subscribe({
-        next: () => {
+        next: (response) => {
+          console.log('Hard delete successful:', response);
           this.loadPositions();
           this.loadHistory();
+          alert('Position permanently deleted');
         },
-        error: (error) => console.error('Error hard deleting position:', error)
+        error: (error) => {
+          console.error('Error hard deleting position:', error);
+          alert('Failed to delete: ' + error.message);
+        }
       });
     }
   }
@@ -164,6 +176,14 @@ export class PyramidManagerComponent implements OnInit {
     if (!dateString) return '';
     const date = new Date(dateString);
     return date.toLocaleDateString();
+  }
+
+  onTradingStyleChange() {
+    console.log('Trading style changed to:', this.tradingStyle);
+    // Reload pyramid plan if a position is selected
+    if (this.selectedPosition) {
+      this.loadPyramidPlan(this.selectedPosition.id);
+    }
   }
 
   ngOnInit() {
@@ -200,20 +220,24 @@ export class PyramidManagerComponent implements OnInit {
   }
   
   selectPosition(position: PyramidPosition) {
+    console.log('Selecting position:', position);
     this.selectedPosition = position;
     this.loadPyramidPlan(position.id);
   }
-  
+
   loadPyramidPlan(positionId: string) {
+    console.log('Loading pyramid plan for:', positionId, 'with trading style:', this.tradingStyle);
     this.isLoading = true;
     this.http.get<PyramidPlan>(`/api/pyramid/position/${positionId}/plan?trading_style=${this.tradingStyle}`).subscribe({
       next: (plan) => {
+        console.log('Pyramid plan loaded:', plan);
         this.pyramidPlan = plan;
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Error loading pyramid plan:', error);
         this.isLoading = false;
+        alert('Failed to load pyramid plan: ' + error.message);
       }
     });
   }

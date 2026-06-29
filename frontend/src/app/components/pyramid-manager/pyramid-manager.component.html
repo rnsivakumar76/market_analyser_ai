@@ -7,14 +7,14 @@
       <button
         class="style-btn"
         [class.active]="tradingStyle === 'swing'"
-        (click)="tradingStyle = 'swing'"
+        (click)="tradingStyle = 'swing'; onTradingStyleChange()"
       >
         📅 Swing Trading
       </button>
       <button
         class="style-btn"
         [class.active]="tradingStyle === 'day'"
-        (click)="tradingStyle = 'day'"
+        (click)="tradingStyle = 'day'; onTradingStyleChange()"
       >
         ⚡ Day Trading
       </button>
@@ -148,7 +148,7 @@
   </div>
 
   <!-- Position List -->
-  <div class="positions-panel" *ngIf="!showOpportunities">
+  <div class="positions-panel" *ngIf="!showOpportunities && !showHistory">
     <div class="panel-header">
       <h3>Active Positions</h3>
       <button class="btn-primary" (click)="showNewPositionForm = true">
