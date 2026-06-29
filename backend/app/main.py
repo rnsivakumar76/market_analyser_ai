@@ -1844,8 +1844,10 @@ async def create_pyramid_position(
         )
         
         # Save to DynamoDB
+        trade_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         save_trade(user_id, {
             'id': position_id,
+            'date': trade_date,
             'symbol': position.symbol,
             'direction': position.direction,
             'entry_price': position.entry_price,
@@ -1903,21 +1905,32 @@ async def get_pyramid_plan(
     from app.db import get_trades
     from app.data_fetcher import fetch_historical_data, get_current_price
     from app.analyzers.volatility_analyzer import calculate_atr
-    
+
     try:
+        logger.info(f"Getting pyramid plan for position {position_id}")
+        trading_style = request.query_params.get('trading_style', 'swing')
+        logger.info(f"Trading style: {trading_style}")
+
         trades = get_trades(user_id)
+        logger.info(f"Found {len(trades)} trades for user {user_id}")
+
         position_data = next((t for t in trades if t['id'] == position_id), None)
-        
+
         if not position_data:
+            logger.error(f"Position {position_id} not found in trades")
             raise HTTPException(status_code=404, detail="Position not found")
-        
+
+        logger.info(f"Found position data: {position_data}")
+
         # Get current price
         current_price = get_current_price(position_data['symbol'])
-        
+        logger.info(f"Current price: {current_price}")
+
         # Get ATR for volatility
         df = fetch_historical_data(position_data['symbol'], interval='1day', days=50)
         atr = calculate_atr(df, period=14)
-        
+        logger.info(f"ATR: {atr}")
+
         # Create PyramidPosition model
         from app.models import PyramidPosition
         position = PyramidPosition(
@@ -1936,16 +1949,18 @@ async def get_pyramid_plan(
             pyramid_level=position_data.get('pyramid_level', 1),
             status=position_data.get('status', 'active')
         )
-        
+
         # Calculate pyramid plan
         from app.analyzers.pyramid_calculator import calculate_pyramid_plan
-        trading_style = request.query_params.get('trading_style', 'swing')
         plan = calculate_pyramid_plan(position, atr, current_price, trading_style=trading_style)
+        logger.info(f"Pyramid plan calculated successfully")
 
         return plan.model_dump()
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error getting pyramid plan: {e}")
+        logger.error(f"Error getting pyramid plan: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1957,30 +1972,40 @@ async def delete_pyramid_position(
 ):
     """Delete pyramid position (soft delete to history or hard delete)."""
     from app.db import get_trades, save_trades
-    
+
     try:
+        logger.info(f"Deleting pyramid position {position_id} with action {action}")
         trades = get_trades(user_id)
+        logger.info(f"Found {len(trades)} trades for user {user_id}")
+
         position_index = next((i for i, t in enumerate(trades) if t['id'] == position_id), None)
-        
+
         if position_index is None:
+            logger.error(f"Position {position_id} not found in trades")
             raise HTTPException(status_code=404, detail="Position not found")
-        
+
+        logger.info(f"Found position at index {position_index}: {trades[position_index]}")
+
         if action == "soft":
             # Soft delete: move to history status
             trades[position_index]['status'] = 'history'
             trades[position_index]['updated_at'] = datetime.now().isoformat()
             save_trades(user_id, trades)
+            logger.info(f"Position {position_id} moved to history")
             return {"message": "Position moved to history", "action": "soft_delete"}
         elif action == "hard":
             # Hard delete: permanently remove
             trades.pop(position_index)
             save_trades(user_id, trades)
+            logger.info(f"Position {position_id} permanently deleted")
             return {"message": "Position permanently deleted", "action": "hard_delete"}
         else:
             raise HTTPException(status_code=400, detail="Invalid action. Use 'soft' or 'hard'")
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error deleting pyramid position: {e}")
+        logger.error(f"Error deleting pyramid position: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

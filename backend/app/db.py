@@ -89,6 +89,27 @@ def get_trades(user_id: str) -> list:
     return [_clean_item(item) for item in response.get('Items', [])]
 
 
+def save_trades(user_id: str, trades: list) -> None:
+    """Save multiple trades for a user (replaces all existing trades)."""
+    table = _get_table()
+
+    # First, delete all existing trades for this user
+    existing_trades = get_trades(user_id)
+    for trade in existing_trades:
+        table.delete_item(
+            Key={
+                'PK': f"USER#{user_id}",
+                'SK': f"TRADE#{trade.get('date', '')}#{trade.get('id', '')}"
+            }
+        )
+
+    # Then save all new trades
+    for trade in trades:
+        save_trade(user_id, trade)
+
+    logger.info(f"Saved {len(trades)} trades for user {user_id}")
+
+
 def delete_trade(user_id: str, trade_id: str) -> bool:
     """Delete a trade by scanning for its ID."""
     table = _get_table()
