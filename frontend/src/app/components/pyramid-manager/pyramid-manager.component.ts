@@ -14,6 +14,7 @@ interface PyramidPosition {
   current_price: number;
   unrealized_pnl: number;
   created_at: string;
+  updated_at: string;
   pyramid_level: number;
   status: string;
 }
