@@ -1875,7 +1875,7 @@ async def get_pyramid_positions(user_id: str = Depends(get_current_user)):
     
     try:
         trades = get_trades(user_id)
-        pyramid_trades = [t for t in trades if t.get('type') == 'pyramid' and t.get('status') != 'closed']
+        pyramid_trades = [t for t in trades if t.get('type') == 'pyramid' and t.get('status') == 'active']
         
         # Update current prices
         from app.data_fetcher import get_current_price
