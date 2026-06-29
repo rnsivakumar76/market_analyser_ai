@@ -1971,32 +1971,52 @@ async def delete_pyramid_position(
     user_id: str = Depends(get_current_user)
 ):
     """Delete pyramid position (soft delete to history or hard delete)."""
-    from app.db import get_trades, save_trades
+    from app.db import get_trades
 
     try:
         logger.info(f"Deleting pyramid position {position_id} with action {action}")
         trades = get_trades(user_id)
         logger.info(f"Found {len(trades)} trades for user {user_id}")
 
-        position_index = next((i for i, t in enumerate(trades) if t['id'] == position_id), None)
+        position = next((t for t in trades if t['id'] == position_id), None)
 
-        if position_index is None:
+        if position is None:
             logger.error(f"Position {position_id} not found in trades")
             raise HTTPException(status_code=404, detail="Position not found")
 
-        logger.info(f"Found position at index {position_index}: {trades[position_index]}")
+        logger.info(f"Found position: {position}")
 
         if action == "soft":
-            # Soft delete: move to history status
-            trades[position_index]['status'] = 'history'
-            trades[position_index]['updated_at'] = datetime.now().isoformat()
-            save_trades(user_id, trades)
+            # Soft delete: update status to history in DynamoDB
+            from app.db import _get_table
+            table = _get_table()
+            table.update_item(
+                Key={
+                    'PK': f"USER#{user_id}",
+                    'SK': f"TRADE#{position.get('date', '')}#{position_id}"
+                },
+                UpdateExpression="SET #status = :status, #updated_at = :updated_at",
+                ExpressionAttributeNames={
+                    '#status': 'status',
+                    '#updated_at': 'updated_at'
+                },
+                ExpressionAttributeValues={
+                    ':status': 'history',
+                    ':updated_at': datetime.now().isoformat()
+                }
+            )
             logger.info(f"Position {position_id} moved to history")
             return {"message": "Position moved to history", "action": "soft_delete"}
         elif action == "hard":
-            # Hard delete: permanently remove
-            trades.pop(position_index)
-            save_trades(user_id, trades)
+            # Hard delete: remove from DynamoDB
+            from app.db import _get_table
+            table = _get_table()
+            table.delete_item(
+                Key={
+                    'PK': f"USER#{user_id}",
+                    'SK': f"TRADE#{position.get('date', '')}#{position_id}"
+                }
+            )
             logger.info(f"Position {position_id} permanently deleted")
             return {"message": "Position permanently deleted", "action": "hard_delete"}
         else:
@@ -2016,29 +2036,57 @@ async def update_pyramid_position(
     user_id: str = Depends(get_current_user)
 ):
     """Update pyramid position (edit entry price, lots, etc.)."""
-    from app.db import get_trades, save_trades
-    
+    from app.db import get_trades
+
     try:
         trades = get_trades(user_id)
-        position_index = next((i for i, t in enumerate(trades) if t['id'] == position_id), None)
-        
-        if position_index is None:
+        position = next((t for t in trades if t['id'] == position_id), None)
+
+        if position is None:
             raise HTTPException(status_code=404, detail="Position not found")
-        
+
         # Allowed fields to update
-        allowed_fields = ['entry_price', 'initial_lots', 'lots', 'stop_loss', 'direction']
-        
+        allowed_fields = ['entry_price', 'initial_lots', 'lots', 'stop_loss', 'direction', 'status']
+
+        # Build update expression dynamically
+        update_expressions = []
+        expression_names = {}
+        expression_values = {}
+
         for field, value in updates.items():
             if field in allowed_fields:
-                trades[position_index][field] = value
-        
-        trades[position_index]['updated_at'] = datetime.now().isoformat()
-        save_trades(user_id, trades)
-        
-        return {"message": "Position updated successfully", "position": trades[position_index]}
-        
+                update_expressions.append(f"#{field} = :{field}")
+                expression_names[f"#{field}"] = field
+                expression_values[f":{field}"] = value
+
+        if not update_expressions:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+
+        # Add updated_at
+        update_expressions.append("#updated_at = :updated_at")
+        expression_names["#updated_at"] = "updated_at"
+        expression_values[":updated_at"] = datetime.now().isoformat()
+
+        # Direct DynamoDB update
+        from app.db import _get_table
+        table = _get_table()
+        table.update_item(
+            Key={
+                'PK': f"USER#{user_id}",
+                'SK': f"TRADE#{position.get('date', '')}#{position_id}"
+            },
+            UpdateExpression="SET " + ", ".join(update_expressions),
+            ExpressionAttributeNames=expression_names,
+            ExpressionAttributeValues=expression_values
+        )
+
+        logger.info(f"Position {position_id} updated successfully")
+        return {"message": "Position updated successfully"}
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error updating pyramid position: {e}")
+        logger.error(f"Error updating pyramid position: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
