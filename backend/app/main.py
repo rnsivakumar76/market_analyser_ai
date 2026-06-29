@@ -1975,7 +1975,7 @@ async def delete_pyramid_position(
     user_id: str = Depends(get_current_user)
 ):
     """Delete pyramid position (soft delete to history or hard delete)."""
-    from app.db import get_trades
+    from app.db import get_trades, _get_table
 
     try:
         logger.info(f"Deleting pyramid position {position_id} with action {action}")
@@ -1990,15 +1990,34 @@ async def delete_pyramid_position(
 
         logger.info(f"Found position: {position}")
 
+        # Get the actual SK from the DynamoDB item (includes PK and SK from cleaned item)
+        # We need to query DynamoDB directly to get the actual PK/SK
+        table = _get_table()
+
+        # Scan for the item with the given ID
+        response = table.scan(
+            FilterExpression='id = :id AND PK = :pk',
+            ExpressionAttributeValues={
+                ':id': position_id,
+                ':pk': f"USER#{user_id}"
+            }
+        )
+
+        items = response.get('Items', [])
+        if not items:
+            logger.error(f"Position {position_id} not found in DynamoDB scan")
+            raise HTTPException(status_code=404, detail="Position not found in DynamoDB")
+
+        # Use the first matching item (there should only be one)
+        item = items[0]
+        pk = item['PK']
+        sk = item['SK']
+        logger.info(f"Deleting item with PK={pk}, SK={sk}")
+
         if action == "soft":
             # Soft delete: update status to history in DynamoDB
-            from app.db import _get_table
-            table = _get_table()
             table.update_item(
-                Key={
-                    'PK': f"USER#{user_id}",
-                    'SK': f"TRADE#{position.get('date', '')}#{position_id}"
-                },
+                Key={'PK': pk, 'SK': sk},
                 UpdateExpression="SET #status = :status, #updated_at = :updated_at",
                 ExpressionAttributeNames={
                     '#status': 'status',
@@ -2013,14 +2032,7 @@ async def delete_pyramid_position(
             return {"message": "Position moved to history", "action": "soft_delete"}
         elif action == "hard":
             # Hard delete: remove from DynamoDB
-            from app.db import _get_table
-            table = _get_table()
-            table.delete_item(
-                Key={
-                    'PK': f"USER#{user_id}",
-                    'SK': f"TRADE#{position.get('date', '')}#{position_id}"
-                }
-            )
+            table.delete_item(Key={'PK': pk, 'SK': sk})
             logger.info(f"Position {position_id} permanently deleted")
             return {"message": "Position permanently deleted", "action": "hard_delete"}
         else:
@@ -2040,7 +2052,7 @@ async def update_pyramid_position(
     user_id: str = Depends(get_current_user)
 ):
     """Update pyramid position (edit entry price, lots, etc.)."""
-    from app.db import get_trades
+    from app.db import get_trades, _get_table
 
     try:
         trades = get_trades(user_id)
@@ -2071,14 +2083,28 @@ async def update_pyramid_position(
         expression_names["#updated_at"] = "updated_at"
         expression_values[":updated_at"] = datetime.now().isoformat()
 
-        # Direct DynamoDB update
-        from app.db import _get_table
+        # Get actual PK/SK from DynamoDB by scanning
         table = _get_table()
+        response = table.scan(
+            FilterExpression='id = :id AND PK = :pk',
+            ExpressionAttributeValues={
+                ':id': position_id,
+                ':pk': f"USER#{user_id}"
+            }
+        )
+
+        items = response.get('Items', [])
+        if not items:
+            raise HTTPException(status_code=404, detail="Position not found in DynamoDB")
+
+        item = items[0]
+        pk = item['PK']
+        sk = item['SK']
+        logger.info(f"Updating item with PK={pk}, SK={sk}")
+
+        # Direct DynamoDB update
         table.update_item(
-            Key={
-                'PK': f"USER#{user_id}",
-                'SK': f"TRADE#{position.get('date', '')}#{position_id}"
-            },
+            Key={'PK': pk, 'SK': sk},
             UpdateExpression="SET " + ", ".join(update_expressions),
             ExpressionAttributeNames=expression_names,
             ExpressionAttributeValues=expression_values
