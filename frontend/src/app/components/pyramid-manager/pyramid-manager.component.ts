@@ -99,8 +99,10 @@ export class PyramidManagerComponent implements OnInit {
 
   isLoading = false;
   showNewPositionForm = false;
-  
-  constructor(private http: HttpClient) {}
+
+  constructor(private http: HttpClient) {
+    console.log('PyramidManagerComponent: constructor called');
+  }
 
   backToOverview() {
     this.back.emit();
@@ -182,6 +184,10 @@ export class PyramidManagerComponent implements OnInit {
 
   onTradingStyleChange() {
     console.log('Trading style changed to:', this.tradingStyle);
+    // Reload opportunities if on opportunities tab
+    if (this.showOpportunities) {
+      this.loadOpportunities();
+    }
     // Reload pyramid plan if a position is selected
     if (this.selectedPosition) {
       this.loadPyramidPlan(this.selectedPosition.id);
@@ -189,14 +195,17 @@ export class PyramidManagerComponent implements OnInit {
   }
 
   ngOnInit() {
+    console.log('PyramidManagerComponent: ngOnInit called');
     this.loadPositions();
     this.loadOpportunities();
   }
   
   loadOpportunities() {
+    console.log('Loading opportunities...');
     this.isLoading = true;
     this.http.get<any>('/api/pyramid/opportunities').subscribe({
       next: (response) => {
+        console.log('Opportunities loaded:', response);
         this.opportunities = response.opportunities || [];
         this.isLoading = false;
       },
