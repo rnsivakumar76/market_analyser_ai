@@ -145,8 +145,11 @@ def _generate_pyramid_levels(
             add_percentages = [0.35, 0.40]  # Day trading: fewer levels, larger additions
         else:
             add_percentages = [0.25, 0.30, 0.35, 0.40]  # Swing trading
-        
-        lots_to_add = int(initial_lots * add_percentages[i - 2])
+
+        lots_to_add = round(initial_lots * add_percentages[i - 2])
+        # Ensure at least 1 lot if calculation results in non-zero
+        if initial_lots * add_percentages[i - 2] > 0 and lots_to_add == 0:
+            lots_to_add = 1
         cumulative_lots += lots_to_add
         
         # Calculate stop loss adjustment using dynamic trail distance
