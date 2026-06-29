@@ -2137,7 +2137,10 @@ async def get_pyramid_history(user_id: str = Depends(get_current_user)):
 
 
 @app.get("/api/pyramid/opportunities")
-async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
+async def get_pyramid_opportunities(
+    trading_style: str = "swing",
+    user_id: str = Depends(get_current_user)
+):
     """Get potential pyramid trading opportunities based on swing reversal detection."""
     from app.analyzers.swing_reversal_analyzer import analyze_swing_reversal
     from app.analyzers.pyramid_calculator import calculate_pyramid_plan
@@ -2192,7 +2195,7 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
                             status='active'
                         )
                         
-                        plan = calculate_pyramid_plan(hypothetical_position, atr, adjusted_price)
+                        plan = calculate_pyramid_plan(hypothetical_position, atr, adjusted_price, trading_style=trading_style)
 
                         # Calculate target profit range based on pyramid levels
                         final_level = plan.levels[-1] if plan.levels else None
@@ -2226,7 +2229,7 @@ async def get_pyramid_opportunities(user_id: str = Depends(get_current_user)):
                             },
                             'multi_timeframe': reversal.get('multi_timeframe', {}),
                             'risk_level': reversal.get('risk_level', 'MODERATE'),
-                            'trading_style': 'swing'  # Default to swing for opportunities
+                            'trading_style': trading_style
                         })
                         
             except Exception as e:

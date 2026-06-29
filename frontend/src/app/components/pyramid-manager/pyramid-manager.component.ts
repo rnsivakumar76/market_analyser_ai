@@ -201,9 +201,9 @@ export class PyramidManagerComponent implements OnInit {
   }
   
   loadOpportunities() {
-    console.log('Loading opportunities...');
+    console.log('Loading opportunities with trading style:', this.tradingStyle);
     this.isLoading = true;
-    this.http.get<any>('/api/pyramid/opportunities').subscribe({
+    this.http.get<any>(`/api/pyramid/opportunities?trading_style=${this.tradingStyle}`).subscribe({
       next: (response) => {
         console.log('Opportunities loaded:', response);
         this.opportunities = response.opportunities || [];
