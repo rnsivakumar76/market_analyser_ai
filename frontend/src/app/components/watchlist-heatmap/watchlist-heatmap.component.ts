@@ -15,7 +15,6 @@ import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../servic
           <select class="sort-select" [(ngModel)]="sortBy" (change)="sortInstruments()">
             <option value="gates">Sort by Gates</option>
             <option value="score">Sort by Score</option>
-            <option value="confidence">Sort by Confidence</option>
             <option value="symbol">Sort by Symbol</option>
           </select>
           <button class="sort-direction-btn" (click)="toggleSortDirection()" title="Toggle sort direction">
@@ -512,7 +511,7 @@ export class WatchlistHeatmapComponent {
     @Output() select = new EventEmitter<InstrumentAnalysis>();
     @Output() scan = new EventEmitter<void>();
 
-    sortBy: 'gates' | 'score' | 'confidence' | 'symbol' = 'gates';
+    sortBy: 'gates' | 'score' | 'symbol' = 'gates';
     sortDirection: 'asc' | 'desc' = 'desc';
 
     getSortedInstruments(): InstrumentAnalysis[] {
@@ -525,8 +524,6 @@ export class WatchlistHeatmapComponent {
                     return dir * (this.getGateCount(b) - this.getGateCount(a));
                 case 'score':
                     return dir * (b.trade_signal.score - a.trade_signal.score);
-                case 'confidence':
-                    return dir * ((b.trade_signal.confidence ?? 0) - (a.trade_signal.confidence ?? 0));
                 case 'symbol':
                     return dir * a.symbol.localeCompare(b.symbol);
                 default:
