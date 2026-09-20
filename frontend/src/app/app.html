@@ -352,7 +352,11 @@
   } @else {
 
   <main class="split-view-container" [class.restricted]="psychologicalGuardrail()?.status === 'restricted'">
-    <div class="sidebar-panel" [class.mobile-hidden]="mobileTab() !== 'watchlist'" [class.mobile-active-panel]="mobileTab() === 'watchlist'">
+    <button class="panel-toggle left-toggle" (click)="toggleLeftPanel()" [class.collapsed]="!leftPanelOpen()" title="Toggle watchlist">
+      {{ leftPanelOpen() ? '‹' : '›' }}
+    </button>
+
+    <div class="sidebar-panel" [class.collapsed]="!leftPanelOpen()" [class.mobile-hidden]="mobileTab() !== 'watchlist'" [class.mobile-active-panel]="mobileTab() === 'watchlist'">
       <button class="back-to-overview-btn" (click)="backToOverview()">‹ Back to Opportunities</button>
       <!-- Sidebar Tab Bar -->
       <div class="sidebar-tabs">
@@ -395,8 +399,12 @@
       }
     </div>
 
+    <button class="panel-toggle right-toggle" (click)="toggleRightPanel()" [class.collapsed]="!rightPanelOpen()" title="Toggle context panel">
+      {{ rightPanelOpen() ? '›' : '‹' }}
+    </button>
+
     <!-- Column 3: Context Intelligence Panel -->
-    <div class="performance-panel context-intelligence-panel" [class.mobile-context-active]="mobileTab() === 'context'">
+    <div class="performance-panel context-intelligence-panel" [class.collapsed]="!rightPanelOpen()" [class.mobile-context-active]="mobileTab() === 'context'">
       <div class="perf-panel-header">
         <h3 class="perf-panel-title">CONTEXT INTELLIGENCE</h3>
         <div class="perf-panel-tabs">

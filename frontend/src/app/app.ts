@@ -60,6 +60,8 @@ export class App implements OnInit, OnDestroy {
   viewMode = signal<'overview' | 'detail' | 'pyramid'>('overview');
   contextPanelTab = signal<'context' | 'chat'>('context');
   sidebarTab = signal<'heatmap' | 'orb'>('heatmap');
+  leftPanelOpen = signal(true);
+  rightPanelOpen = signal(true);
 
   // Auto-refresh properties
   nextRefreshCountdown = signal<string>('05:00');
@@ -556,6 +558,15 @@ export class App implements OnInit, OnDestroy {
   backToOverview() {
     this.viewMode.set('overview');
     this.mobileTab.set('watchlist');
+    this.selectedInstrument.set(null);
+  }
+
+  toggleLeftPanel() {
+    this.leftPanelOpen.update(open => !open);
+  }
+
+  toggleRightPanel() {
+    this.rightPanelOpen.update(open => !open);
   }
 
   refreshInstrument(symbol: string) {
