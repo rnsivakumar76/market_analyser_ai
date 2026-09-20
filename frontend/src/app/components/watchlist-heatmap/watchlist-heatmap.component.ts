@@ -284,44 +284,38 @@ import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../servic
     }
 
     .heat-cell:hover {
-      transform: scale(1.03);
+      transform: scale(1.02);
       z-index: 2;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
     .heat-cell.selected {
-      border-color: #60a5fa !important;
-      box-shadow: 0 0 20px rgba(137, 180, 250, 0.25);
-      transform: scale(1.04);
+      border-color: var(--accent-primary) !important;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+      transform: scale(1.02);
       z-index: 3;
     }
 
     /* Direction Colors */
     .heat-cell.bullish-cell {
-      background: linear-gradient(145deg, rgba(166, 227, 161, 0.15), rgba(166, 227, 161, 0.08));
-      border-color: rgba(166, 227, 161, 0.2);
+      background: var(--cell-bullish-bg);
+      border-color: var(--cell-bullish-border);
     }
 
     .heat-cell.bearish-cell {
-      background: linear-gradient(145deg, rgba(243, 139, 168, 0.15), rgba(243, 139, 168, 0.08));
-      border-color: rgba(243, 139, 168, 0.2);
+      background: var(--cell-bearish-bg);
+      border-color: var(--cell-bearish-border);
     }
 
     .heat-cell.neutral-cell {
-      background: linear-gradient(145deg, rgba(249, 226, 175, 0.1), rgba(249, 226, 175, 0.05));
-      border-color: rgba(249, 226, 175, 0.15);
+      background: var(--cell-neutral-bg);
+      border-color: var(--cell-neutral-border);
     }
 
-    /* Intensity via opacity scaling based on score */
+    /* Intensity via stronger border on high score */
     .heat-cell.high-conviction {
-      &.bullish-cell {
-        background: linear-gradient(145deg, rgba(166, 227, 161, 0.3), rgba(166, 227, 161, 0.15));
-        border-color: rgba(166, 227, 161, 0.4);
-      }
-      &.bearish-cell {
-        background: linear-gradient(145deg, rgba(243, 139, 168, 0.3), rgba(243, 139, 168, 0.15));
-        border-color: rgba(243, 139, 168, 0.4);
-      }
+      &.bullish-cell { border-color: var(--cell-bullish-text); }
+      &.bearish-cell { border-color: var(--cell-bearish-text); }
     }
 
     .cell-content {
@@ -335,7 +329,7 @@ import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../servic
     .cell-symbol {
       font-size: 0.88rem;
       font-weight: 800;
-      color: #e8f0fa;
+      color: var(--text-primary);
       letter-spacing: 0.5px;
     }
 
@@ -345,23 +339,23 @@ import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../servic
       line-height: 1;
     }
 
-    .bullish-cell .cell-score { color: #86efac; }
-    .bearish-cell .cell-score { color: #f87171; }
-    .neutral-cell .cell-score { color: #fcd34d; }
+    .bullish-cell .cell-score { color: var(--cell-bullish-text); }
+    .bearish-cell .cell-score { color: var(--cell-bearish-text); }
+    .neutral-cell .cell-score { color: var(--cell-neutral-text); }
 
     .cell-change {
       font-size: 0.78rem;
       font-weight: 700;
     }
 
-    .cell-change.positive { color: #86efac; }
-    .cell-change.negative { color: #f87171; }
-    .cell-change.neutral { color: #fcd34d; }
+    .cell-change.positive { color: var(--success); }
+    .cell-change.negative { color: var(--danger); }
+    .cell-change.neutral { color: var(--warning); }
 
     .cell-phase {
       font-size: 0.68rem;
       font-weight: 700;
-      color: #6b8299;
+      color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -409,11 +403,11 @@ import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../servic
       gap: 6px;
       margin-top: 8px;
     }
-    .wl-ready { color: #86efac; }
-    .wl-monitoring { color: #4e6480; }
+    .wl-ready { color: var(--success); }
+    .wl-monitoring { color: var(--text-muted); }
     .wl-group-count {
-      background: rgba(108,112,134,0.15);
-      color: #64748b;
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
       border-radius: 8px;
       padding: 1px 6px;
       font-size: 0.72rem;
@@ -428,11 +422,13 @@ import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../servic
       padding: 1px 5px;
       border-radius: 8px;
       letter-spacing: 0.3px;
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
     }
-    .gates-5 { background: rgba(166,227,161,0.2); color: #86efac; border: 1px solid rgba(166,227,161,0.35); }
-    .gates-4 { background: rgba(166,227,161,0.12); color: #86efac; border: 1px solid rgba(166,227,161,0.25); }
-    .gates-3 { background: rgba(249,226,175,0.12); color: #fcd34d; border: 1px solid rgba(249,226,175,0.25); }
-    .gates-2, .gates-1, .gates-0 { background: rgba(78,100,128,0.12); color: #4e6480; border: 1px solid rgba(78,100,128,0.25); }
+    .gates-5, .gates-4 { background: var(--cell-bullish-bg); color: var(--cell-bullish-text); border-color: var(--cell-bullish-border); }
+    .gates-3 { background: var(--cell-neutral-bg); color: var(--cell-neutral-text); border-color: var(--cell-neutral-border); }
+    .gates-2, .gates-1, .gates-0 { background: var(--bg-tertiary); color: var(--text-muted); border-color: var(--border-color); }
 
     @keyframes glow-pulse {
       0%, 100% { opacity: 0.5; }

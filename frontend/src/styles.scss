@@ -20,6 +20,17 @@
   --danger: #ef4444;
   --warning: #f59e0b;
   --info: #0ea5e9;
+
+  /* Heatmap cells */
+  --cell-bullish-bg: rgba(16, 185, 129, 0.12);
+  --cell-bullish-border: rgba(16, 185, 129, 0.35);
+  --cell-bullish-text: #34d399;
+  --cell-bearish-bg: rgba(239, 68, 68, 0.12);
+  --cell-bearish-border: rgba(239, 68, 68, 0.35);
+  --cell-bearish-text: #f87171;
+  --cell-neutral-bg: rgba(245, 158, 11, 0.10);
+  --cell-neutral-border: rgba(245, 158, 11, 0.30);
+  --cell-neutral-text: #fbbf24;
 }
 
 .light-theme {
@@ -36,6 +47,17 @@
   --danger: #dc2626;
   --warning: #d97706;
   --info: #0284c7;
+
+  /* Heatmap cells */
+  --cell-bullish-bg: rgba(16, 185, 129, 0.08);
+  --cell-bullish-border: rgba(16, 185, 129, 0.45);
+  --cell-bullish-text: #047857;
+  --cell-bearish-bg: rgba(239, 68, 68, 0.08);
+  --cell-bearish-border: rgba(239, 68, 68, 0.45);
+  --cell-bearish-text: #b91c1c;
+  --cell-neutral-bg: rgba(245, 158, 11, 0.08);
+  --cell-neutral-border: rgba(245, 158, 11, 0.40);
+  --cell-neutral-text: #b45309;
 }
 
 html {
