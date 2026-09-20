@@ -912,7 +912,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
   `,
   styles: [`
     :host { display: block; width: 100%; margin-bottom: 30px; }
-    .instrument-terminal { background: var(--bg-secondary, #070d1c); border-radius: 16px; border: 1px solid var(--border-color, #141f30); overflow: hidden; position: relative; }
+    .instrument-terminal { background: var(--card-bg, #111827); border-radius: 16px; border: 1px solid var(--card-border, #1e293b); overflow: hidden; position: relative; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
     .instrument-terminal.compact { max-height: 1000px; }
 
     .btn-density {

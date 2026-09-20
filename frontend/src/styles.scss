@@ -6,58 +6,93 @@
 }
 
 :root {
-  /* Dark theme (default) */
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --text-primary: #e2e8f0;
+  /* Elegant Dark theme (default) */
+  --bg-primary: #0a0f1c;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --bg-quaternary: #27364c;
+  --bg-elevated: #182233;
+  --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --border-color: #334155;
-  --accent-primary: #3b82f6;
-  --accent-secondary: #8b5cf6;
-  --success: #10b981;
-  --danger: #ef4444;
+  --text-tertiary: #64748b;
+  --text-muted: #475569;
+  --border-color: #1e293b;
+  --border-subtle: #151d2b;
+  --accent-primary: #6366f1;
+  --accent-secondary: #a78bfa;
+  --success: #22c55e;
+  --danger: #f43f5e;
   --warning: #f59e0b;
-  --info: #0ea5e9;
+  --info: #38bdf8;
 
-  /* Heatmap cells */
-  --cell-bullish-bg: rgba(16, 185, 129, 0.12);
-  --cell-bullish-border: rgba(16, 185, 129, 0.35);
-  --cell-bullish-text: #34d399;
-  --cell-bearish-bg: rgba(239, 68, 68, 0.12);
-  --cell-bearish-border: rgba(239, 68, 68, 0.35);
-  --cell-bearish-text: #f87171;
-  --cell-neutral-bg: rgba(245, 158, 11, 0.10);
-  --cell-neutral-border: rgba(245, 158, 11, 0.30);
+  /* Heatmap cells - refined, low-saturation */
+  --cell-bullish-bg: rgba(34, 197, 94, 0.10);
+  --cell-bullish-border: rgba(34, 197, 94, 0.30);
+  --cell-bullish-text: #4ade80;
+  --cell-bearish-bg: rgba(244, 63, 94, 0.10);
+  --cell-bearish-border: rgba(244, 63, 94, 0.30);
+  --cell-bearish-text: #fb7185;
+  --cell-neutral-bg: rgba(245, 158, 11, 0.08);
+  --cell-neutral-border: rgba(245, 158, 11, 0.25);
   --cell-neutral-text: #fbbf24;
+
+  /* Surfaces */
+  --card-bg: #111827;
+  --card-border: #1e293b;
+  --panel-bg: #111827;
+
+  /* Legacy component aliases */
+  --surface-primary: var(--bg-primary);
+  --surface-secondary: var(--bg-secondary);
+  --surface-tertiary: var(--bg-tertiary);
+  --border-primary: var(--border-color);
+  --error: var(--danger);
+  --sidebar-bg: var(--bg-secondary);
 }
 
 .light-theme {
+  /* Elegant Light theme */
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
-  --bg-tertiary: #e2e8f0;
+  --bg-tertiary: #f1f5f9;
+  --bg-quaternary: #e2e8f0;
+  --bg-elevated: #ffffff;
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --border-color: #cbd5e1;
-  --accent-primary: #2563eb;
+  --text-tertiary: #94a3b8;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --accent-primary: #4f46e5;
   --accent-secondary: #7c3aed;
-  --success: #059669;
-  --danger: #dc2626;
+  --success: #16a34a;
+  --danger: #e11d48;
   --warning: #d97706;
   --info: #0284c7;
 
   /* Heatmap cells */
-  --cell-bullish-bg: rgba(16, 185, 129, 0.08);
-  --cell-bullish-border: rgba(16, 185, 129, 0.45);
-  --cell-bullish-text: #047857;
-  --cell-bearish-bg: rgba(239, 68, 68, 0.08);
-  --cell-bearish-border: rgba(239, 68, 68, 0.45);
-  --cell-bearish-text: #b91c1c;
-  --cell-neutral-bg: rgba(245, 158, 11, 0.08);
-  --cell-neutral-border: rgba(245, 158, 11, 0.40);
+  --cell-bullish-bg: rgba(34, 197, 94, 0.06);
+  --cell-bullish-border: rgba(34, 197, 94, 0.35);
+  --cell-bullish-text: #15803d;
+  --cell-bearish-bg: rgba(244, 63, 94, 0.06);
+  --cell-bearish-border: rgba(244, 63, 94, 0.35);
+  --cell-bearish-text: #be123c;
+  --cell-neutral-bg: rgba(245, 158, 11, 0.06);
+  --cell-neutral-border: rgba(245, 158, 11, 0.30);
   --cell-neutral-text: #b45309;
+
+  /* Surfaces */
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --panel-bg: #f8fafc;
+
+  /* Legacy component aliases */
+  --surface-primary: var(--bg-primary);
+  --surface-secondary: var(--bg-secondary);
+  --surface-tertiary: var(--bg-tertiary);
+  --border-primary: var(--border-color);
+  --error: var(--danger);
+  --sidebar-bg: var(--bg-secondary);
 }
 
 html {
