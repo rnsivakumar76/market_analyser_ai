@@ -10,7 +10,7 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
   standalone: true,
   imports: [CommonModule, InstrumentChartComponent, MultiTimeframeOverlayComponent, TradeJournalComponent],
   template: `
-    <div class="instrument-terminal">
+    <div class="instrument-terminal" [class.compact]="!expanded()">
       <div class="terminal-body" [class]="getCardClass()">
         <!-- 2. SMART HUD HEADER (COMPACT) -->
         <header class="terminal-header">
@@ -36,6 +36,9 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
           </div>
 
           <div class="th-right-compact">
+            <button class="btn-density" (click)="expanded.set(!expanded())" title="Toggle detail view">
+              {{ expanded() ? '▲' : '▼' }}
+            </button>
             <div class="th-status-pill" [class]="getVerdictState().toLowerCase()">
                <span class="th-verdict">{{ getVerdictState() }}</span>
                <span class="th-score">{{ analysis.trade_signal.score }}</span>
@@ -899,16 +902,65 @@ import { TradeJournalComponent } from '../trade-journal/trade-journal.component'
       @if (alertToastVisible) {
         <div class="alert-toast">{{ alertToastMsg }}</div>
       }
+
+      @if (!expanded()) {
+      <div class="compact-fade" (click)="expanded.set(true)">
+        <button class="expand-btn">Show full analysis ▼</button>
+      </div>
+      }
     </div>
   `,
   styles: [`
     :host { display: block; width: 100%; margin-bottom: 30px; }
-    .instrument-terminal { background: #070d1c; border-radius: 16px; border: 1px solid #141f30; overflow: hidden; }
+    .instrument-terminal { background: var(--bg-secondary, #070d1c); border-radius: 16px; border: 1px solid var(--border-color, #141f30); overflow: hidden; position: relative; }
+    .instrument-terminal.compact { max-height: 1000px; }
+
+    .btn-density {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color, #141f30);
+      background: var(--bg-tertiary, #1e293b);
+      color: var(--text-secondary, #94a3b8);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-density:hover { background: var(--accent-primary, #3b82f6); color: #fff; }
+
+    .compact-fade {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 120px;
+      background: linear-gradient(to bottom, transparent, var(--bg-secondary, #070d1c) 85%);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 24px;
+      z-index: 10;
+      cursor: pointer;
+    }
+
+    .expand-btn {
+      background: var(--bg-tertiary, #1e293b);
+      color: var(--text-primary, #e2e8f0);
+      border: 1px solid var(--border-color, #334155);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .expand-btn:hover { background: var(--accent-primary, #3b82f6); color: #fff; border-color: var(--accent-primary, #3b82f6); }
     
     .terminal-banner { width: 100%; }
     
     .terminal-body { padding: 0; }
-    .terminal-body.bullish { border-left: 3px solid #86efac; }
+    .terminal-body.bullish { border-left: 3px solid var(--success, #86efac); }
     .terminal-body.bearish { border-left: 3px solid #f87171; }
 
     /* SIGNAL REASONS STRIP (replaces verbose AI Summary) */
@@ -1966,6 +2018,8 @@ export class InstrumentCardComponent implements OnChanges {
   @Output() modeChange = new EventEmitter<'long_term' | 'short_term'>();
 
   private marketAnalyzerService = inject(MarketAnalyzerService);
+
+  expanded = signal(false);
 
   selectedTab: 'plan' | 'insight' = 'plan';
   activeAnalysisTab: 'technical' | 'risk' | 'performance' = 'technical';
