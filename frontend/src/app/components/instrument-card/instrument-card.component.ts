@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnChanges, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InstrumentAnalysis, MarketAnalyzerService, ChartData, NewsItem, IntradaySignal } from '../../services/market-analyzer.service';
 import { InstrumentChartComponent } from '../instrument-chart/instrument-chart.component';
