@@ -1,8 +1,15 @@
 # Market Analyzer AI — Wireframes v4.0 (Decision-Support Redesign)
 
 **Design Date**: September 20, 2026  
-**Revision**: v4.0 — Proposal before implementation  
-**Status**: 🟡 PROPOSAL — Pending review
+**Revision**: v4.0 — Approved for implementation  
+**Status**: � APPROVED
+
+**User Decisions:**
+1. Move to single center column with collapsible side panels (not three-column)
+2. Pyramid Manager remains a full page
+3. Support light theme
+4. Watchlist should be sortable by confidence, risk/reward, and gate count
+5. No real-time toast notifications
 
 ---
 
@@ -16,38 +23,35 @@ Move the interface from **data display** to **decision support**. The user shoul
 
 ---
 
-## 2. Page Layout (Desktop)
+## 2. Page Layout (Desktop) — Single Center Column with Collapsible Side Panels
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│ NEXUS PRO  [👤 User]  [🛡️ Shield]  [📊 Correlation]  [📒 Journal]  [⚙️ Settings]  [🔄 Refresh] │
+│ NEXUS PRO  [👤 User]  [🛡️ Shield]  [📊 Correlation]  [📒 Journal]  [⚙️ Settings]  [☀️ Theme]  [🔄 Refresh] │
 ├─────────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                             │
-│  ┌────────────────────────────────┐  ┌─────────────────────────────────────────────────────┐   │
-│  │  ZONE A — DECISION CARD    │  │  ZONE B — EXECUTION CHECKLIST                       │   │
-│  │  (Signal, Direction,       │  │  (Pass/Fail gates, gate score, confidence)          │   │
-│  │   Confidence, Primary CTA) │  │                                                     │   │
-│  └────────────────────────────┘  └─────────────────────────────────────────────────────┘   │
-│                                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────────────────────┐   │
-│  │  ZONE C — TRADE LEVELS (only if exec pass count >= 3)                               │   │
-│  │  Entry Range | Stop Loss | Target Profit                                            │   │
-│  └─────────────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                             │
-│  ┌────────────────────────────────────────────────────────────────────────────────────┌─────────────────────────────────────────────────────────────────────────────────────┐   │
-│  │  ZONE D — BATTLE PLAN / EXPERT ACTION                                               │   │
-│  └─�─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────────────────────┐   │
-│  │  ZONE E — ACCORDION DRAWERS                                                         │   │
-│  │  ▶ Signal & Action  ▶ Risk Factors  ▶ Performance                                   │   │
-│  └─────────────────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                             │
-│  ┌────────────────────────────┐  ┌────────────────────────────┐  ┌──────────────────────┐ │
-│  │  ZONE F — WATCHLIST        │  │  ZONE G — PYRAMID PANEL    │  │  ZONE H — CONTEXT    │ │
-│  │  Heatmap / Gate badges     │  │  (if active)               │  │  Intel / Correlation │ │
-│  └────────────────────────────┘  └────────────────────────────┘  └──────────────────────┘ │
-│                                                                                             │
+│ ┌──────────────────────┐  ┌──────────────────────────────────────────────────────┐  ┌──────────────────────┐ │
+│ │  LEFT PANEL          │  │  CENTER COLUMN — MAIN DECISION AREA                  │  │  RIGHT PANEL         │ │
+│ │  (collapsible)       │  │                                                      │  │  (collapsible)       │ │
+│ │                      │  │  ┌────────────────────────────────────────────────┐  │  │                      │ │
+│ │  Watchlist / Heatmap │  │  │  ZONE A — DECISION CARD                        │  │  │  Context           │ │
+│ │  with sort controls  │  │  │  Symbol, Direction, Confidence, Primary CTA    │  │  │  Intelligence      │ │
+│ │                      │  │  └────────────────────────────────────────────────┘  │  │  (correlations,    │ │
+│ │                      │  │  ─�┌────────────────────────────────────────────────┌────────────────────────────────────────────────┐  │  │  news, risk)       │ │
+│ │                      │  │  │  ZONE B — EXECUTION CHECKLIST                  │  │  │                      │ │
+│ │                      │  │  │  Pass/fail gates + gate score                  │  │  │                      │ │
+│ │                      │  │  └────────────────────────────────────────────────┘  │  │                      │ │
+│ │                      │  │  ┌────────────────────────────────────────────────┐  │  │                      │ │
+│ │                      │  │  │  ZONE C — TRADE LEVELS                         │  │  │                      │ │
+│ │                      │  │  │  Entry | Stop | Target (if exec pass >= 3)     │  │  │                      │ │
+│ │                      │  │  └────────────────────────────────────────────────┘  │  │                      │ │
+│ │                      │  │  ┌────────────────────────────────────────────────┐  │  │                      │ │
+│ │                      │  │  │  ZONE D — BATTLE PLAN / EXPERT ACTION          │  │  │                      │ │
+│ │                      │  │  └────────────────────────────────────────────────┘  │  │                      │ │
+│ │                      │  │  ┌────────────────────────────────────────────────┐  │  │                      │ │
+│ │                      │  │  │  ZONE E — ACCORDION DRAWERS                    │  │  │                      │ │
+│ │                      │  │  │  Signal & Action | Risk | Performance          │  │  │                      │ │
+│ │                      │  │  └────────────────────────────────────────────────┘  │  │                      │ │
+│ └──────────────────────┘  └──────────────────────────────────────────────────────┘  └──────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
