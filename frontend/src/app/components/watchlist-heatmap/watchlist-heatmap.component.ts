@@ -1,15 +1,27 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../services/market-analyzer.service';
 
 @Component({
     selector: 'app-watchlist-heatmap',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, FormsModule],
     template: `
     <div class="heatmap-container">
       <div class="heatmap-header">
         <h3 class="heatmap-title">MARKET HEATMAP</h3>
+        <div class="heatmap-controls">
+          <select class="sort-select" [(ngModel)]="sortBy" (change)="sortInstruments()">
+            <option value="gates">Sort by Gates</option>
+            <option value="score">Sort by Score</option>
+            <option value="confidence">Sort by Confidence</option>
+            <option value="symbol">Sort by Symbol</option>
+          </select>
+          <button class="sort-direction-btn" (click)="toggleSortDirection()" title="Toggle sort direction">
+            {{ sortDirection === 'desc' ? '↓' : '↑' }}
+          </button>
+        </div>
         <div class="heatmap-legend">
           <span class="legend-item bullish">● Bullish</span>
           <span class="legend-item bearish">● Bearish</span>
@@ -194,6 +206,40 @@ import { InstrumentAnalysis, IntradaySignal, ScanDiagnostic } from '../../servic
       letter-spacing: 1.2px;
       color: #6b8299;
       margin: 0;
+    }
+
+    .heatmap-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .sort-select {
+      background: var(--bg-secondary, #1e293b);
+      color: var(--text-primary, #e2e8f0);
+      border: 1px solid var(--border-color, #334155);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.70rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .sort-direction-btn {
+      background: var(--bg-secondary, #1e293b);
+      color: var(--text-primary, #e2e8f0);
+      border: 1px solid var(--border-color, #334155);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.80rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .sort-direction-btn:hover {
+      background: var(--bg-tertiary, #334155);
     }
 
     .heatmap-legend {
@@ -466,6 +512,39 @@ export class WatchlistHeatmapComponent {
     @Output() select = new EventEmitter<InstrumentAnalysis>();
     @Output() scan = new EventEmitter<void>();
 
+    sortBy: 'gates' | 'score' | 'confidence' | 'symbol' = 'gates';
+    sortDirection: 'asc' | 'desc' = 'desc';
+
+    getSortedInstruments(): InstrumentAnalysis[] {
+        const sorted = [...this.instruments];
+        const dir = this.sortDirection === 'asc' ? 1 : -1;
+
+        sorted.sort((a, b) => {
+            switch (this.sortBy) {
+                case 'gates':
+                    return dir * (this.getGateCount(b) - this.getGateCount(a));
+                case 'score':
+                    return dir * (b.trade_signal.score - a.trade_signal.score);
+                case 'confidence':
+                    return dir * ((b.trade_signal.confidence ?? 0) - (a.trade_signal.confidence ?? 0));
+                case 'symbol':
+                    return dir * a.symbol.localeCompare(b.symbol);
+                default:
+                    return 0;
+            }
+        });
+
+        return sorted;
+    }
+
+    sortInstruments(): void {
+        // Triggered by select change; the list re-sorts through getSortedInstruments()
+    }
+
+    toggleSortDirection(): void {
+        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    }
+
     getActiveSignals(): IntradaySignal[] {
         return (this.signals || []).filter(s => s.status === 'ACTIVE');
     }
@@ -502,11 +581,11 @@ export class WatchlistHeatmapComponent {
     }
 
     getReadyInstruments(): InstrumentAnalysis[] {
-        return this.instruments.filter(i => this.getGateCount(i) >= 3);
+        return this.getSortedInstruments().filter(i => this.getGateCount(i) >= 3);
     }
 
     getMonitoringInstruments(): InstrumentAnalysis[] {
-        return this.instruments.filter(i => this.getGateCount(i) < 3);
+        return this.getSortedInstruments().filter(i => this.getGateCount(i) < 3);
     }
 
     getCellClass(instrument: InstrumentAnalysis): string {
